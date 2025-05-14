@@ -1,8 +1,12 @@
 (function (w) {
 	const loadList = [
 		// それぞれのライブラリをロード
-		"dynamicEnum.js",
-		"interface.js",
+		// libs
+		"libs/TypeChecker.js",
+
+		// util
+		"util/dynamicEnum.js",
+		"util/interface.js",
 	];
 
 	const eventName = "javaLibraryScriptLoad";
