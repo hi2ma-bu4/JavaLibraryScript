@@ -6,11 +6,21 @@ class _EnumItem {
 	 * @param {string} name - Enumのキー名
 	 * @param {number} ordinal - 順序番号（自動インクリメント）
 	 * @param {any} value - 任意の値（name, 数値, オブジェクトなど）
+	 * @param {_DynamicEnumCore} [owner] - Enumのインスタンス
+	 * @param {{[methodName: string]: (...args: any[]) => any}} [methods] - Enumのメソッド
 	 */
-	constructor(name, ordinal, value = name) {
+	constructor(name, ordinal, value = name, owner = null, methods = {}) {
 		this.name = name;
 		this.ordinal = ordinal;
 		this.value = value;
+
+		this.owner = owner;
+
+		for (const [key, fn] of Object.entries(methods)) {
+			if (typeof fn === "function") {
+				this[key] = fn.bind(this);
+			}
+		}
 
 		Object.freeze(this);
 	}
@@ -64,10 +74,12 @@ class _EnumItem {
 class _DynamicEnumCore {
 	/**
 	 * @param {Array<string | [string, any]> | Record<string, any>} defs - 定義
+	 * @param {{[methodName: string]: (...args: any[]) => any}} [options.methods] - Enumのメソッド
 	 */
-	constructor(defs) {
+	constructor(defs, options = {}) {
 		/** @type {_EnumItem[]} */
 		this._items = [];
+		this._methods = options.methods || {};
 
 		let entries;
 
@@ -80,7 +92,7 @@ class _DynamicEnumCore {
 		}
 
 		entries.forEach(([name, value], index) => {
-			const item = new _EnumItem(name, index, value);
+			const item = new _EnumItem(name, index, value, this, this._methods);
 			Object.defineProperty(this, name, {
 				value: item,
 				writable: false,
@@ -200,10 +212,11 @@ class _DynamicEnumCore {
 /**
  * DynamicEnum生成関数（インデックスアクセスに対応したProxy付き）
  * @param {Array<string | [string, any]> | Record<string, any>} defs
+ * @param {{[methodName: string]: (...args: any[]) => any}} [options.methods] - Enumのメソッド
  * @returns {_DynamicEnumCore & Proxy}
  */
-function DynamicEnum(defs) {
-	const core = new _DynamicEnumCore(defs);
+function DynamicEnum(defs, options = {}) {
+	const core = new _DynamicEnumCore(defs, options);
 	return new Proxy(core, {
 		get(target, prop, receiver) {
 			if (typeof prop === "string" && /^[0-9]+$/.test(prop)) {
