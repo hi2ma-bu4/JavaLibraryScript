@@ -68,7 +68,7 @@ class Interface {
 		// ----- DynamicEnum対応
 		if (expected instanceof _DynamicEnumCore) {
 			// DynamicEnumの場合
-			return expected.has(value.name);
+			return expected.has(value?.name);
 		}
 		if (expected === _EnumItem) return value instanceof _EnumItem;
 		// -----
