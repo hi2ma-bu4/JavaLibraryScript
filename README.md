@@ -1,0 +1,3 @@
+# dynamicEnum
+
+JavaのenumをJavaScriptにそれっぽく似せて作ったやつ
