@@ -22,8 +22,8 @@ class TypeChecker {
 	}
 
 	static typeNames(expected) {
-		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.__iface_stringify(t)).join(" | ");
-		return expected?.name || TypeChecker.__iface_stringify(expected);
+		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.stringify(t)).join(" | ");
+		return expected?.name || TypeChecker.stringify(expected);
 	}
 
 	static stringify(value) {
