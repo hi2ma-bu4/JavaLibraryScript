@@ -1,3 +1,5 @@
+const { _EnumCore, _EnumItem } = require("../base/Enum.js");
+
 class TypeChecker {
 	static matchType(value, expected) {
 		if (Array.isArray(expected)) return expected.some((e) => this.checkType(value, e));
@@ -10,9 +12,9 @@ class TypeChecker {
 		if (expected === String || expected === Number || expected === Boolean || expected === Symbol || expected === Function || expected === BigInt) return typeof value === expected.name.toLowerCase();
 		if (expected === Object) return typeof value === "object" && value !== null && !Array.isArray(value);
 		if (expected === Array) return Array.isArray(value);
-		// ----- DynamicEnum対応
-		if (expected instanceof _DynamicEnumCore) {
-			// DynamicEnumの場合
+		// ----- Enum対応
+		if (expected instanceof _EnumCore) {
+			// Enumの場合
 			return expected.has(value?.name);
 		}
 		if (expected === _EnumItem) return value instanceof _EnumItem;
@@ -62,3 +64,5 @@ class TypeChecker {
 		return String(value); // それ以外の型はそのまま文字列に変換
 	}
 }
+
+module.exports = TypeChecker;

@@ -1,0 +1,30 @@
+{
+  "name": "javalibraryscript",
+  "version": "1.0.0",
+  "description": "JavaLibraryScript",
+  "main": "index.js",
+  "scripts": {
+    "build": "node dev/build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hi2ma-bu4/JavaLibraryScript.git"
+  },
+  "keywords": [],
+  "author": "hi2ma-bu4",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hi2ma-bu4/JavaLibraryScript/issues"
+  },
+  "homepage": "https://github.com/hi2ma-bu4/JavaLibraryScript#readme",
+  "volta": {
+    "node": "22.15.1",
+    "npm": "11.3.0"
+  },
+  "devDependencies": {
+    "browserify": "^17.0.1",
+    "exorcist": "^2.0.0",
+    "terser": "^5.39.1"
+  }
+}

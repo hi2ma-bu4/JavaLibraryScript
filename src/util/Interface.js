@@ -1,3 +1,5 @@
+const TypeChecker = require("../libs/TypeChecker.js");
+
 class Interface {
 	static _isDebugMode = false;
 
@@ -54,3 +56,5 @@ class Interface {
 		}
 	}
 }
+
+module.exports = Interface;

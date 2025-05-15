@@ -1,3 +1,4 @@
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 /**
  * 単一のEnum要素を表すクラス
  */
@@ -6,7 +7,7 @@ class _EnumItem {
 	 * @param {string} name - Enumのキー名
 	 * @param {number} ordinal - 順序番号（自動インクリメント）
 	 * @param {any} value - 任意の値（name, 数値, オブジェクトなど）
-	 * @param {_DynamicEnumCore} [owner] - Enumのインスタンス
+	 * @param {_EnumCore} [owner] - Enumのインスタンス
 	 * @param {{[methodName: string]: (...args: any[]) => any}} [methods] - Enumのメソッド
 	 */
 	constructor(name, ordinal, value = name, owner = null, methods = {}) {
@@ -71,7 +72,7 @@ class _EnumItem {
 /**
  * Enum を生成するクラス
  */
-class _DynamicEnumCore {
+class _EnumCore {
 	/**
 	 * @param {Array<string | [string, any]> | Record<string, any>} defs - 定義
 	 * @param {{[methodName: string]: (...args: any[]) => any}} [options.methods] - Enumのメソッド
@@ -213,10 +214,10 @@ class _DynamicEnumCore {
  * DynamicEnum生成関数（インデックスアクセスに対応したProxy付き）
  * @param {Array<string | [string, any]> | Record<string, any>} defs
  * @param {{[methodName: string]: (...args: any[]) => any}} [options.methods] - Enumのメソッド
- * @returns {_DynamicEnumCore & Proxy}
+ * @returns {_EnumCore & Proxy}
  */
-function DynamicEnum(defs, options = {}) {
-	const core = new _DynamicEnumCore(defs, options);
+function Enum(defs, options = {}) {
+	const core = new _EnumCore(defs, options);
 	return new Proxy(core, {
 		get(target, prop, receiver) {
 			if (typeof prop === "string" && /^[0-9]+$/.test(prop)) {
@@ -276,3 +277,176 @@ function DynamicEnum(defs, options = {}) {
 		},
 	});
 }
+
+module.exports = {
+	_EnumItem,
+	_EnumCore,
+	Enum,
+};
+
+},{}],2:[function(require,module,exports){
+module.exports = {
+  Enum: require("./Enum.js")
+};
+
+},{"./Enum.js":1}],3:[function(require,module,exports){
+module.exports = {
+  main: require("./main.js"),
+  base: require("./base/index.js"),
+  libs: require("./libs/index.js"),
+  util: require("./util/index.js")
+};
+
+},{"./base/index.js":2,"./libs/index.js":5,"./main.js":6,"./util/index.js":8}],4:[function(require,module,exports){
+const { _EnumCore, _EnumItem } = require("../base/Enum.js");
+
+class TypeChecker {
+	static matchType(value, expected) {
+		if (Array.isArray(expected)) return expected.some((e) => this.checkType(value, e));
+		return this.checkType(value, expected);
+	}
+
+	static checkType(value, expected) {
+		if (expected === null) return value === null;
+		if (expected === undefined) return value === undefined;
+		if (expected === String || expected === Number || expected === Boolean || expected === Symbol || expected === Function || expected === BigInt) return typeof value === expected.name.toLowerCase();
+		if (expected === Object) return typeof value === "object" && value !== null && !Array.isArray(value);
+		if (expected === Array) return Array.isArray(value);
+		// ----- Enum対応
+		if (expected instanceof _EnumCore) {
+			// Enumの場合
+			return expected.has(value?.name);
+		}
+		if (expected === _EnumItem) return value instanceof _EnumItem;
+		// -----
+		if (typeof expected === "function") return value instanceof expected;
+		return false;
+	}
+
+	static typeNames(expected) {
+		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.stringify(t)).join(" | ");
+		return expected?.name || TypeChecker.stringify(expected);
+	}
+
+	static stringify(value) {
+		if (value === null || value === undefined) {
+			return String(value);
+		}
+		if (typeof value === "object") {
+			if (value?.toString() !== "[object Object]") {
+				return String(value);
+			}
+			try {
+				const jsonString = JSON.stringify(
+					value,
+					(key, val) => {
+						if (val && typeof val === "object") {
+							const size = Object.keys(val).length;
+							// オブジェクトが大きすぎる場合は省略表示
+							if (size > 5) {
+								return `Object with ${size} properties`;
+							}
+						}
+						return val;
+					},
+					0
+				);
+				// JSON.stringifyエラー時にfallback
+				if (jsonString === undefined) {
+					return "Object is too large to display or contains circular references";
+				}
+
+				return jsonString.length > 1000 ? "Object is too large to display" : jsonString; // 文字数が多すぎる場合は省略
+			} catch (e) {
+				return `[オブジェクト表示エラー: ${e.message}]`; // サークル参照等のエラー防止
+			}
+		}
+		return String(value); // それ以外の型はそのまま文字列に変換
+	}
+}
+
+module.exports = TypeChecker;
+
+},{"../base/Enum.js":1}],5:[function(require,module,exports){
+module.exports = {
+  TypeChecker: require("./TypeChecker.js")
+};
+
+},{"./TypeChecker.js":4}],6:[function(require,module,exports){
+const JavaLibraryScript = require("./index.js");
+
+if (typeof window !== "undefined") {
+	window.JavaLibraryScript = JavaLibraryScript;
+}
+
+module.exports = JavaLibraryScript;
+
+},{"./index.js":3}],7:[function(require,module,exports){
+const TypeChecker = require("../libs/TypeChecker.js");
+
+class Interface {
+	static _isDebugMode = false;
+
+	static methodTypes = {};
+
+	constructor() {
+		if (new.target === Interface) {
+			throw new Error("Interfaceは直接インスタンス化できません。継承して使ってください。");
+		}
+
+		if (!Interface._isDebugMode) return;
+
+		const CLASS_REG = /^\s*class\s+/;
+
+		const cls = this.constructor;
+		const typeDefs = cls.methodTypes || {};
+
+		for (const method in typeDefs) {
+			const def = typeDefs[method];
+			if (typeof this[method] !== "function") {
+				throw new Error(`"${cls.name}" はメソッド "${method}" を実装する必要があります`);
+			}
+
+			const originalMethod = this[method].bind(this);
+
+			this[method] = (...args) => {
+				// 引数チェック
+				const expectedArgs = def.args || [];
+				for (let i = 0; i < expectedArgs.length; i++) {
+					if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
+						throw new TypeError(`"${cls.name}.${method}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
+					}
+				}
+
+				const result = originalMethod(...args);
+
+				// 戻り値型を動的に取得
+				const ret = def.returns;
+				const expectedReturn = typeof ret === "function" && !CLASS_REG.test(ret.toString()) ? ret(args) : ret;
+
+				const validate = (val) => {
+					if (!TypeChecker.matchType(val, expectedReturn)) {
+						throw new TypeError(`"${cls.name}.${method}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
+					}
+					return val;
+				};
+
+				if (result instanceof Promise) {
+					return result.then(validate);
+				} else {
+					return validate(result);
+				}
+			};
+		}
+	}
+}
+
+module.exports = Interface;
+
+},{"../libs/TypeChecker.js":4}],8:[function(require,module,exports){
+module.exports = {
+  Interface: require("./Interface.js")
+};
+
+},{"./Interface.js":7}]},{},[6])
+//# sourceMappingURL=JavaLibraryScript.js.map
