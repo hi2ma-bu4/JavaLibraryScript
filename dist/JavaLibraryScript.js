@@ -1,8 +1,10 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+
 /**
  * 単一のEnum要素を表すクラス
  */
-class _EnumItem {
+class _EnumItem extends JavaLibraryScriptCore {
 	/**
 	 * @param {string} name - Enumのキー名
 	 * @param {number} ordinal - 順序番号（自動インクリメント）
@@ -11,6 +13,7 @@ class _EnumItem {
 	 * @param {{[methodName: string]: (...args: any[]) => any}} [methods] - Enumのメソッド
 	 */
 	constructor(name, ordinal, value = name, owner = null, methods = {}) {
+		super();
 		this.name = name;
 		this.ordinal = ordinal;
 		this.value = value;
@@ -72,12 +75,13 @@ class _EnumItem {
 /**
  * Enum を生成するクラス
  */
-class _EnumCore {
+class _EnumCore extends JavaLibraryScriptCore {
 	/**
 	 * @param {Array<string | [string, any]> | Record<string, any>} defs - 定義
 	 * @param {{[methodName: string]: (...args: any[]) => any}} [options.methods] - Enumのメソッド
 	 */
 	constructor(defs, options = {}) {
+		super();
 		/** @type {_EnumItem[]} */
 		this._items = [];
 		this._methods = options.methods || {};
@@ -89,7 +93,7 @@ class _EnumCore {
 		} else if (typeof defs === "object" && defs !== null) {
 			entries = Object.entries(defs);
 		} else {
-			throw new TypeError("DynamicEnum: 配列か連想配列で定義してください");
+			throw new TypeError("Enum: 配列か連想配列で定義してください");
 		}
 
 		entries.forEach(([name, value], index) => {
@@ -284,111 +288,17 @@ module.exports = {
 	Enum,
 };
 
-},{}],2:[function(require,module,exports){
-module.exports = {
-  ...require("./Enum.js")
-};
-
-},{"./Enum.js":1}],3:[function(require,module,exports){
-module.exports = {
-  base: require("./base"),
-  libs: require("./libs"),
-  util: require("./util")
-};
-
-},{"./base":2,"./libs":5,"./util":8}],4:[function(require,module,exports){
-const { _EnumCore, _EnumItem } = require("../base/Enum.js");
-
-class TypeChecker {
-	static matchType(value, expected) {
-		if (Array.isArray(expected)) return expected.some((e) => this.checkType(value, e));
-		return this.checkType(value, expected);
-	}
-
-	static checkType(value, expected) {
-		if (expected === null) return value === null;
-		if (expected === undefined) return value === undefined;
-		if (expected === String || expected === Number || expected === Boolean || expected === Symbol || expected === Function || expected === BigInt) return typeof value === expected.name.toLowerCase();
-		if (expected === Object) return typeof value === "object" && value !== null && !Array.isArray(value);
-		if (expected === Array) return Array.isArray(value);
-		// ----- Enum対応
-		if (expected instanceof _EnumCore) {
-			// Enumの場合
-			return expected.has(value?.name);
-		}
-		if (expected === _EnumItem) return value instanceof _EnumItem;
-		// -----
-		if (typeof expected === "function") return value instanceof expected;
-		return false;
-	}
-
-	static typeNames(expected) {
-		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.stringify(t)).join(" | ");
-		return expected?.name || TypeChecker.stringify(expected);
-	}
-
-	static stringify(value) {
-		if (value === null || value === undefined) {
-			return String(value);
-		}
-		if (typeof value === "object") {
-			if (value?.toString() !== "[object Object]") {
-				return String(value);
-			}
-			try {
-				const jsonString = JSON.stringify(
-					value,
-					(key, val) => {
-						if (val && typeof val === "object") {
-							const size = Object.keys(val).length;
-							// オブジェクトが大きすぎる場合は省略表示
-							if (size > 5) {
-								return `Object with ${size} properties`;
-							}
-						}
-						return val;
-					},
-					0
-				);
-				// JSON.stringifyエラー時にfallback
-				if (jsonString === undefined) {
-					return "Object is too large to display or contains circular references";
-				}
-
-				return jsonString.length > 1000 ? "Object is too large to display" : jsonString; // 文字数が多すぎる場合は省略
-			} catch (e) {
-				return `[オブジェクト表示エラー: ${e.message}]`; // サークル参照等のエラー防止
-			}
-		}
-		return String(value); // それ以外の型はそのまま文字列に変換
-	}
-}
-
-module.exports = TypeChecker;
-
-},{"../base/Enum.js":1}],5:[function(require,module,exports){
-module.exports = {
-  TypeChecker: require("./TypeChecker.js")
-};
-
-},{"./TypeChecker.js":4}],6:[function(require,module,exports){
-const JavaLibraryScript = require("./index.js");
-
-if (typeof window !== "undefined") {
-	window.JavaLibraryScript = JavaLibraryScript;
-}
-
-module.exports = JavaLibraryScript;
-
-},{"./index.js":3}],7:[function(require,module,exports){
+},{"../libs/sys/JavaLibraryScriptCore.js":7}],2:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
 
-class Interface {
+class Interface extends JavaLibraryScriptCore {
 	static _isDebugMode = false;
 
 	static methodTypes = {};
 
 	constructor() {
+		super();
 		if (new.target === Interface) {
 			throw new Error("Interfaceは直接インスタンス化できません。継承して使ってください。");
 		}
@@ -442,10 +352,251 @@ class Interface {
 
 module.exports = Interface;
 
-},{"../libs/TypeChecker.js":4}],8:[function(require,module,exports){
+},{"../libs/TypeChecker.js":5,"../libs/sys/JavaLibraryScriptCore.js":7}],3:[function(require,module,exports){
 module.exports = {
+  ...require("./Enum.js"),
   Interface: require("./Interface.js")
 };
 
-},{"./Interface.js":7}]},{},[6])
+},{"./Enum.js":1,"./Interface.js":2}],4:[function(require,module,exports){
+module.exports = {
+  base: require("./base"),
+  libs: require("./libs"),
+  util: require("./util")
+};
+
+},{"./base":3,"./libs":6,"./util":12}],5:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+const { _EnumCore, _EnumItem } = require("../base/Enum.js");
+
+class TypeChecker extends JavaLibraryScriptCore {
+	static _NotType = class _NotType extends JavaLibraryScriptCore {
+		constructor(typeToExclude) {
+			super();
+			if (typeToExclude instanceof TypeChecker._NotType) throw new TypeError("typeToExclude must be instance of NotType");
+			this.typeToExclude = typeToExclude;
+		}
+	};
+
+	static NotType(typeToExclude) {
+		return new TypeChecker._NotType(typeToExclude);
+	}
+	// ==================================================
+
+	static Any = Symbol("any");
+	static Void = Symbol("void");
+	static NoReturn = this.Void;
+
+	static NotNull = this.NotType(null);
+	static NotUndefined = this.NotType(undefined);
+
+	// ==================================================
+
+	static matchType(value, expected) {
+		if (Array.isArray(expected)) {
+			const notTypes = expected.filter((t) => t instanceof this._NotType);
+			const isNotExcluded = notTypes.some((t) => this.checkType(value, t.typeToExclude));
+			if (isNotExcluded) return false;
+			const notExcluded = expected.filter((t) => !(t instanceof this._NotType));
+			if (notExcluded.length === 0) return true;
+			return notExcluded.some((e) => this.checkType(value, e));
+		}
+		return this.checkType(value, expected);
+	}
+
+	static checkType(value, expected) {
+		if (expected instanceof this._NotType) {
+			// 除外型なので、valueが除外型にマッチしたらfalse
+			return !this.checkType(value, expected.typeToExclude);
+		}
+		if (expected === this.Any) return true;
+		if (expected === this.NoReturn) return value === undefined;
+		if (expected === null) return value === null;
+		if (expected === undefined) return value === undefined;
+		if (expected === String || expected === Number || expected === Boolean || expected === Symbol || expected === Function || expected === BigInt) return typeof value === expected.name.toLowerCase();
+		if (expected === Object) return typeof value === "object" && value !== null && !Array.isArray(value);
+		if (expected === Array) return Array.isArray(value);
+		// ----- Enum対応
+		if (expected instanceof _EnumCore) {
+			// Enumの場合
+			return expected.has(value?.name);
+		}
+		if (expected === _EnumItem) return value instanceof _EnumItem;
+		// -----
+		if (typeof expected === "function") return value instanceof expected;
+		return false;
+	}
+
+	static typeNames(expected) {
+		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.stringify(t)).join(" | ");
+		return expected?.name || TypeChecker.stringify(expected);
+	}
+
+	static stringify(value) {
+		if (value === null || value === undefined) {
+			return String(value);
+		}
+		if (typeof value === "object") {
+			if (value?.toString() !== "[object Object]") {
+				return String(value);
+			}
+			if (value instanceof this._NotType) {
+				return `NotType(${TypeChecker.stringify(value.typeToExclude)})`;
+			}
+			try {
+				const jsonString = JSON.stringify(
+					value,
+					(key, val) => {
+						if (val && typeof val === "object") {
+							const size = Object.keys(val).length;
+							// オブジェクトが大きすぎる場合は省略表示
+							if (size > 5) {
+								return `Object with ${size} properties`;
+							}
+						}
+						return val;
+					},
+					0
+				);
+				// JSON.stringifyエラー時にfallback
+				if (jsonString === undefined) {
+					return "Object is too large to display or contains circular references";
+				}
+
+				return jsonString.length > 1000 ? "Object is too large to display" : jsonString; // 文字数が多すぎる場合は省略
+			} catch (e) {
+				return `[オブジェクト表示エラー: ${e.message}]`; // サークル参照等のエラー防止
+			}
+		}
+		return String(value); // それ以外の型はそのまま文字列に変換
+	}
+}
+
+module.exports = TypeChecker;
+
+},{"../base/Enum.js":1,"../libs/sys/JavaLibraryScriptCore.js":7}],6:[function(require,module,exports){
+module.exports = {
+  TypeChecker: require("./TypeChecker.js"),
+  sys: require("./sys")
+};
+
+},{"./TypeChecker.js":5,"./sys":8}],7:[function(require,module,exports){
+const LIBRARY_ID = Symbol("JavaLibraryScript");
+
+class JavaLibraryScriptCore {
+	static [LIBRARY_ID] = true;
+}
+
+module.exports = JavaLibraryScriptCore;
+
+},{}],8:[function(require,module,exports){
+module.exports = {
+  JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js")
+};
+
+},{"./JavaLibraryScriptCore.js":7}],9:[function(require,module,exports){
+const JavaLibraryScript = require("./index.js");
+
+if (typeof window !== "undefined") {
+	window.JavaLibraryScript = JavaLibraryScript;
+}
+
+module.exports = JavaLibraryScript;
+
+},{"./index.js":4}],10:[function(require,module,exports){
+const Interface = require("../base/Interface");
+const TypeChecker = require("../libs/TypeChecker");
+
+const Any = TypeChecker.Any;
+const NoReturn = TypeChecker.NoReturn;
+const NotNull = TypeChecker.NotNull;
+const NotUndefined = TypeChecker.NotUndefined;
+
+const NotEmpty = [NotNull, NotUndefined];
+
+class BaseMap extends Interface {
+	static methodTypes = {
+		put: {
+			args: [NotEmpty, NotEmpty],
+			returns: NoReturn,
+		},
+		get: {
+			args: [NotEmpty],
+			returns: Any,
+		},
+		containsKey: {
+			args: [NotEmpty],
+			returns: Boolean,
+		},
+		delete: {
+			args: [NotEmpty],
+			returns: Boolean,
+		},
+	};
+
+	constructor(KeyType, ValueType) {
+		super();
+		if (new.target === BaseMap) {
+			throw new TypeError("Cannot instantiate abstract class BaseMap");
+		}
+
+		this.KeyType = KeyType;
+		this.ValueType = ValueType;
+	}
+
+	_checkKey(key) {
+		if (!TypeChecker.matchType(key, this.KeyType)) {
+			throw new TypeError(`キー型が一致しません。期待: ${this.KeyType.name} → 実際: ${TypeChecker.stringify(key)}`);
+		}
+	}
+
+	_checkValue(value) {
+		if (!TypeChecker.matchType(value, this.ValueType)) {
+			throw new TypeError(`値型が一致しません。期待: ${this.ValueType.name} → 実際: ${TypeChecker.stringify(value)}`);
+		}
+	}
+}
+
+module.exports = BaseMap;
+
+},{"../base/Interface":2,"../libs/TypeChecker":5}],11:[function(require,module,exports){
+const BaseMap = require("./BaseMap");
+
+class HashMap extends BaseMap {
+	constructor(KeyType, ValueType) {
+		super(KeyType, ValueType);
+		this._data = new Map();
+	}
+
+	put(key, value) {
+		this._checkKey(key);
+		this._checkValue(value);
+		this._data.set(key, value);
+	}
+
+	get(key) {
+		this._checkKey(key);
+		return this._data.get(key);
+	}
+
+	containsKey(key) {
+		this._checkKey(key);
+		return this._data.has(key);
+	}
+
+	delete(key) {
+		this._checkKey(key);
+		return this._data.delete(key);
+	}
+}
+
+module.exports = HashMap;
+
+},{"./BaseMap":10}],12:[function(require,module,exports){
+module.exports = {
+  BaseMap: require("./BaseMap.js"),
+  HashMap: require("./HashMap.js")
+};
+
+},{"./BaseMap.js":10,"./HashMap.js":11}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map

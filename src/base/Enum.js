@@ -1,7 +1,9 @@
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+
 /**
  * 単一のEnum要素を表すクラス
  */
-class _EnumItem {
+class _EnumItem extends JavaLibraryScriptCore {
 	/**
 	 * @param {string} name - Enumのキー名
 	 * @param {number} ordinal - 順序番号（自動インクリメント）
@@ -10,6 +12,7 @@ class _EnumItem {
 	 * @param {{[methodName: string]: (...args: any[]) => any}} [methods] - Enumのメソッド
 	 */
 	constructor(name, ordinal, value = name, owner = null, methods = {}) {
+		super();
 		this.name = name;
 		this.ordinal = ordinal;
 		this.value = value;
@@ -71,12 +74,13 @@ class _EnumItem {
 /**
  * Enum を生成するクラス
  */
-class _EnumCore {
+class _EnumCore extends JavaLibraryScriptCore {
 	/**
 	 * @param {Array<string | [string, any]> | Record<string, any>} defs - 定義
 	 * @param {{[methodName: string]: (...args: any[]) => any}} [options.methods] - Enumのメソッド
 	 */
 	constructor(defs, options = {}) {
+		super();
 		/** @type {_EnumItem[]} */
 		this._items = [];
 		this._methods = options.methods || {};
@@ -88,7 +92,7 @@ class _EnumCore {
 		} else if (typeof defs === "object" && defs !== null) {
 			entries = Object.entries(defs);
 		} else {
-			throw new TypeError("DynamicEnum: 配列か連想配列で定義してください");
+			throw new TypeError("Enum: 配列か連想配列で定義してください");
 		}
 
 		entries.forEach(([name, value], index) => {

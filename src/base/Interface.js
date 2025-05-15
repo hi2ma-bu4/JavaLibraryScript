@@ -1,11 +1,13 @@
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
 
-class Interface {
+class Interface extends JavaLibraryScriptCore {
 	static _isDebugMode = false;
 
 	static methodTypes = {};
 
 	constructor() {
+		super();
 		if (new.target === Interface) {
 			throw new Error("Interfaceは直接インスタンス化できません。継承して使ってください。");
 		}

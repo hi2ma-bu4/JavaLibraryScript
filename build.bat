@@ -4,4 +4,4 @@ rem “ú–{Œê‚Å‚·
 
 call npm run build
 
-pause
+if "%~1"=="" pause

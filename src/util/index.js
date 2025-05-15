@@ -1,3 +1,4 @@
 module.exports = {
-  Interface: require("./Interface.js")
+  BaseMap: require("./BaseMap.js"),
+  HashMap: require("./HashMap.js")
 };

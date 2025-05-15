@@ -18,19 +18,28 @@ CDNのURL
 https://cdn.jsdelivr.net/gh/hi2ma-bu4/JavaLibraryScript/dist/JavaLibraryScript.min.js
 ```
 
-## 連携
-
-index.jsで一括読み込み
-
-(jasc.js対応)
-
 
 ## 実装機能
 
-### DynamicEnum
+### base
+
+#### Enum
 
 JavaのenumをJavaScriptにそれっぽく似せて作ったやつ
 
-### Interface
+#### Interface
 
 JavaのInterfaceをJavaScriptにそれっぽく似せて作ったやつ
+
+
+### util
+
+#### BaseMap
+
+JavaのMapをJavaScriptにそれっぽく似せて作ったやつ
+
+Mapが予約語だったので変更
+
+#### HashMap
+
+JavaのHashMapをJavaScriptにそれっぽく似せて作ったやつ

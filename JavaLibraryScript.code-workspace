@@ -5,6 +5,10 @@
 		}
 	],
 	"settings": {
+		"code-runner.executorMap": {
+			"javascript": "./build.bat",
+			"bat": "cmd /c",
+		},
 		"cSpell.words": [
 			"javalibraryscript"
 		]

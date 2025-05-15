@@ -1,12 +1,48 @@
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
-class TypeChecker {
+class TypeChecker extends JavaLibraryScriptCore {
+	static _NotType = class _NotType extends JavaLibraryScriptCore {
+		constructor(typeToExclude) {
+			super();
+			if (typeToExclude instanceof TypeChecker._NotType) throw new TypeError("typeToExclude must be instance of NotType");
+			this.typeToExclude = typeToExclude;
+		}
+	};
+
+	static NotType(typeToExclude) {
+		return new TypeChecker._NotType(typeToExclude);
+	}
+	// ==================================================
+
+	static Any = Symbol("any");
+	static Void = Symbol("void");
+	static NoReturn = this.Void;
+
+	static NotNull = this.NotType(null);
+	static NotUndefined = this.NotType(undefined);
+
+	// ==================================================
+
 	static matchType(value, expected) {
-		if (Array.isArray(expected)) return expected.some((e) => this.checkType(value, e));
+		if (Array.isArray(expected)) {
+			const notTypes = expected.filter((t) => t instanceof this._NotType);
+			const isNotExcluded = notTypes.some((t) => this.checkType(value, t.typeToExclude));
+			if (isNotExcluded) return false;
+			const notExcluded = expected.filter((t) => !(t instanceof this._NotType));
+			if (notExcluded.length === 0) return true;
+			return notExcluded.some((e) => this.checkType(value, e));
+		}
 		return this.checkType(value, expected);
 	}
 
 	static checkType(value, expected) {
+		if (expected instanceof this._NotType) {
+			// 除外型なので、valueが除外型にマッチしたらfalse
+			return !this.checkType(value, expected.typeToExclude);
+		}
+		if (expected === this.Any) return true;
+		if (expected === this.NoReturn) return value === undefined;
 		if (expected === null) return value === null;
 		if (expected === undefined) return value === undefined;
 		if (expected === String || expected === Number || expected === Boolean || expected === Symbol || expected === Function || expected === BigInt) return typeof value === expected.name.toLowerCase();
@@ -35,6 +71,9 @@ class TypeChecker {
 		if (typeof value === "object") {
 			if (value?.toString() !== "[object Object]") {
 				return String(value);
+			}
+			if (value instanceof this._NotType) {
+				return `NotType(${TypeChecker.stringify(value.typeToExclude)})`;
 			}
 			try {
 				const jsonString = JSON.stringify(
