@@ -12,6 +12,12 @@ class HashMap extends BaseMap {
 		this._data.set(key, value);
 	}
 
+	putAll(map) {
+		for (const [k, v] of map.entries()) {
+			this.set(k, v);
+		}
+	}
+
 	get(key) {
 		this._checkKey(key);
 		return this._data.get(key);
@@ -22,9 +28,67 @@ class HashMap extends BaseMap {
 		return this._data.has(key);
 	}
 
-	delete(key) {
+	containsValue(value) {
+		for (const v of this.values()) {
+			if (v === value) return true;
+		}
+		return false;
+	}
+
+	remove(key) {
 		this._checkKey(key);
 		return this._data.delete(key);
+	}
+
+	size() {
+		return this._data.size;
+	}
+
+	isEmpty() {
+		return this._data.size === 0;
+	}
+
+	clear() {
+		this._data.clear();
+	}
+
+	containsKey(key) {
+		this._checkKey(key);
+		return this._data.has(key);
+	}
+
+	containsValue(value) {
+		for (const val of this._data.values()) {
+			if (val === value) return true;
+		}
+		return false;
+	}
+
+	keySet() {
+		return Array.from(this._data.keys());
+	}
+
+	values() {
+		return Array.from(this._data.values());
+	}
+
+	entrySet() {
+		return Array.from(this._data.entries());
+	}
+
+	equals(otherMap) {
+		if (this.size !== otherMap.size) return false;
+		for (const [k, v] of this.entries()) {
+			if (!otherMap.has(k) || otherMap.get(k) !== v) return false;
+		}
+		return true;
+	}
+
+	toString() {
+		const data = Array.from(this.entries())
+			.map(([k, v]) => `${k}=${v}`)
+			.join(", ");
+		return `{ ${data} }`;
 	}
 }
 

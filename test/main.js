@@ -2,5 +2,5 @@ jasc.on("DOMContentLoaded", () => {
 	console.log("JavaLibraryScript");
 	console.log(JavaLibraryScript);
 
-	JavaLibraryScript.util.Interface._isDebugMode = true;
+	JavaLibraryScript.base.Interface._isDebugMode = true;
 });

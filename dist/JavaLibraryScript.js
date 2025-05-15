@@ -305,8 +305,6 @@ class Interface extends JavaLibraryScriptCore {
 
 		if (!Interface._isDebugMode) return;
 
-		const CLASS_REG = /^\s*class\s+/;
-
 		const cls = this.constructor;
 		const typeDefs = cls.methodTypes || {};
 
@@ -331,7 +329,7 @@ class Interface extends JavaLibraryScriptCore {
 
 				// 戻り値型を動的に取得
 				const ret = def.returns;
-				const expectedReturn = typeof ret === "function" && !CLASS_REG.test(ret.toString()) ? ret(args) : ret;
+				const expectedReturn = TypeChecker.checkClass(ret) ? ret : ret(args);
 
 				const validate = (val) => {
 					if (!TypeChecker.matchType(val, expectedReturn)) {
@@ -365,11 +363,14 @@ module.exports = {
   util: require("./util")
 };
 
-},{"./base":3,"./libs":6,"./util":12}],5:[function(require,module,exports){
+},{"./base":3,"./libs":6,"./util":13}],5:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
 class TypeChecker extends JavaLibraryScriptCore {
+	static _CLASS_REG = /^\s*class\s+/;
+
+	// ==================================================
 	static _NotType = class _NotType extends JavaLibraryScriptCore {
 		constructor(typeToExclude) {
 			super();
@@ -470,6 +471,17 @@ class TypeChecker extends JavaLibraryScriptCore {
 		}
 		return String(value); // それ以外の型はそのまま文字列に変換
 	}
+
+	static checkClass(fn) {
+		if (typeof fn !== "function") return false;
+		if (this._CLASS_REG.test(fn.toString())) return true;
+		try {
+			new new Proxy(fn, { construct: () => ({}) })();
+			return true;
+		} catch {
+			return false;
+		}
+	}
 }
 
 module.exports = TypeChecker;
@@ -516,22 +528,17 @@ const NotEmpty = [NotNull, NotUndefined];
 
 class BaseMap extends Interface {
 	static methodTypes = {
-		put: {
-			args: [NotEmpty, NotEmpty],
-			returns: NoReturn,
-		},
-		get: {
-			args: [NotEmpty],
-			returns: Any,
-		},
-		containsKey: {
-			args: [NotEmpty],
-			returns: Boolean,
-		},
-		delete: {
-			args: [NotEmpty],
-			returns: Boolean,
-		},
+		put: { args: [NotEmpty, NotEmpty], returns: NoReturn },
+		get: { args: [NotEmpty], returns: Any },
+		remove: { args: [NotEmpty], returns: Boolean },
+		size: { returns: Number },
+		isEmpty: { returns: Boolean },
+		clear: { returns: NoReturn },
+		containsKey: { args: [NotEmpty], returns: Boolean },
+		containsValue: { args: [NotEmpty], returns: Boolean },
+		keySet: { returns: Array },
+		values: { returns: Array },
+		entrySet: { returns: Array },
 	};
 
 	constructor(KeyType, ValueType) {
@@ -574,6 +581,12 @@ class HashMap extends BaseMap {
 		this._data.set(key, value);
 	}
 
+	putAll(map) {
+		for (const [k, v] of map.entries()) {
+			this.set(k, v);
+		}
+	}
+
 	get(key) {
 		this._checkKey(key);
 		return this._data.get(key);
@@ -584,19 +597,180 @@ class HashMap extends BaseMap {
 		return this._data.has(key);
 	}
 
-	delete(key) {
+	containsValue(value) {
+		for (const v of this.values()) {
+			if (v === value) return true;
+		}
+		return false;
+	}
+
+	remove(key) {
 		this._checkKey(key);
 		return this._data.delete(key);
+	}
+
+	size() {
+		return this._data.size;
+	}
+
+	isEmpty() {
+		return this._data.size === 0;
+	}
+
+	clear() {
+		this._data.clear();
+	}
+
+	containsKey(key) {
+		this._checkKey(key);
+		return this._data.has(key);
+	}
+
+	containsValue(value) {
+		for (const val of this._data.values()) {
+			if (val === value) return true;
+		}
+		return false;
+	}
+
+	keySet() {
+		return Array.from(this._data.keys());
+	}
+
+	values() {
+		return Array.from(this._data.values());
+	}
+
+	entrySet() {
+		return Array.from(this._data.entries());
+	}
+
+	equals(otherMap) {
+		if (this.size !== otherMap.size) return false;
+		for (const [k, v] of this.entries()) {
+			if (!otherMap.has(k) || otherMap.get(k) !== v) return false;
+		}
+		return true;
+	}
+
+	toString() {
+		const data = Array.from(this.entries())
+			.map(([k, v]) => `${k}=${v}`)
+			.join(", ");
+		return `{ ${data} }`;
 	}
 }
 
 module.exports = HashMap;
 
 },{"./BaseMap":10}],12:[function(require,module,exports){
+const BaseMap = require("./BaseMap");
+const HashMap = require("./HashMap");
+
+class TreeMap extends HashMap {
+	static defaultCompare(a, b) {
+		if (typeof a === "number" && typeof b === "number") return a - b;
+		if (typeof a === "string" && typeof b === "string") return a.localeCompare(b);
+		const sa = String(a),
+			sb = String(b);
+		return sa > sb ? 1 : sa < sb ? -1 : 0;
+	}
+
+	static compareByProp(propName, fallback = TreeMap.defaultCompare) {
+		return (a, b) => fallback(a[propName], b[propName]);
+	}
+
+	constructor(KeyType, ValueType, compareFunction = TreeMap.defaultCompare) {
+		super(KeyType, ValueType);
+		this._compare = compareFunction;
+		this._sortedKeys = null;
+	}
+
+	_invalidateSortedKeys() {
+		this._sortedKeys = null;
+	}
+
+	_getSortedKeys() {
+		if (!this._sortedKeys) {
+			this._sortedKeys = Array.from(this.keys()).sort(this._compare);
+		}
+		return this._sortedKeys;
+	}
+
+	put(key, value) {
+		const existed = this._data.has(key);
+		super.put(key, value);
+		if (!existed) this._invalidateSortedKeys();
+	}
+
+	remove(key) {
+		const deleted = super.remove(key);
+		if (deleted) this._invalidateSortedKeys();
+		return deleted;
+	}
+
+	clear() {
+		super.clear();
+		this._invalidateSortedKeys();
+	}
+
+	firstKey() {
+		const keys = this._getSortedKeys();
+		return keys.length > 0 ? keys[0] : undefined;
+	}
+
+	lastKey() {
+		const keys = this._getSortedKeys();
+		return keys.length > 0 ? keys[keys.length - 1] : undefined;
+	}
+
+	ceilingKey(key) {
+		return this._getSortedKeys().find((k) => this._compare(k, key) >= 0);
+	}
+
+	floorKey(key) {
+		const keys = this._getSortedKeys();
+		for (let i = keys.length - 1; i >= 0; i--) {
+			if (this._compare(keys[i], key) <= 0) return keys[i];
+		}
+		return undefined;
+	}
+
+	headMap(toKey) {
+		const map = new TreeMap();
+		for (const k of this._getSortedKeys()) {
+			if (this._compare(k, toKey) >= 0) break;
+			map.set(k, this.get(k));
+		}
+		return map;
+	}
+
+	tailMap(fromKey) {
+		const map = new TreeMap();
+		for (const k of this._getSortedKeys()) {
+			if (this._compare(k, fromKey) >= 0) map.set(k, this.get(k));
+		}
+		return map;
+	}
+
+	subMap(fromKey, toKey) {
+		const map = new TreeMap();
+		for (const k of this._getSortedKeys()) {
+			if (this._compare(k, toKey) >= 0) break;
+			if (this._compare(k, fromKey) >= 0) map.set(k, this.get(k));
+		}
+		return map;
+	}
+}
+
+module.exports = TreeMap;
+
+},{"./BaseMap":10,"./HashMap":11}],13:[function(require,module,exports){
 module.exports = {
   BaseMap: require("./BaseMap.js"),
-  HashMap: require("./HashMap.js")
+  HashMap: require("./HashMap.js"),
+  TreeMap: require("./TreeMap.js")
 };
 
-},{"./BaseMap.js":10,"./HashMap.js":11}]},{},[9])
+},{"./BaseMap.js":10,"./HashMap.js":11,"./TreeMap.js":12}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map

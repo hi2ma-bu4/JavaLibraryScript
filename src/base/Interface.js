@@ -14,8 +14,6 @@ class Interface extends JavaLibraryScriptCore {
 
 		if (!Interface._isDebugMode) return;
 
-		const CLASS_REG = /^\s*class\s+/;
-
 		const cls = this.constructor;
 		const typeDefs = cls.methodTypes || {};
 
@@ -40,7 +38,7 @@ class Interface extends JavaLibraryScriptCore {
 
 				// 戻り値型を動的に取得
 				const ret = def.returns;
-				const expectedReturn = typeof ret === "function" && !CLASS_REG.test(ret.toString()) ? ret(args) : ret;
+				const expectedReturn = TypeChecker.checkClass(ret) ? ret : ret(args);
 
 				const validate = (val) => {
 					if (!TypeChecker.matchType(val, expectedReturn)) {

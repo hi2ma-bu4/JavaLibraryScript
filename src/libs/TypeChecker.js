@@ -2,6 +2,9 @@ const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
 class TypeChecker extends JavaLibraryScriptCore {
+	static _CLASS_REG = /^\s*class\s+/;
+
+	// ==================================================
 	static _NotType = class _NotType extends JavaLibraryScriptCore {
 		constructor(typeToExclude) {
 			super();
@@ -101,6 +104,17 @@ class TypeChecker extends JavaLibraryScriptCore {
 			}
 		}
 		return String(value); // それ以外の型はそのまま文字列に変換
+	}
+
+	static checkClass(fn) {
+		if (typeof fn !== "function") return false;
+		if (this._CLASS_REG.test(fn.toString())) return true;
+		try {
+			new new Proxy(fn, { construct: () => ({}) })();
+			return true;
+		} catch {
+			return false;
+		}
 	}
 }
 

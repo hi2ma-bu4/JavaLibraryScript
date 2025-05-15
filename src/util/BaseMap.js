@@ -10,22 +10,17 @@ const NotEmpty = [NotNull, NotUndefined];
 
 class BaseMap extends Interface {
 	static methodTypes = {
-		put: {
-			args: [NotEmpty, NotEmpty],
-			returns: NoReturn,
-		},
-		get: {
-			args: [NotEmpty],
-			returns: Any,
-		},
-		containsKey: {
-			args: [NotEmpty],
-			returns: Boolean,
-		},
-		delete: {
-			args: [NotEmpty],
-			returns: Boolean,
-		},
+		put: { args: [NotEmpty, NotEmpty], returns: NoReturn },
+		get: { args: [NotEmpty], returns: Any },
+		remove: { args: [NotEmpty], returns: Boolean },
+		size: { returns: Number },
+		isEmpty: { returns: Boolean },
+		clear: { returns: NoReturn },
+		containsKey: { args: [NotEmpty], returns: Boolean },
+		containsValue: { args: [NotEmpty], returns: Boolean },
+		keySet: { returns: Array },
+		values: { returns: Array },
+		entrySet: { returns: Array },
 	};
 
 	constructor(KeyType, ValueType) {
