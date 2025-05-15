@@ -3,6 +3,20 @@ const path = require("node:path");
 
 const CL = require("./libs/ColorLogger.js");
 
+const skipList = new Set([
+	"index.js", // 自動生成対象自身
+	"main.js",
+]);
+
+function isPlainObjectExport(modulePath) {
+	try {
+		const mod = require(modulePath);
+		return typeof mod === "object" && mod !== null && !Array.isArray(mod);
+	} catch {
+		return false;
+	}
+}
+
 /**
  * index.jsを生成する
  * @param {string} dir
@@ -11,10 +25,10 @@ function generateIndex(dir, baseDir = dir) {
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
 
 	// jsファイルだけ、かつindex.jsは除外
-	const jsFiles = entries.filter((e) => e.isFile() && e.name.endsWith(".js") && e.name !== "index.js");
+	const jsFiles = entries.filter((e) => e.isFile() && e.name.endsWith(".js") && !skipList.has(e.name));
 
 	// サブディレクトリ
-	const subDirs = entries.filter((e) => e.isDirectory());
+	const subDirs = entries.filter((e) => e.isDirectory() && !skipList.has(e.name));
 
 	// 先にサブディレクトリも再帰処理（深い階層から順に）
 	for (const subDir of subDirs) {
@@ -22,23 +36,29 @@ function generateIndex(dir, baseDir = dir) {
 	}
 
 	// export文を作成
-	let exportsObj = {};
+	const exportLines = [];
 
 	// ファイルのエクスポートを設定
 	jsFiles.forEach((file) => {
-		const name = path.basename(file.name, ".js");
-		exportsObj[name] = `require("./${file.name}")`;
+		const filePath = path.join(dir, file.name);
+		const requirePath = `./${file.name}`;
+		const key = path.basename(file.name, ".js");
+
+		const fullRequirePath = path.resolve(filePath);
+
+		if (isPlainObjectExport(fullRequirePath)) {
+			exportLines.push(`  ...require("${requirePath}")`);
+		} else {
+			exportLines.push(`  ${key}: require("${requirePath}")`);
+		}
 	});
 
 	// サブフォルダのindexもexport
 	subDirs.forEach((subDir) => {
-		const name = subDir.name;
-		exportsObj[name] = `require("./${name}/index.js")`;
+		exportLines.push(`  ${subDir.name}: require("./${subDir.name}")`);
 	});
 
 	// module.exportsの内容を文字列で作成
-	const exportLines = Object.entries(exportsObj).map(([key, val]) => `  ${key}: ${val}`);
-
 	const content = `module.exports = {\n${exportLines.join(",\n")}\n};\n`;
 
 	// index.jsを書き込み

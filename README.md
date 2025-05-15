@@ -15,7 +15,7 @@ Javaの機能をJavaScriptにそれっぽく作成したもの
 CDNのURL
 
 ```url
-https://cdn.jsdelivr.net/gh/hi2ma-bu4/JavaLibraryScript/index.js
+https://cdn.jsdelivr.net/gh/hi2ma-bu4/JavaLibraryScript/dist/JavaLibraryScript.min.js
 ```
 
 ## 連携

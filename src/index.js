@@ -1,6 +1,5 @@
 module.exports = {
-  main: require("./main.js"),
-  base: require("./base/index.js"),
-  libs: require("./libs/index.js"),
-  util: require("./util/index.js")
+  base: require("./base"),
+  libs: require("./libs"),
+  util: require("./util")
 };

@@ -1,3 +1,3 @@
 module.exports = {
-  Enum: require("./Enum.js")
+  ...require("./Enum.js")
 };
