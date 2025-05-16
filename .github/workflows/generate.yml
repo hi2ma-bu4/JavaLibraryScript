@@ -1,0 +1,52 @@
+name: Generate .d.ts
+
+on:
+    push:
+        tags:
+            - "v*"
+
+permissions:
+    contents: write # リポジトリのコンテンツに書き込み権限を与える
+
+jobs:
+    generate-dts:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: リポジトリをチェックアウト
+              uses: actions/checkout@v4
+
+            - name: Node.js をセットアップ
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+
+            - name: TypeScript をインストール
+              run: npm install --save-dev typescript
+
+            - name: tsconfig.json を作成
+              run: |
+                  echo '{
+                    "compilerOptions": {
+                      "allowJs": true,
+                      "declaration": true,
+                      "emitDeclarationOnly": true,
+                      "outDir": "types"
+                    },
+                    "include": ["dist/*.js"]
+                  }' > tsconfig.json
+
+            - name: .d.ts を生成
+              run: npx tsc
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  if-no-files-found: error
+                  path: types/*
+
+            - name: Upload .d.ts to existing release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: types/*.d.ts # .d.tsファイルをアップロード
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
