@@ -115,6 +115,7 @@ class TypeChecker extends JavaLibraryScriptCore {
 	static checkClass(fn) {
 		if (typeof fn !== "function") return false;
 		if (this._CLASS_REG.test(fn.toString())) return true;
+		if (fn === Function) return true;
 		try {
 			new new Proxy(fn, { construct: () => ({}) })();
 			return true;

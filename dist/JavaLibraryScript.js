@@ -481,6 +481,7 @@ class TypeChecker extends JavaLibraryScriptCore {
 	static checkClass(fn) {
 		if (typeof fn !== "function") return false;
 		if (this._CLASS_REG.test(fn.toString())) return true;
+		if (fn === Function) return true;
 		try {
 			new new Proxy(fn, { construct: () => ({}) })();
 			return true;
@@ -835,8 +836,642 @@ module.exports = {
   BaseMap: require("./BaseMap.js"),
   HashMap: require("./HashMap.js"),
   LinkedHashMap: require("./LinkedHashMap.js"),
-  TreeMap: require("./TreeMap.js")
+  TreeMap: require("./TreeMap.js"),
+  stream: require("./stream")
 };
 
-},{"./BaseMap.js":10,"./HashMap.js":11,"./LinkedHashMap.js":12,"./TreeMap.js":13}]},{},[9])
+},{"./BaseMap.js":10,"./HashMap.js":11,"./LinkedHashMap.js":12,"./TreeMap.js":13,"./stream":21}],15:[function(require,module,exports){
+const StreamInterface = require("./StreamInterface.js");
+const Stream = require("./Stream.js");
+
+class AsyncStream extends StreamInterface {
+	constructor(source) {
+		super();
+		this._iter = AsyncStream._normalize(source);
+		this._pipeline = [];
+	}
+
+	static from(iterable) {
+		return new AsyncStream(iterable);
+	}
+
+	static _normalize(input) {
+		if (typeof input[Symbol.asyncIterator] === "function") return input;
+		if (typeof input[Symbol.iterator] === "function") {
+			return (async function* () {
+				for (const x of input) yield x;
+			})();
+		}
+		throw new TypeError("not (Async)Iterable");
+	}
+
+	_use(fn) {
+		this._pipeline.push(fn);
+		return this;
+	}
+
+	// ==================================================
+	// パイプライン計算
+	// ==================================================
+
+	flattenPipeline() {
+		const flattenedFn = this._pipeline.reduceRight(
+			(nextFn, currentFn) => {
+				return async function* (iterable) {
+					yield* currentFn(nextFn(iterable));
+				};
+			},
+			async function* (x) {
+				yield* x;
+			}
+		);
+		const flat = new this.constructor([]);
+		flat._iter = this._iter;
+		flat._pipeline = [flattenedFn];
+		return flat;
+	}
+
+	toFunction() {
+		const flat = this.flattenPipeline();
+		const fn = flat._pipeline[0];
+		return (input) => fn(input);
+	}
+
+	// ==================================================
+	// Pipeline
+	// ==================================================
+
+	map(fn) {
+		return this._use(async function* (iter) {
+			for await (const x of iter) yield await fn(x);
+		});
+	}
+
+	filter(fn) {
+		return this._use(async function* (iter) {
+			for await (const x of iter) {
+				if (await fn(x)) yield x;
+			}
+		});
+	}
+
+	flatMap(fn) {
+		return this._use(async function* (iter) {
+			for await (const x of iter) {
+				const sub = await fn(x);
+				for await (const y of AsyncStream._normalize(sub)) yield y;
+			}
+		});
+	}
+
+	distinct(keyFn = (x) => x) {
+		return this._use(async function* (iter) {
+			const seen = new Set();
+			for await (const x of iter) {
+				const key = await keyFn(x);
+				if (!seen.has(key)) {
+					seen.add(key);
+					yield x;
+				}
+			}
+		});
+	}
+
+	limit(n) {
+		return this._use(async function* (iter) {
+			let i = 0;
+			for await (const x of iter) {
+				if (i++ < n) yield x;
+				else break;
+			}
+		});
+	}
+
+	skip(n) {
+		return this._use(async function* (iter) {
+			let i = 0;
+			for await (const x of iter) {
+				if (i++ >= n) yield x;
+			}
+		});
+	}
+
+	// ==================================================
+	// Iterator
+	// ==================================================
+
+	[Symbol.asyncIterator]() {
+		let iter = this._iter;
+		for (const op of this._pipeline) {
+			iter = op(iter);
+		}
+		return iter[Symbol.asyncIterator]();
+	}
+	// ==================================================
+	// End
+	// ==================================================
+
+	async forEach(fn) {
+		for await (const x of this) {
+			await fn(x);
+		}
+	}
+
+	async toArray() {
+		const result = [];
+		for await (const x of this) {
+			result.push(x);
+		}
+		return result;
+	}
+
+	async reduce(fn, init) {
+		let acc = init;
+		for await (const x of this) {
+			acc = await fn(acc, x);
+		}
+		return acc;
+	}
+
+	count() {
+		return this.reduce((acc) => acc + 1, 0);
+	}
+
+	// ==================================================
+	// mapTo
+	// ==================================================
+
+	toLazy() {
+		return new Promise(async (resolve) => {
+			const arr = [];
+			for await (const item of this) {
+				arr.push(item);
+			}
+			resolve(new Stream(arr));
+		});
+	}
+}
+
+module.exports = AsyncStream;
+
+},{"./Stream.js":18,"./StreamInterface.js":19}],16:[function(require,module,exports){
+const Stream = require("./Stream.js");
+
+class EntryStream extends Stream {
+	constructor(source) {
+		super(source);
+
+		this.mapToEntry = undefined;
+	}
+
+	keys() {
+		return this._convertToX(Stream).map(([k, _]) => k);
+	}
+
+	values() {
+		return this._convertToX(Stream).map(([_, v]) => v);
+	}
+
+	mapKeys(fn) {
+		return this.map(([k, v]) => [fn(k), v]);
+	}
+
+	mapValues(fn) {
+		return this.map(([k, v]) => [k, fn(v)]);
+	}
+}
+
+module.exports = EntryStream;
+
+},{"./Stream.js":18}],17:[function(require,module,exports){
+const Stream = require("./Stream.js");
+
+class NumberStream extends Stream {
+	constructor(source) {
+		super(source);
+
+		this.mapToNumber = undefined;
+	}
+
+	sum() {
+		let total = 0;
+		for (const num of this) {
+			total += num;
+		}
+		return total;
+	}
+
+	average() {
+		let total = 0;
+		let count = 0;
+		for (const num of this) {
+			total += num;
+			count++;
+		}
+		return count === 0 ? NaN : total / count;
+	}
+
+	min() {
+		let min = Infinity;
+		for (const num of this) {
+			if (num < min) min = num;
+		}
+		return min === Infinity ? undefined : min;
+	}
+
+	max() {
+		let max = -Infinity;
+		for (const num of this) {
+			if (num > max) max = num;
+		}
+		return max === -Infinity ? undefined : max;
+	}
+}
+
+module.exports = NumberStream;
+
+},{"./Stream.js":18}],18:[function(require,module,exports){
+const StreamInterface = require("./StreamInterface.js");
+
+let NumberStream, StringStream, EntryStream, AsyncStream;
+function init() {
+	if (NumberStream) return;
+	NumberStream = require("./NumberStream.js");
+	StringStream = require("./StringStream.js");
+	EntryStream = require("./EntryStream.js");
+	AsyncStream = require("./AsyncStream.js");
+}
+
+class Stream extends StreamInterface {
+	constructor(source) {
+		super();
+		this._iter = source[Symbol.iterator]();
+		this._pipeline = [];
+
+		init();
+	}
+
+	static from(iterable) {
+		return new this(iterable);
+	}
+
+	_use(fn) {
+		this._pipeline.push(fn);
+		return this;
+	}
+
+	// ==================================================
+	// パイプライン計算
+	// ==================================================
+
+	_convertToX(construct, fn) {
+		const newStream = new construct([]);
+		newStream._iter = this._iter;
+		newStream._pipeline = [...this._pipeline];
+		if (fn) newStream._pipeline.push(fn);
+		return newStream;
+	}
+
+	flattenPipeline() {
+		const flattenedFn = this._pipeline.reduceRight(
+			(nextFn, currentFn) => {
+				return function* (iterable) {
+					yield* currentFn(nextFn(iterable));
+				};
+			},
+			(x) => x
+		);
+
+		const flat = new this.constructor([]); // 継承クラス対応
+		flat._iter = this._iter;
+		flat._pipeline = [flattenedFn];
+		return flat;
+	}
+
+	toFunction() {
+		const flat = this.flattenPipeline();
+		const fn = flat._pipeline[0];
+		return (input) => fn(input);
+	}
+
+	// ==================================================
+	// Pipeline
+	// ==================================================
+
+	map(fn) {
+		return this._use(function* (iter) {
+			for (const item of iter) yield fn(item);
+		});
+	}
+
+	filter(fn) {
+		return this._use(function* (iter) {
+			for (const item of iter) if (fn(item)) yield item;
+		});
+	}
+
+	flatMap(fn) {
+		return this._use(function* (iter) {
+			for (const item of iter) {
+				const sub = fn(item);
+				yield* sub instanceof StreamInterface ? sub : sub[Symbol.iterator]();
+			}
+		});
+	}
+
+	distinct() {
+		return this._use(function* (iter) {
+			const seen = new Set();
+			for (const item of iter) {
+				const key = JSON.stringify(item);
+				if (!seen.has(key)) {
+					seen.add(key);
+					yield item;
+				}
+			}
+		});
+	}
+
+	sorted(compareFn = (a, b) => (a > b ? 1 : a < b ? -1 : 0)) {
+		return this._use(function* (iter) {
+			const arr = [...iter].sort(compareFn);
+			yield* arr;
+		});
+	}
+
+	peek(fn) {
+		return this._use(function* (iter) {
+			for (const item of iter) {
+				fn(item);
+				yield item;
+			}
+		});
+	}
+
+	limit(n) {
+		return this._use(function* (iter) {
+			let i = 0;
+			for (const item of iter) {
+				if (i++ >= n) break;
+				yield item;
+			}
+		});
+	}
+
+	skip(n) {
+		return this._use(function* (iter) {
+			let i = 0;
+			for (const item of iter) {
+				if (i++ < n) continue;
+				yield item;
+			}
+		});
+	}
+
+	chunk(size) {
+		return this._use(function* (iter) {
+			let buf = [];
+			for (const item of iter) {
+				buf.push(item);
+				if (buf.length === size) {
+					yield buf;
+					buf = [];
+				}
+			}
+			if (buf.length) yield buf;
+		});
+	}
+
+	windowed(size, step = size) {
+		return this._use(function* (iter) {
+			const buffer = [];
+			for (const item of iter) {
+				buffer.push(item);
+				if (buffer.length === size) {
+					yield buffer.slice();
+					buffer.splice(0, step); // スライド
+				}
+			}
+		});
+	}
+
+	// ==================================================
+	// Iterator
+	// ==================================================
+
+	[Symbol.iterator]() {
+		return this._pipeline.reduce((iter, fn) => fn(iter), this._iter);
+	}
+
+	[Symbol.asyncIterator]() {
+		let iter = this._pipeline.reduce((i, fn) => fn(i), this._iter);
+		return {
+			async next() {
+				return Promise.resolve(iter.next());
+			},
+		};
+	}
+
+	// ==================================================
+	// End
+	// ==================================================
+
+	forEach(fn) {
+		for (const item of this) fn(item);
+	}
+
+	toArray() {
+		return Array.from(this);
+	}
+
+	reduce(fn, initial) {
+		let acc = initial;
+		for (const item of this) {
+			acc = fn(acc, item);
+		}
+		return acc;
+	}
+
+	count() {
+		let c = 0;
+		for (const _ of this) c++;
+		return c;
+	}
+
+	anyMatch(fn) {
+		for (const item of this) {
+			if (fn(item)) return true;
+		}
+		return false;
+	}
+
+	allMatch(fn) {
+		for (const item of this) {
+			if (!fn(item)) return false;
+		}
+		return true;
+	}
+
+	noneMatch(fn) {
+		for (const item of this) {
+			if (fn(item)) return false;
+		}
+		return true;
+	}
+
+	findFirst() {
+		for (const item of this) return item;
+		return undefined;
+	}
+
+	findAny() {
+		return this.findFirst(); // 同義（非並列）
+	}
+
+	// Java Collectors 相当
+	collectWith(collectorFn) {
+		return collectorFn(this);
+	}
+
+	// ==================================================
+	// mapTo
+	// ==================================================
+
+	mapToNumber(fn) {
+		return this._convertToX(NumberStream, function* (iter) {
+			for (const item of iter) {
+				const mapped = fn(item);
+				if (typeof mapped !== "number") {
+					throw new TypeError(`mapToNumber() must return number. Got ${typeof mapped}`);
+				}
+				yield mapped;
+			}
+		});
+	}
+
+	mapToString(fn) {
+		return this._convertToX(StringStream, function* (iter) {
+			for (const item of iter) {
+				const mapped = fn(item);
+				if (typeof mapped !== "string") {
+					throw new TypeError(`mapToString() must return string. Got ${typeof mapped}`);
+				}
+				yield mapped;
+			}
+		});
+	}
+
+	mapToEntry(fn) {
+		return this._convertToX(EntryStream, function* (iter) {
+			for (const item of iter) {
+				const entry = fn(item);
+				if (!Array.isArray(entry) || entry.length !== 2) {
+					throw new TypeError(`mapToEntry() must return [key, value] pair. Got: ${entry}`);
+				}
+				yield entry;
+			}
+		});
+	}
+
+	mapToAsync(fn) {
+		const input = this.flattenPipeline();
+		const sourceIterable = input._pipeline[0](input._iter); // 実行（同期 generator）
+
+		// AsyncStream に渡す非同期イテレータを構築
+		const asyncIterable = (async function* () {
+			for (const item of sourceIterable) {
+				yield await fn(item);
+			}
+		})();
+
+		return new AsyncStream(asyncIterable);
+	}
+}
+
+module.exports = Stream;
+
+},{"./AsyncStream.js":15,"./EntryStream.js":16,"./NumberStream.js":17,"./StreamInterface.js":19,"./StringStream.js":20}],19:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
+
+class StreamInterface extends JavaLibraryScriptCore {
+	static methodTypes = {
+		map: {
+			args: [Function],
+			returns: StreamInterface,
+		},
+		filter: {
+			args: [Function],
+			returns: StreamInterface,
+		},
+		flatMap: {
+			args: [Function],
+			returns: StreamInterface,
+		},
+		//
+		forEach: {
+			args: [[Function, Promise]],
+			returns: [undefined, Promise],
+		},
+	};
+
+	constructor() {
+		super();
+		if (new.target === StreamInterface) {
+			throw new TypeError("Cannot instantiate abstract class StreamInterface");
+		}
+	}
+}
+
+module.exports = StreamInterface;
+
+},{"../../libs/sys/JavaLibraryScriptCore.js":7}],20:[function(require,module,exports){
+const Stream = require("./Stream.js");
+
+class StringStream extends Stream {
+	constructor(source) {
+		super(source);
+
+		this.mapToString = undefined;
+	}
+
+	join(separator = "") {
+		return Array.from(this).join(separator);
+	}
+
+	concatAll() {
+		return this.join("");
+	}
+
+	longest() {
+		let max = "";
+		for (const str of this) {
+			if (typeof str !== "string") throw new TypeError("All elements must be strings");
+			if (str.length > max.length) max = str;
+		}
+		return max || undefined;
+	}
+
+	shortest() {
+		let min = null;
+		for (const str of this) {
+			if (typeof str !== "string") throw new TypeError("All elements must be strings");
+			if (min === null || str.length < min.length) min = str;
+		}
+		return min || undefined;
+	}
+}
+
+module.exports = StringStream;
+
+},{"./Stream.js":18}],21:[function(require,module,exports){
+module.exports = {
+  AsyncStream: require("./AsyncStream.js"),
+  EntryStream: require("./EntryStream.js"),
+  NumberStream: require("./NumberStream.js"),
+  Stream: require("./Stream.js"),
+  StreamInterface: require("./StreamInterface.js"),
+  StringStream: require("./StringStream.js")
+};
+
+},{"./AsyncStream.js":15,"./EntryStream.js":16,"./NumberStream.js":17,"./Stream.js":18,"./StreamInterface.js":19,"./StringStream.js":20}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map
