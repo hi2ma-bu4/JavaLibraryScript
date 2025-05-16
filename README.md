@@ -6,6 +6,8 @@
 [![jsDelivr hits (GitHub)](https://img.shields.io/jsdelivr/gh/hy/hi2ma-bu4/JavaLibraryScript?logo=jsdelivr&logoColor=%23fff)](https://cdn.jsdelivr.net/gh/hi2ma-bu4/JavaLibraryScript/index.js)
 
 [![GitHub repo size](https://img.shields.io/github/repo-size/hi2ma-bu4/JavaLibraryScript)](https://github.com/hi2ma-bu4/JavaLibraryScript)
+[![GitHub file size in bytes](https://img.shields.io/github/size/hi2ma-bu4/JavaLibraryScript/dist/JavaLibraryScript.js?label=JavaLibraryScript.js)](https://github.com/hi2ma-bu4/JavaLibraryScript/blob/main/JavaLibraryScript.js)
+[![GitHub file size in bytes](https://img.shields.io/github/size/hi2ma-bu4/JavaLibraryScript/dist/JavaLibraryScript.min.js?label=JavaLibraryScript.min.js)](https://github.com/hi2ma-bu4/JavaLibraryScript/blob/main/JavaLibraryScript.min.js)
 
 ## JavaLibraryScriptとは
 
