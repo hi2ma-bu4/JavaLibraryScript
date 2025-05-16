@@ -329,7 +329,6 @@ class Interface extends JavaLibraryScriptCore {
 
 				// 戻り値型を動的に取得
 				const ret = def.returns;
-				// TODO: クラス判定が雑魚(matchType内部で判定した方が楽じゃね?)
 				const expectedReturn = TypeChecker.checkFunction(ret) ? ret(args) : ret;
 
 				const validate = (val) => {
@@ -364,7 +363,7 @@ module.exports = {
   util: require("./util")
 };
 
-},{"./base":3,"./libs":6,"./util":13}],5:[function(require,module,exports){
+},{"./base":3,"./libs":6,"./util":14}],5:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
@@ -543,7 +542,7 @@ class BaseMap extends Interface {
 		clear: { returns: NoReturn },
 		containsKey: { args: [NotEmpty], returns: Boolean },
 		containsValue: { args: [NotEmpty], returns: Boolean },
-		keySet: { returns: Array },
+		keys: { returns: Array },
 		values: { returns: Array },
 		entrySet: { returns: Array },
 	};
@@ -596,6 +595,7 @@ class HashMap extends BaseMap {
 
 	get(key) {
 		this._checkKey(key);
+		if (!this._map.has(key)) return undefined;
 		return this._data.get(key);
 	}
 
@@ -640,7 +640,7 @@ class HashMap extends BaseMap {
 		return false;
 	}
 
-	keySet() {
+	keys() {
 		return Array.from(this._data.keys());
 	}
 
@@ -660,18 +660,58 @@ class HashMap extends BaseMap {
 		return true;
 	}
 
+	forEach(callback, thisArg) {
+		for (const [key, value] of this._data.entries()) {
+			callback.call(thisArg, value, key, this);
+		}
+	}
+
 	toString() {
 		const data = Array.from(this.entries())
 			.map(([k, v]) => `${k}=${v}`)
 			.join(", ");
 		return `{ ${data} }`;
 	}
+
+	[Symbol.iterator]() {
+		return this.entries()[Symbol.iterator]();
+	}
 }
 
 module.exports = HashMap;
 
 },{"./BaseMap":10}],12:[function(require,module,exports){
-const BaseMap = require("./BaseMap");
+const HashMap = require("./HashMap");
+
+class LinkedHashMap extends HashMap {
+	constructor(KeyType, ValueType, { accessOrder = false } = {}) {
+		super(KeyType, ValueType);
+		this._accessOrder = accessOrder;
+	}
+
+	put(key, value) {
+		this._checkKey(key);
+		this._checkValue(value);
+
+		if (this._accessOrder && this._data.has(key)) {
+			this._data.delete(key); // 移動のため一度削除
+		}
+		super.put(key, value);
+	}
+
+	get(key) {
+		const value = super.get(key);
+		if (this._accessOrder && value !== undefined) {
+			this._data.delete(key); // 移動のため一度削除
+			this._data.set(key, value);
+		}
+		return value;
+	}
+}
+
+module.exports = LinkedHashMap;
+
+},{"./HashMap":11}],13:[function(require,module,exports){
 const HashMap = require("./HashMap");
 
 class TreeMap extends HashMap {
@@ -721,6 +761,18 @@ class TreeMap extends HashMap {
 		this._invalidateSortedKeys();
 	}
 
+	keys() {
+		return this._getSortedKeys().slice();
+	}
+
+	values() {
+		return this._getSortedKeys().map((k) => this._data.get(k));
+	}
+
+	entrySet() {
+		return this._getSortedKeys().map((k) => [k, this._data.get(k)]);
+	}
+
 	firstKey() {
 		const keys = this._getSortedKeys();
 		return keys.length > 0 ? keys[0] : undefined;
@@ -768,16 +820,23 @@ class TreeMap extends HashMap {
 		}
 		return map;
 	}
+
+	forEach(callback, thisArg) {
+		for (const key of this._getSortedKeys()) {
+			callback.call(thisArg, this._map.get(key), key, this);
+		}
+	}
 }
 
 module.exports = TreeMap;
 
-},{"./BaseMap":10,"./HashMap":11}],13:[function(require,module,exports){
+},{"./HashMap":11}],14:[function(require,module,exports){
 module.exports = {
   BaseMap: require("./BaseMap.js"),
   HashMap: require("./HashMap.js"),
+  LinkedHashMap: require("./LinkedHashMap.js"),
   TreeMap: require("./TreeMap.js")
 };
 
-},{"./BaseMap.js":10,"./HashMap.js":11,"./TreeMap.js":12}]},{},[9])
+},{"./BaseMap.js":10,"./HashMap.js":11,"./LinkedHashMap.js":12,"./TreeMap.js":13}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map

@@ -18,7 +18,7 @@ class BaseMap extends Interface {
 		clear: { returns: NoReturn },
 		containsKey: { args: [NotEmpty], returns: Boolean },
 		containsValue: { args: [NotEmpty], returns: Boolean },
-		keySet: { returns: Array },
+		keys: { returns: Array },
 		values: { returns: Array },
 		entrySet: { returns: Array },
 	};

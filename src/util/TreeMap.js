@@ -1,4 +1,3 @@
-const BaseMap = require("./BaseMap");
 const HashMap = require("./HashMap");
 
 class TreeMap extends HashMap {
@@ -48,6 +47,18 @@ class TreeMap extends HashMap {
 		this._invalidateSortedKeys();
 	}
 
+	keys() {
+		return this._getSortedKeys().slice();
+	}
+
+	values() {
+		return this._getSortedKeys().map((k) => this._data.get(k));
+	}
+
+	entrySet() {
+		return this._getSortedKeys().map((k) => [k, this._data.get(k)]);
+	}
+
 	firstKey() {
 		const keys = this._getSortedKeys();
 		return keys.length > 0 ? keys[0] : undefined;
@@ -94,6 +105,12 @@ class TreeMap extends HashMap {
 			if (this._compare(k, fromKey) >= 0) map.set(k, this.get(k));
 		}
 		return map;
+	}
+
+	forEach(callback, thisArg) {
+		for (const key of this._getSortedKeys()) {
+			callback.call(thisArg, this._map.get(key), key, this);
+		}
 	}
 }
 

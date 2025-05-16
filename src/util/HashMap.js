@@ -20,6 +20,7 @@ class HashMap extends BaseMap {
 
 	get(key) {
 		this._checkKey(key);
+		if (!this._map.has(key)) return undefined;
 		return this._data.get(key);
 	}
 
@@ -64,7 +65,7 @@ class HashMap extends BaseMap {
 		return false;
 	}
 
-	keySet() {
+	keys() {
 		return Array.from(this._data.keys());
 	}
 
@@ -84,11 +85,21 @@ class HashMap extends BaseMap {
 		return true;
 	}
 
+	forEach(callback, thisArg) {
+		for (const [key, value] of this._data.entries()) {
+			callback.call(thisArg, value, key, this);
+		}
+	}
+
 	toString() {
 		const data = Array.from(this.entries())
 			.map(([k, v]) => `${k}=${v}`)
 			.join(", ");
 		return `{ ${data} }`;
+	}
+
+	[Symbol.iterator]() {
+		return this.entries()[Symbol.iterator]();
 	}
 }
 

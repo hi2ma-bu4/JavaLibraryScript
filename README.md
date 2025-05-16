@@ -43,3 +43,16 @@ Mapが予約語だったので変更
 #### HashMap
 
 JavaのHashMapをJavaScriptにそれっぽく似せて作ったやつ
+
+使い道なし
+
+#### TreeMap
+
+JavaのTreeMapをJavaScriptにそれっぽく似せて作ったやつ
+
+使い道なし
+
+#### LinkedHashMap
+
+JavaのLinkedHashMapをJavaScriptにそれっぽく似せて作ったやつ
+
