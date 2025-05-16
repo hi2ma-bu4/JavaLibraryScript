@@ -106,6 +106,12 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return String(value); // それ以外の型はそのまま文字列に変換
 	}
 
+	static checkFunction(fn) {
+		if (typeof fn !== "function") return false;
+		if (this.checkClass(fn)) return false;
+		return true;
+	}
+
 	static checkClass(fn) {
 		if (typeof fn !== "function") return false;
 		if (this._CLASS_REG.test(fn.toString())) return true;

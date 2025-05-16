@@ -38,7 +38,7 @@ class Interface extends JavaLibraryScriptCore {
 
 				// 戻り値型を動的に取得
 				const ret = def.returns;
-				const expectedReturn = TypeChecker.checkClass(ret) ? ret : ret(args);
+				const expectedReturn = TypeChecker.checkFunction(ret) ? ret(args) : ret;
 
 				const validate = (val) => {
 					if (!TypeChecker.matchType(val, expectedReturn)) {

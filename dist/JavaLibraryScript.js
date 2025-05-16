@@ -329,7 +329,8 @@ class Interface extends JavaLibraryScriptCore {
 
 				// 戻り値型を動的に取得
 				const ret = def.returns;
-				const expectedReturn = TypeChecker.checkClass(ret) ? ret : ret(args);
+				// TODO: クラス判定が雑魚(matchType内部で判定した方が楽じゃね?)
+				const expectedReturn = TypeChecker.checkFunction(ret) ? ret(args) : ret;
 
 				const validate = (val) => {
 					if (!TypeChecker.matchType(val, expectedReturn)) {
@@ -470,6 +471,12 @@ class TypeChecker extends JavaLibraryScriptCore {
 			}
 		}
 		return String(value); // それ以外の型はそのまま文字列に変換
+	}
+
+	static checkFunction(fn) {
+		if (typeof fn !== "function") return false;
+		if (this.checkClass(fn)) return false;
+		return true;
 	}
 
 	static checkClass(fn) {
