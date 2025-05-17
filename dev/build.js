@@ -122,6 +122,15 @@ async function buildRollup() {
 	});
 }
 
+function fixDtsOutputFlexible(filePath) {
+	let code = fs.readFileSync(filePath, "utf8");
+
+	const reg = new RegExp(`export\s{\s${script_name}\sas\sdefault\s};`);
+	code = code.replace(reg, `export default ${script_name};`);
+
+	fs.writeFileSync(filePath, code);
+}
+
 (async () => {
 	const debug = true;
 	try {
@@ -160,6 +169,9 @@ async function buildRollup() {
 			console.log(`┃┗✅ ${CL.brightWhite("rollup完了")}: ${getRelativePath(typesPath)}`);
 			console.log(`┃🗑️ ${CL.brightWhite("types仮フォルダcleanup")}`);
 			prepareDir(typesTmpDir);
+			console.log(`┃🌵 ${CL.brightWhite("export問題を解決")}`);
+			fixDtsOutputFlexible(typesPath);
+			console.log(`┃┗✅ ${CL.brightWhite("export default 生成完了")}: ${getRelativePath(typesPath)}`);
 			showFileSize(typesPath);
 		}
 

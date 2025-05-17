@@ -1,3 +1,5 @@
+const { default: JavaLibraryScript } = require("../types/JavaLibraryScript");
+
 jasc.on("DOMContentLoaded", () => {
 	console.log("JavaLibraryScript");
 	console.log(JavaLibraryScript);
@@ -19,7 +21,7 @@ function main() {
 	console.log(
 		map
 			.stream()
-			.map(([k, v]) => [k, v * 10])
+			.map(([k, v]) => [k, "a"])
 			.toHashMap(String, Number)
 	);
 }

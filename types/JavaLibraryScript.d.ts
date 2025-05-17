@@ -950,15 +950,15 @@ declare let util: {
     };
 };
 
-declare const lib_base: typeof base;
-declare const lib_libs: typeof libs;
-declare const lib_util: typeof util;
-declare namespace lib {
+declare const JavaLibraryScript_base: typeof base;
+declare const JavaLibraryScript_libs: typeof libs;
+declare const JavaLibraryScript_util: typeof util;
+declare namespace JavaLibraryScript {
   export {
-    lib_base as base,
-    lib_libs as libs,
-    lib_util as util,
+    JavaLibraryScript_base as base,
+    JavaLibraryScript_libs as libs,
+    JavaLibraryScript_util as util,
   };
 }
 
-export { lib as default };
+export default JavaLibraryScript;
