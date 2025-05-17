@@ -28,8 +28,8 @@ jobs:
 
                     old="${OLD_VERSION#v}"
                     new="${NEW_VERSION#v}"
-                    IFS='.' read -r -a o <<< "$old"
-                    IFS='.' read -r -a n <<< "$new"
+                    IFS='.' read -r -a old_parts <<< "$old"
+                    IFS='.' read -r -a new_parts <<< "$new"
 
                     is_newer=false
                     changed_higher_digit=false
