@@ -54,6 +54,12 @@ jobs:
                       is_newer=true
                     fi
 
+                    echo "Debug info:"
+                    echo "changed_higher_digit=$changed_higher_digit"
+                    echo "is_newer=$is_newer"
+                    echo "old_parts: ${old_parts[*]}"
+                    echo "new_parts: ${new_parts[*]}"
+
                     if [ "$is_newer" = true ]; then
                       echo "version_changed=true" >> $GITHUB_OUTPUT
                       echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
