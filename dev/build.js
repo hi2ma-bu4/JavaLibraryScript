@@ -3,6 +3,7 @@ const exorcist = require("exorcist");
 const fs = require("node:fs");
 const path = require("node:path");
 const { minify } = require("terser");
+const { execSync } = require("node:child_process");
 
 const generateIndex = require("./generateIndex.js");
 const CL = require("./libs/ColorLogger.js");
@@ -43,7 +44,7 @@ function formatSize(bytes) {
 // ファイルサイズ取得
 function showFileSize(filePath) {
 	const stat = fs.statSync(filePath);
-	console.log(`📦 ${CL.brightWhite(path.basename(filePath))}: ${CL.brightGreen(formatSize(stat.size))}`);
+	console.log(`┃📦 ${CL.brightWhite(path.basename(filePath))}: ${CL.brightGreen(formatSize(stat.size))}`);
 }
 
 // Browserifyでバンドル
@@ -95,28 +96,41 @@ async function minifyCode(code) {
 }
 
 (async () => {
+	const debug = true;
 	try {
+		const start = performance.now();
+		console.log(`🎉 ${CL.brightYellow("ビルド開始")}`);
 		//
-		console.log(`🔁 ${CL.brightWhite("index.js自動生成開始...")}`);
+		console.log(`┣🔁 ${CL.brightWhite("index.js自動生成開始...")}`);
 		generateIndex(entryDir);
-		console.log(`🌱 ${CL.brightWhite("自動生成完了")}`);
+		console.log(`┃┗🌱 ${CL.brightWhite("自動生成完了")}`);
 		//
-		console.log(`🗑️ ${CL.brightWhite("distフォルダリセット")}`);
+		console.log(`┃🗑️ ${CL.brightWhite("distフォルダリセット")}`);
 		prepareDist();
 		//
-		console.log(`🗂️ ${CL.brightWhite("バンドル中...")}`);
+		console.log(`┃🗂️ ${CL.brightWhite("バンドル中...")}`);
 		const code = await bundle();
-		console.log(`✨ ${CL.brightWhite("バンドル完了")}: ${getRelativePath(bundlePath)}`);
-		console.log(`🗺️ ${CL.brightWhite("ソースマップ生成")}: ${getRelativePath(bundleMapPath)}`);
-
-		console.log(`🔧 ${CL.brightWhite("Minify中...")}`);
+		console.log(`┃┣✅ ${CL.brightWhite("バンドル完了")}: ${getRelativePath(bundlePath)}`);
+		console.log(`┃┗🗺️ ${CL.brightWhite("ソースマップ生成")}: ${getRelativePath(bundleMapPath)}`);
+		//
+		console.log(`┃🔧 ${CL.brightWhite("Minify中...")}`);
 		await minifyCode(code);
-		console.log(`✅ ${CL.brightWhite("Minify完了:")} ${getRelativePath(minPath)}`);
-		console.log(`🗺️ ${CL.brightWhite("ソースマップ生成[min]")}: ${getRelativePath(minMapPath)}`);
+		console.log(`┃┣✅ ${CL.brightWhite("Minify完了:")} ${getRelativePath(minPath)}`);
+		console.log(`┃┗🗺️ ${CL.brightWhite("ソースマップ生成[min]")}: ${getRelativePath(minMapPath)}`);
 		showFileSize(bundlePath);
 		showFileSize(minPath);
+		//
+		if (debug) {
+			console.log(`┃🗒️ ${CL.brightWhite("TypeScriptコンパイル中...")}`);
+			execSync("npx tsc", { stdio: "inherit" });
+			console.log(`┃┗✅ ${CL.brightWhite("TypeScriptコンパイル完了")}`);
+		}
+
+		console.log(`┣🎉 ${CL.brightYellow("ビルド完了")}`);
+		const end = performance.now() - start;
+		console.log(`┗🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);
 	} catch (e) {
-		console.error("❌ ビルド失敗:", e);
+		console.error("┗❌ ビルド失敗:", e);
 		process.exit(1);
 	}
 })();

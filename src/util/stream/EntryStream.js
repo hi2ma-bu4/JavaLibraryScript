@@ -1,5 +1,11 @@
 const Stream = require("./Stream.js");
 
+let HashMap;
+function init() {
+	if (HashMap) return;
+	HashMap = require("../HashMap.js");
+}
+
 class EntryStream extends Stream {
 	constructor(source) {
 		super(source);
@@ -21,6 +27,13 @@ class EntryStream extends Stream {
 
 	mapValues(fn) {
 		return this.map(([k, v]) => [k, fn(v)]);
+	}
+
+	toHashMap(KeyType, ValueType) {
+		init();
+		const map = new HashMap(KeyType, ValueType);
+		this.forEach(([k, v]) => map.set(k, v));
+		return map;
 	}
 }
 

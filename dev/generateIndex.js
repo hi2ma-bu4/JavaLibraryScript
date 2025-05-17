@@ -66,7 +66,7 @@ function generateIndex(dir, baseDir = dir) {
 	// index.jsを書き込み
 	fs.writeFileSync(path.join(dir, "index.js"), content, "utf8");
 
-	console.log(`📜 Generated index.js in ${CL.brightBlue(path.relative(path.dirname(baseDir), dir))}`);
+	console.log(`┃┣📜 Generated index.js in ${CL.brightBlue(path.relative(path.dirname(baseDir), dir))}`);
 }
 
 module.exports = generateIndex;

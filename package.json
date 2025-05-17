@@ -1,7 +1,7 @@
 {
   "name": "javalibraryscript",
-  "version": "1.0.0",
-  "description": "JavaLibraryScript",
+  "version": "v1.0.3.0",
+  "description": "Javaの機能をJavaScriptに適当に再現",
   "main": "index.js",
   "scripts": {
     "build": "node dev/build.js"
@@ -25,6 +25,7 @@
   "devDependencies": {
     "browserify": "^17.0.1",
     "exorcist": "^2.0.0",
-    "terser": "^5.39.1"
+    "terser": "^5.39.1",
+    "typescript": "^5.8.3"
   }
 }
