@@ -10,7 +10,9 @@
 			"bat": "cmd /c",
 		},
 		"cSpell.words": [
-			"javalibraryscript"
+			"javalibraryscript",
+			"prereleased",
+			"softprops"
 		]
 	}
 }

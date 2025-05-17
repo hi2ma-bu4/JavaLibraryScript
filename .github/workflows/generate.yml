@@ -1,9 +1,8 @@
 name: Generate .d.ts
 
 on:
-    push:
-        tags:
-            - "v*"
+    release:
+        types: [published, prereleased]
 
 permissions:
     contents: write # リポジトリのコンテンツに書き込み権限を与える

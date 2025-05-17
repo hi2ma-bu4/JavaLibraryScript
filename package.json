@@ -1,6 +1,6 @@
 {
   "name": "javalibraryscript",
-  "version": "v1.0.3.4",
+  "version": "v1.0.3.5",
   "description": "Javaの機能をJavaScriptに適当に再現",
   "main": "index.js",
   "scripts": {
