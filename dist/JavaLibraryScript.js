@@ -352,15 +352,15 @@ module.exports = Interface;
 
 },{"../libs/TypeChecker.js":5,"../libs/sys/JavaLibraryScriptCore.js":7}],3:[function(require,module,exports){
 module.exports = {
-  ...require("./Enum.js"),
-  Interface: require("./Interface.js")
+    ...require("./Enum.js"),
+    Interface: require("./Interface.js")
 };
 
 },{"./Enum.js":1,"./Interface.js":2}],4:[function(require,module,exports){
 module.exports = {
-  base: require("./base"),
-  libs: require("./libs"),
-  util: require("./util")
+    base: require("./base"),
+    libs: require("./libs"),
+    util: require("./util")
 };
 
 },{"./base":3,"./libs":6,"./util":14}],5:[function(require,module,exports){
@@ -495,8 +495,8 @@ module.exports = TypeChecker;
 
 },{"../base/Enum.js":1,"../libs/sys/JavaLibraryScriptCore.js":7}],6:[function(require,module,exports){
 module.exports = {
-  TypeChecker: require("./TypeChecker.js"),
-  sys: require("./sys")
+    TypeChecker: require("./TypeChecker.js"),
+    sys: require("./sys")
 };
 
 },{"./TypeChecker.js":5,"./sys":8}],7:[function(require,module,exports){
@@ -510,7 +510,7 @@ module.exports = JavaLibraryScriptCore;
 
 },{}],8:[function(require,module,exports){
 module.exports = {
-  JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js")
+    JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js")
 };
 
 },{"./JavaLibraryScriptCore.js":7}],9:[function(require,module,exports){
@@ -833,11 +833,11 @@ module.exports = TreeMap;
 
 },{"./HashMap":11}],14:[function(require,module,exports){
 module.exports = {
-  BaseMap: require("./BaseMap.js"),
-  HashMap: require("./HashMap.js"),
-  LinkedHashMap: require("./LinkedHashMap.js"),
-  TreeMap: require("./TreeMap.js"),
-  stream: require("./stream")
+    BaseMap: require("./BaseMap.js"),
+    HashMap: require("./HashMap.js"),
+    LinkedHashMap: require("./LinkedHashMap.js"),
+    TreeMap: require("./TreeMap.js"),
+    stream: require("./stream")
 };
 
 },{"./BaseMap.js":10,"./HashMap.js":11,"./LinkedHashMap.js":12,"./TreeMap.js":13,"./stream":21}],15:[function(require,module,exports){
@@ -1465,12 +1465,12 @@ module.exports = StringStream;
 
 },{"./Stream.js":18}],21:[function(require,module,exports){
 module.exports = {
-  AsyncStream: require("./AsyncStream.js"),
-  EntryStream: require("./EntryStream.js"),
-  NumberStream: require("./NumberStream.js"),
-  Stream: require("./Stream.js"),
-  StreamInterface: require("./StreamInterface.js"),
-  StringStream: require("./StringStream.js")
+    AsyncStream: require("./AsyncStream.js"),
+    EntryStream: require("./EntryStream.js"),
+    NumberStream: require("./NumberStream.js"),
+    Stream: require("./Stream.js"),
+    StreamInterface: require("./StreamInterface.js"),
+    StringStream: require("./StringStream.js")
 };
 
 },{"./AsyncStream.js":15,"./EntryStream.js":16,"./NumberStream.js":17,"./Stream.js":18,"./StreamInterface.js":19,"./StringStream.js":20}]},{},[9])

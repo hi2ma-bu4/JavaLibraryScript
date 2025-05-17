@@ -1,3 +1,3 @@
 module.exports = {
-  JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js")
+    JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js")
 };

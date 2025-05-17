@@ -70,23 +70,26 @@ function bundle() {
 
 // Terserでminify（drop_consoleなど最適化オプション付き）
 async function minifyCode(code) {
-	const result = await minify(code, {
+	const opt = {
 		compress: {
 			drop_console: true,
-			passes: 2,
-			pure_funcs: ["console.info", "console.debug", "console.warn"],
+			dead_code: true,
+			passes: 4,
+			pure_funcs: ["console.info", "console.debug"],
 		},
 		mangle: {
 			toplevel: true,
 		},
 		format: {
-			comments: false,
+			comments: "some",
 		},
 		sourceMap: {
 			filename: path.basename(minPath),
 			url: path.basename(minMapPath),
 		},
-	});
+		ecma: 2020,
+	};
+	const result = await minify(code, opt);
 	fs.writeFileSync(minPath, result.code);
 	fs.writeFileSync(minMapPath, result.map);
 }

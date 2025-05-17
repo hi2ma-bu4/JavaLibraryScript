@@ -1,4 +1,4 @@
 module.exports = {
-  ...require("./Enum.js"),
-  Interface: require("./Interface.js")
+    ...require("./Enum.js"),
+    Interface: require("./Interface.js")
 };

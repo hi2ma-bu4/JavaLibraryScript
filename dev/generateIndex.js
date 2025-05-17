@@ -8,6 +8,8 @@ const skipList = new Set([
 	"main.js",
 ]);
 
+const indent = "    ";
+
 function isPlainObjectExport(modulePath) {
 	try {
 		const mod = require(modulePath);
@@ -47,15 +49,15 @@ function generateIndex(dir, baseDir = dir) {
 		const fullRequirePath = path.resolve(filePath);
 
 		if (isPlainObjectExport(fullRequirePath)) {
-			exportLines.push(`  ...require("${requirePath}")`);
+			exportLines.push(`${indent}...require("${requirePath}")`);
 		} else {
-			exportLines.push(`  ${key}: require("${requirePath}")`);
+			exportLines.push(`${indent}${key}: require("${requirePath}")`);
 		}
 	});
 
 	// サブフォルダのindexもexport
 	subDirs.forEach((subDir) => {
-		exportLines.push(`  ${subDir.name}: require("./${subDir.name}")`);
+		exportLines.push(`${indent}${subDir.name}: require("./${subDir.name}")`);
 	});
 
 	// module.exportsの内容を文字列で作成
