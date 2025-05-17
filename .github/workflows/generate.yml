@@ -48,6 +48,12 @@ jobs:
                   if-no-files-found: error
                   path: types/*
 
+            - name: 最新のタグを取得
+              id: get_tag
+              run: |
+                  TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+                  echo "tag=$TAG" >> $GITHUB_OUTPUT
+
             - name: Upload .d.ts to existing release
               uses: softprops/action-gh-release@v1
               with:
