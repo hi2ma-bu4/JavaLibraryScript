@@ -1,8 +1,13 @@
 name: Generate .d.ts
 
 on:
-    release:
-        types: [published, prereleased]
+    workflow_run:
+        workflows: ["Release on Version Change"]
+        types:
+            - completed
+    push:
+        tags:
+            - "v*"
 
 permissions:
     contents: write # リポジトリのコンテンツに書き込み権限を与える
