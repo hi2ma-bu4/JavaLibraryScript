@@ -3,6 +3,7 @@ const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 
 /**
  * 単一のEnum要素を表すクラス
+ * @class
  */
 class _EnumItem extends JavaLibraryScriptCore {
 	/**
@@ -74,6 +75,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 /**
  * Enum を生成するクラス
+ * @class
  */
 class _EnumCore extends JavaLibraryScriptCore {
 	/**
@@ -292,6 +294,10 @@ module.exports = {
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
 
+/**
+ * インターフェイス管理
+ * @class
+ */
 class Interface extends JavaLibraryScriptCore {
 	static _isDebugMode = false;
 
@@ -383,20 +389,32 @@ module.exports = {
 
 },{"./Enum.js":1,"./Interface.js":2}],4:[function(require,module,exports){
 module.exports = {
-    base: require("./base"),
-    libs: require("./libs"),
-    util: require("./util")
+    base: require("./base/index.js"),
+    libs: require("./libs/index.js"),
+    util: require("./util/index.js")
 };
 
-},{"./base":3,"./libs":6,"./util":12}],5:[function(require,module,exports){
+},{"./base/index.js":3,"./libs/index.js":6,"./util/index.js":12}],5:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
+/**
+ * 型チェッカー
+ * @class
+ */
 class TypeChecker extends JavaLibraryScriptCore {
 	static _CLASS_REG = /^\s*class\s+/;
 
 	// ==================================================
+	/**
+	 * Typeの否定
+	 * @class
+	 * @static
+	 */
 	static _NotType = class _NotType extends JavaLibraryScriptCore {
+		/**
+		 * @param {Function | Function[]} typeToExclude
+		 */
 		constructor(typeToExclude) {
 			super();
 			if (typeToExclude instanceof TypeChecker._NotType) throw new TypeError("typeToExclude must be instance of NotType");
@@ -404,20 +422,62 @@ class TypeChecker extends JavaLibraryScriptCore {
 		}
 	};
 
+	/**
+	 * 否定型を返す
+	 * @param {Function | Function[]} typeToExclude
+	 * @returns {TypeChecker._NotType}
+	 */
 	static NotType(typeToExclude) {
 		return new TypeChecker._NotType(typeToExclude);
 	}
 	// ==================================================
 
+	/**
+	 * 任意の型
+	 * @type {Symbol}
+	 * @static
+	 * @readonly
+	 */
 	static Any = Symbol("any");
+	/**
+	 * 返り値を返さない関数の型
+	 * @type {Symbol}
+	 * @static
+	 * @readonly
+	 */
 	static Void = Symbol("void");
+	/**
+	 * 返り値を返さない関数の型
+	 * @type {Symbol}
+	 * @static
+	 * @readonly
+	 */
 	static NoReturn = this.Void;
 
+	/**
+	 * null以外の型
+	 * @type {TypeChecker._NotType}
+	 * @static
+	 * @readonly
+	 */
 	static NotNull = this.NotType(null);
+	/**
+	 * undefined以外の型
+	 * @type {TypeChecker._NotType}
+	 * @static
+	 * @readonly
+	 */
 	static NotUndefined = this.NotType(undefined);
 
 	// ==================================================
 
+	/**
+	 * 型チェック(一括)
+	 * @param {any} value
+	 * @param {Function} expected
+	 * @returns {boolean}
+	 * @static
+	 */
 	static matchType(value, expected) {
 		if (Array.isArray(expected)) {
 			const notTypes = expected.filter((t) => t instanceof this._NotType);
@@ -430,6 +490,13 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return this.checkType(value, expected);
 	}
 
+	/**
+	 * 型チェック(個別)
+	 * @param {any} value
+	 * @param {Function} expected
+	 * @returns {boolean}
+	 * @static
+	 */
 	static checkType(value, expected) {
 		if (expected instanceof this._NotType) {
 			// 除外型なので、valueが除外型にマッチしたらfalse
@@ -453,11 +520,52 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return false;
 	}
 
+	/**
+	 * 型を取得する
+	 * @param {any} value
+	 * @returns {Function | null}
+	 */
+	static getType(value) {
+		if (value === null) return null;
+		if (value === undefined) return undefined;
+		const type = typeof value;
+		switch (type) {
+			case "string":
+				return String;
+			case "number":
+				return Number;
+			case "boolean":
+				return Boolean;
+			case "symbol":
+				return Symbol;
+			case "function":
+				return Function;
+			case "bigint":
+				return BigInt;
+			case "object":
+				if (Array.isArray(value)) return Array;
+				return value.constructor;
+		}
+		throw new TypeError(`TypeChecker: getType()に対応していない型:${type}`);
+	}
+
+	/**
+	 * 型名を取得
+	 * @param {Function} expected
+	 * @returns {string}
+	 * @static
+	 */
 	static typeNames(expected) {
 		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.stringify(t)).join(" | ");
 		return expected?.name || TypeChecker.stringify(expected);
 	}
 
+	/**
+	 * 値を文字列に変換
+	 * @param {any} value
+	 * @returns {string}
+	 * @static
+	 */
 	static stringify(value) {
 		if (value === null || value === undefined) {
 			return String(value);
@@ -497,12 +605,24 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return String(value); // それ以外の型はそのまま文字列に変換
 	}
 
+	/**
+	 * 関数かチェック
+	 * @param {any} fn
+	 * @returns {boolean}
+	 * @static
+	 */
 	static checkFunction(fn) {
 		if (typeof fn !== "function") return false;
 		if (this.checkClass(fn)) return false;
 		return true;
 	}
 
+	/**
+	 * クラスかチェック
+	 * @param {any} fn
+	 * @returns {boolean}
+	 * @static
+	 */
 	static checkClass(fn) {
 		if (typeof fn !== "function") return false;
 		if (this._CLASS_REG.test(fn.toString())) return true;
@@ -521,13 +641,23 @@ module.exports = TypeChecker;
 },{"../base/Enum.js":1,"../libs/sys/JavaLibraryScriptCore.js":7}],6:[function(require,module,exports){
 module.exports = {
     TypeChecker: require("./TypeChecker.js"),
-    sys: require("./sys")
+    sys: require("./sys/index.js")
 };
 
-},{"./TypeChecker.js":5,"./sys":8}],7:[function(require,module,exports){
+},{"./TypeChecker.js":5,"./sys/index.js":8}],7:[function(require,module,exports){
+/**
+ * @typedef {symbol} LIBRARY_ID_TYPE
+ */
+
+/** @type {LIBRARY_ID_TYPE} */
 const LIBRARY_ID = Symbol.for("JavaLibraryScript");
 
+/**
+ * JavaLibraryScriptの共通継承元
+ * @class
+ */
 class JavaLibraryScriptCore {
+	/** @type {true} */
 	static [LIBRARY_ID] = true;
 }
 
@@ -560,6 +690,7 @@ const NotEmpty = [NotNull, NotUndefined];
 
 /**
  * Mapの基底クラス
+ * @class
  */
 class BaseMap extends Map {
 	/**
@@ -621,6 +752,7 @@ const EntryStream = require("./stream/EntryStream.js");
 
 /**
  * 型チェック機能のついたMap
+ * @class
  */
 class HashMap extends BaseMap {
 	/**
@@ -833,24 +965,42 @@ module.exports = HashMap;
 module.exports = {
     BaseMap: require("./BaseMap.js"),
     HashMap: require("./HashMap.js"),
-    stream: require("./stream")
+    stream: require("./stream/index.js")
 };
 
-},{"./BaseMap.js":10,"./HashMap.js":11,"./stream":19}],13:[function(require,module,exports){
+},{"./BaseMap.js":10,"./HashMap.js":11,"./stream/index.js":20}],13:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
 const Stream = require("./Stream.js");
 
+/**
+ * 非同期Stream (LazyAsyncList)
+ * @class
+ */
 class AsyncStream extends StreamInterface {
+	/**
+	 * @param {Iterable | AsyncIterator} source
+	 */
 	constructor(source) {
 		super();
 		this._iter = AsyncStream._normalize(source);
 		this._pipeline = [];
 	}
 
+	/**
+	 * AsyncStream化
+	 * @param {Iterable | AsyncIterator} iterable
+	 * @returns {AsyncStream}
+	 * @static
+	 */
 	static from(iterable) {
 		return new AsyncStream(iterable);
 	}
 
+	/**
+	 * Iterable化
+	 * @param {Iterable | AsyncIterator} input
+	 * @returns {AsyncIterator}
+	 */
 	static _normalize(input) {
 		if (typeof input[Symbol.asyncIterator] === "function") return input;
 		if (typeof input[Symbol.iterator] === "function") {
@@ -861,15 +1011,24 @@ class AsyncStream extends StreamInterface {
 		throw new TypeError("not (Async)Iterable");
 	}
 
+	// ==================================================
+	// パイプライン計算
+	// ==================================================
+
+	/**
+	 * pipelineに追加
+	 * @param {Generator} fn
+	 * @returns {AsyncStream}
+	 */
 	_use(fn) {
 		this._pipeline.push(fn);
 		return this;
 	}
 
-	// ==================================================
-	// パイプライン計算
-	// ==================================================
-
+	/**
+	 * pipelineを圧縮
+	 * @returns {AsyncStream}
+	 */
 	flattenPipeline() {
 		const flattenedFn = this._pipeline.reduceRight(
 			(nextFn, currentFn) => {
@@ -887,6 +1046,10 @@ class AsyncStream extends StreamInterface {
 		return flat;
 	}
 
+	/**
+	 * 処理を一括関数化
+	 * @returns {Function}
+	 */
 	toFunction() {
 		const flat = this.flattenPipeline();
 		const fn = flat._pipeline[0];
@@ -897,12 +1060,22 @@ class AsyncStream extends StreamInterface {
 	// Pipeline
 	// ==================================================
 
+	/**
+	 * AsyncStreamをマップ
+	 * @param {Function | Promise} fn
+	 * @returns {AsyncStream}
+	 */
 	map(fn) {
 		return this._use(async function* (iter) {
 			for await (const x of iter) yield await fn(x);
 		});
 	}
 
+	/**
+	 * AsyncStreamをフィルタ
+	 * @param {Function | Promise} fn
+	 * @returns {AsyncStream}
+	 */
 	filter(fn) {
 		return this._use(async function* (iter) {
 			for await (const x of iter) {
@@ -911,6 +1084,11 @@ class AsyncStream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * AsyncStreamを展開
+	 * @param {Function | Promise} fn
+	 * @returns {AsyncStream}
+	 */
 	flatMap(fn) {
 		return this._use(async function* (iter) {
 			for await (const x of iter) {
@@ -920,6 +1098,11 @@ class AsyncStream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * AsyncStreamの重複を排除
+	 * @param {Function | Promise} keyFn
+	 * @returns {AsyncStream}
+	 */
 	distinct(keyFn = (x) => x) {
 		return this._use(async function* (iter) {
 			const seen = new Set();
@@ -933,6 +1116,25 @@ class AsyncStream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * AsyncStreamの要素は変更せずに関数のみを実行
+	 * @param {Function} fn
+	 * @returns {AsyncStream}
+	 */
+	peek(fn) {
+		return this._use(async function* (iter) {
+			for await (const x of iter) {
+				fn(x);
+				yield x;
+			}
+		});
+	}
+
+	/**
+	 * AsyncStreamの要素数を先頭から制限
+	 * @param {Number} n
+	 * @returns {AsyncStream}
+	 */
 	limit(n) {
 		return this._use(async function* (iter) {
 			let i = 0;
@@ -943,6 +1145,11 @@ class AsyncStream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * AsyncStreamの要素数を先頭からスキップ
+	 * @param {Number} n
+	 * @returns {AsyncStream}
+	 */
 	skip(n) {
 		return this._use(async function* (iter) {
 			let i = 0;
@@ -956,6 +1163,10 @@ class AsyncStream extends StreamInterface {
 	// Iterator
 	// ==================================================
 
+	/**
+	 * Streamをイテレータ化(非同期)
+	 * @returns {AsyncIterator}
+	 */
 	[Symbol.asyncIterator]() {
 		let iter = this._iter;
 		for (const op of this._pipeline) {
@@ -967,12 +1178,22 @@ class AsyncStream extends StreamInterface {
 	// End
 	// ==================================================
 
+	/**
+	 * AsyncStreamをforEach
+	 * @param {Function | Promise} fn
+	 * @async
+	 */
 	async forEach(fn) {
 		for await (const x of this) {
 			await fn(x);
 		}
 	}
 
+	/**
+	 * AsyncStreamを配列化
+	 * @returns {Array}
+	 * @async
+	 */
 	async toArray() {
 		const result = [];
 		for await (const x of this) {
@@ -981,37 +1202,108 @@ class AsyncStream extends StreamInterface {
 		return result;
 	}
 
-	async reduce(fn, init) {
-		let acc = init;
+	/**
+	 * AsyncStreamをreduce
+	 * @param {Function | Promise} fn
+	 * @param {any} initial
+	 * @returns {any}
+	 * @async
+	 */
+	async reduce(fn, initial) {
+		let acc = initial;
 		for await (const x of this) {
 			acc = await fn(acc, x);
 		}
 		return acc;
 	}
 
-	count() {
-		return this.reduce((acc) => acc + 1, 0);
+	/**
+	 * AsyncStreamの要素数を取得
+	 * @returns {Number}
+	 * @async
+	 */
+	async count() {
+		return await this.reduce((acc) => acc + 1, 0);
+	}
+
+	/**
+	 * AsyncStreamで条件を満たす要素があるか検査
+	 * @param {Function | Promise} fn
+	 * @returns {Boolean}
+	 * @async
+	 */
+	async some(fn) {
+		for await (const x of this) {
+			if (await fn(x)) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Streamで全ての要素が条件を満たすか検査
+	 * @param {Function | Promise} fn
+	 * @returns {Boolean}
+	 * @async
+	 */
+	async every(fn) {
+		for await (const x of this) {
+			if (!(await fn(x))) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * AsyncStreamから最初の要素を取得
+	 * @returns {any}
+	 * @async
+	 */
+	async findFirst() {
+		for await (const item of this) return item;
+		return undefined;
+	}
+
+	/**
+	 * Streamから任意の要素を取得
+	 * @returns {any}
+	 * @async
+	 */
+	async find() {
+		return await this.findFirst();
+	}
+
+	/**
+	 * Java Collectors 相当
+	 * @param {Function} collectorFn
+	 * @returns {any}
+	 */
+	collectWith(collectorFn) {
+		return collectorFn(this);
 	}
 
 	// ==================================================
 	// mapTo
 	// ==================================================
 
-	toLazy() {
-		return new Promise(async (resolve) => {
-			const arr = [];
-			for await (const item of this) {
-				arr.push(item);
-			}
-			resolve(new Stream(arr));
-		});
+	/**
+	 * AsyncStreamをStreamに変換
+	 * @returns {Stream}
+	 * @async
+	 */
+	async toLazy() {
+		const arr = [];
+		for await (const item of this) {
+			arr.push(item);
+		}
+		return new Stream(arr);
 	}
 }
 
 module.exports = AsyncStream;
 
-},{"./Stream.js":16,"./StreamInterface.js":17}],14:[function(require,module,exports){
+},{"./Stream.js":16,"./StreamInterface.js":18}],14:[function(require,module,exports){
 const Stream = require("./Stream.js");
+const Interface = require("../../base/Interface");
+const StreamChecker = require("./StreamChecker");
 
 let HashMap;
 function init() {
@@ -1019,19 +1311,38 @@ function init() {
 	HashMap = require("../HashMap.js");
 }
 
+/**
+ * Entry専用Stream (LazyList)
+ * @class
+ */
 class EntryStream extends Stream {
-	constructor(source) {
+	/**
+	 * @param {Iterable} source
+	 * @param {Function} KeyType
+	 * @param {Function} ValueType
+	 */
+	constructor(source, KeyType, ValueType) {
 		super(source);
 
 		this.mapToEntry = undefined;
+		this._KeyType = KeyType;
+		this._ValueType = ValueType;
 	}
 
+	/**
+	 * EntryStreamからキーのStreamを返却
+	 * @returns {Stream}
+	 */
 	keys() {
-		return this._convertToX(Stream).map(([k, _]) => k);
+		return this._convertToX(StreamChecker.typeToStream(this._KeyType)).map(([k, _]) => k);
 	}
 
+	/**
+	 * EntryStreamから値のStreamを返却
+	 * @returns {Stream}
+	 */
 	values() {
-		return this._convertToX(Stream).map(([_, v]) => v);
+		return this._convertToX(StreamChecker.typeToStream(this._ValueType)).map(([_, v]) => v);
 	}
 
 	mapKeys(fn) {
@@ -1050,18 +1361,32 @@ class EntryStream extends Stream {
 	}
 }
 
+Interface.applyTo(EntryStream);
+
 module.exports = EntryStream;
 
-},{"../HashMap.js":11,"./Stream.js":16}],15:[function(require,module,exports){
+},{"../../base/Interface":2,"../HashMap.js":11,"./Stream.js":16,"./StreamChecker":17}],15:[function(require,module,exports){
 const Stream = require("./Stream.js");
+const Interface = require("../../base/Interface");
 
+/**
+ * 数値専用Stream (LazyList)
+ * @class
+ */
 class NumberStream extends Stream {
+	/**
+	 * @param {Iterable} source
+	 */
 	constructor(source) {
 		super(source);
 
 		this.mapToNumber = undefined;
 	}
 
+	/**
+	 * 合計
+	 * @returns {Number}
+	 */
 	sum() {
 		let total = 0;
 		for (const num of this) {
@@ -1070,6 +1395,10 @@ class NumberStream extends Stream {
 		return total;
 	}
 
+	/**
+	 * 平均
+	 * @returns {Number}
+	 */
 	average() {
 		let total = 0;
 		let count = 0;
@@ -1080,27 +1409,41 @@ class NumberStream extends Stream {
 		return count === 0 ? NaN : total / count;
 	}
 
+	/**
+	 * 最小値
+	 * @returns {Number | null}
+	 */
 	min() {
 		let min = Infinity;
 		for (const num of this) {
 			if (num < min) min = num;
 		}
-		return min === Infinity ? undefined : min;
+		return min === Infinity ? null : min;
 	}
 
+	/**
+	 * 最大値
+	 * @returns {Number | null}
+	 */
 	max() {
 		let max = -Infinity;
 		for (const num of this) {
 			if (num > max) max = num;
 		}
-		return max === -Infinity ? undefined : max;
+		return max === -Infinity ? null : max;
 	}
 }
 
+Interface.applyTo(NumberStream);
+
 module.exports = NumberStream;
 
-},{"./Stream.js":16}],16:[function(require,module,exports){
+},{"../../base/Interface":2,"./Stream.js":16}],16:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
+const Interface = require("../../base/Interface");
+const TypeChecker = require("../../libs/TypeChecker");
+
+const Any = TypeChecker.Any;
 
 let NumberStream, StringStream, EntryStream, AsyncStream;
 function init() {
@@ -1111,7 +1454,14 @@ function init() {
 	AsyncStream = require("./AsyncStream.js");
 }
 
+/**
+ * Streamオブジェクト(LazyList)
+ * @class
+ */
 class Stream extends StreamInterface {
+	/**
+	 * @param {Iterable} source
+	 */
 	constructor(source) {
 		super();
 		this._iter = source[Symbol.iterator]();
@@ -1120,27 +1470,49 @@ class Stream extends StreamInterface {
 		init();
 	}
 
+	/**
+	 * Stream化
+	 * @param {Iterable} iterable
+	 * @returns {Stream}
+	 * @static
+	 */
 	static from(iterable) {
 		return new this(iterable);
-	}
-
-	_use(fn) {
-		this._pipeline.push(fn);
-		return this;
 	}
 
 	// ==================================================
 	// パイプライン計算
 	// ==================================================
 
-	_convertToX(construct, fn) {
-		const newStream = new construct([]);
+	/**
+	 * pipelineに追加
+	 * @param {Generator} fn
+	 * @returns {Stream}
+	 */
+	_use(fn) {
+		this._pipeline.push(fn);
+		return this;
+	}
+
+	/**
+	 * 他Streamに変換
+	 * @param {Function} construct
+	 * @param {Generator} fn
+	 * @param {...any} args
+	 * @returns {Stream}
+	 */
+	_convertToX(construct, fn, ...args) {
+		const newStream = new construct([], ...args);
 		newStream._iter = this._iter;
 		newStream._pipeline = [...this._pipeline];
 		if (fn) newStream._pipeline.push(fn);
 		return newStream;
 	}
 
+	/**
+	 * pipelineを圧縮
+	 * @returns {Stream}
+	 */
 	flattenPipeline() {
 		const flattenedFn = this._pipeline.reduceRight(
 			(nextFn, currentFn) => {
@@ -1157,6 +1529,10 @@ class Stream extends StreamInterface {
 		return flat;
 	}
 
+	/**
+	 * 処理を一括関数化
+	 * @returns {Function}
+	 */
 	toFunction() {
 		const flat = this.flattenPipeline();
 		const fn = flat._pipeline[0];
@@ -1167,18 +1543,33 @@ class Stream extends StreamInterface {
 	// Pipeline
 	// ==================================================
 
+	/**
+	 * Streamをマップ
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	map(fn) {
 		return this._use(function* (iter) {
 			for (const item of iter) yield fn(item);
 		});
 	}
 
+	/**
+	 * Streamをフィルタ
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	filter(fn) {
 		return this._use(function* (iter) {
 			for (const item of iter) if (fn(item)) yield item;
 		});
 	}
 
+	/**
+	 * Streamを展開
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	flatMap(fn) {
 		return this._use(function* (iter) {
 			for (const item of iter) {
@@ -1188,11 +1579,16 @@ class Stream extends StreamInterface {
 		});
 	}
 
-	distinct() {
+	/**
+	 * Streamの重複を排除
+	 * @param {Function} keyFn
+	 * @returns {Stream}
+	 */
+	distinct(keyFn = JSON.stringify.bind(JSON)) {
 		return this._use(function* (iter) {
 			const seen = new Set();
 			for (const item of iter) {
-				const key = JSON.stringify(item);
+				const key = keyFn(item);
 				if (!seen.has(key)) {
 					seen.add(key);
 					yield item;
@@ -1201,6 +1597,11 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * Streamをソート
+	 * @param {Function} compareFn
+	 * @returns {Stream}
+	 */
 	sorted(compareFn = (a, b) => (a > b ? 1 : a < b ? -1 : 0)) {
 		return this._use(function* (iter) {
 			const arr = [...iter].sort(compareFn);
@@ -1208,6 +1609,11 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * Streamの要素は変更せずに関数のみを実行
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	peek(fn) {
 		return this._use(function* (iter) {
 			for (const item of iter) {
@@ -1217,6 +1623,11 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * Streamの要素数を先頭から制限
+	 * @param {Number} n
+	 * @returns {Stream}
+	 */
 	limit(n) {
 		return this._use(function* (iter) {
 			let i = 0;
@@ -1227,6 +1638,11 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * Streamの要素数を先頭からスキップ
+	 * @param {Number} n
+	 * @returns {Stream}
+	 */
 	skip(n) {
 		return this._use(function* (iter) {
 			let i = 0;
@@ -1237,6 +1653,11 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * Streamを分割
+	 * @param {Number} size
+	 * @returns {Stream}
+	 */
 	chunk(size) {
 		return this._use(function* (iter) {
 			let buf = [];
@@ -1251,6 +1672,12 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * Streamをスライド分割
+	 * @param {Number} size
+	 * @param {Number} step
+	 * @returns {Stream}
+	 */
 	windowed(size, step = size) {
 		return this._use(function* (iter) {
 			const buffer = [];
@@ -1268,10 +1695,18 @@ class Stream extends StreamInterface {
 	// Iterator
 	// ==================================================
 
+	/**
+	 * Streamをイテレータ化
+	 * @returns {Iterator}
+	 */
 	[Symbol.iterator]() {
 		return this._pipeline.reduce((iter, fn) => fn(iter), this._iter);
 	}
 
+	/**
+	 * Streamをイテレータ化(非同期)
+	 * @returns {AsyncIterator}
+	 */
 	[Symbol.asyncIterator]() {
 		let iter = this._pipeline.reduce((i, fn) => fn(i), this._iter);
 		return {
@@ -1285,14 +1720,28 @@ class Stream extends StreamInterface {
 	// End
 	// ==================================================
 
+	/**
+	 * StreamをforEach
+	 * @param {Function} fn
+	 */
 	forEach(fn) {
 		for (const item of this) fn(item);
 	}
 
+	/**
+	 * Streamを配列化
+	 * @returns {Array}
+	 */
 	toArray() {
 		return Array.from(this);
 	}
 
+	/**
+	 * Streamをreduce
+	 * @param {Function} fn
+	 * @param {any} initial
+	 * @returns {any}
+	 */
 	reduce(fn, initial) {
 		let acc = initial;
 		for (const item of this) {
@@ -1301,43 +1750,62 @@ class Stream extends StreamInterface {
 		return acc;
 	}
 
+	/**
+	 * Streamの要素数を取得
+	 * @returns {Number}
+	 */
 	count() {
 		let c = 0;
 		for (const _ of this) c++;
 		return c;
 	}
 
-	anyMatch(fn) {
+	/**
+	 * Streamで条件を満たす要素があるか検査
+	 * @param {Function} fn
+	 * @returns {Boolean}
+	 */
+	some(fn) {
 		for (const item of this) {
 			if (fn(item)) return true;
 		}
 		return false;
 	}
 
-	allMatch(fn) {
+	/**
+	 * Streamで全ての要素が条件を満たすか検査
+	 * @param {Function} fn
+	 * @returns {Boolean}
+	 */
+	every(fn) {
 		for (const item of this) {
 			if (!fn(item)) return false;
 		}
 		return true;
 	}
 
-	noneMatch(fn) {
-		for (const item of this) {
-			if (fn(item)) return false;
-		}
-		return true;
-	}
-
+	/**
+	 * Streamから最初の要素を取得
+	 * @returns {any}
+	 */
 	findFirst() {
 		for (const item of this) return item;
 		return undefined;
 	}
 
+	/**
+	 * Streamから任意の要素を取得
+	 * @returns {any}
+	 */
 	findAny() {
 		return this.findFirst(); // 同義（非並列）
 	}
 
-	// Java Collectors 相当
+	/**
+	 * Java Collectors 相当
+	 * @param {Function} collectorFn
+	 * @returns {any}
+	 */
 	collectWith(collectorFn) {
 		return collectorFn(this);
 	}
@@ -1346,6 +1814,11 @@ class Stream extends StreamInterface {
 	// mapTo
 	// ==================================================
 
+	/**
+	 * StreamをNumberStreamに変換
+	 * @param {Function} fn
+	 * @returns {NumberStream}
+	 */
 	mapToNumber(fn) {
 		return this._convertToX(NumberStream, function* (iter) {
 			for (const item of iter) {
@@ -1358,6 +1831,11 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * StreamをStringStreamに変換
+	 * @param {Function} fn
+	 * @returns {StringStream}
+	 */
 	mapToString(fn) {
 		return this._convertToX(StringStream, function* (iter) {
 			for (const item of iter) {
@@ -1370,18 +1848,33 @@ class Stream extends StreamInterface {
 		});
 	}
 
+	/**
+	 * StreamをEntryStreamに変換
+	 * @param {Function} fn
+	 * @returns {EntryStream}
+	 */
 	mapToEntry(fn) {
-		return this._convertToX(EntryStream, function* (iter) {
-			for (const item of iter) {
-				const entry = fn(item);
-				if (!Array.isArray(entry) || entry.length !== 2) {
-					throw new TypeError(`mapToEntry() must return [key, value] pair. Got: ${entry}`);
+		return this._convertToX(
+			EntryStream,
+			function* (iter) {
+				for (const item of iter) {
+					const entry = fn(item);
+					if (!Array.isArray(entry) || entry.length !== 2) {
+						throw new TypeError(`mapToEntry() must return [key, value] pair. Got: ${entry}`);
+					}
+					yield entry;
 				}
-				yield entry;
-			}
-		});
+			},
+			Any,
+			Any
+		);
 	}
 
+	/**
+	 * StreamをAsyncStreamに変換
+	 * @param {Function} fn
+	 * @returns {AsyncStream}
+	 */
 	mapToAsync(fn) {
 		const input = this.flattenPipeline();
 		const sourceIterable = input._pipeline[0](input._iter); // 実行（同期 generator）
@@ -1397,32 +1890,73 @@ class Stream extends StreamInterface {
 	}
 }
 
+Interface.applyTo(Stream);
+
 module.exports = Stream;
 
-},{"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./StreamInterface.js":17,"./StringStream.js":18}],17:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/TypeChecker":5,"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./StreamInterface.js":18,"./StringStream.js":19}],17:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
+const TypeChecker = require("../../libs/TypeChecker.js");
+const StreamInterface = require("./StreamInterface.js");
 
+let Stream, NumberStream, StringStream, EntryStream, AsyncStream;
+function init() {
+	if (Stream) return;
+	Stream = require("./Stream.js");
+	NumberStream = require("./NumberStream.js");
+	StringStream = require("./StringStream.js");
+	EntryStream = require("./EntryStream.js");
+	AsyncStream = require("./AsyncStream.js");
+}
+
+/**
+ * Streamの型チェック
+ * @class
+ */
+class StreamChecker extends JavaLibraryScriptCore {
+	/**
+	 * TypeをStreamに変換する
+	 * @param {Function} expected
+	 * @returns {StreamInterface}
+	 */
+	static typeToStream(expected) {
+		if (expected == null) return Stream;
+		if (expected === String) return StringStream;
+		if (expected === Number) return NumberStream;
+		if (expected === Map) return EntryStream;
+		if (expected === Promise) return AsyncStream;
+		return Stream;
+	}
+
+	/**
+	 * StreamをTypeに変換する
+	 * @param {StreamInterface} stream
+	 * @returns {Function}
+	 * @static
+	 */
+	static streamToType(stream) {
+		// Stream継承
+		if (stream instanceof StringStream) return String;
+		if (stream instanceof NumberStream) return Number;
+		if (stream instanceof EntryStream) return Map;
+		// StreamInterface継承
+		if (stream instanceof AsyncStream) return Promise;
+		if (stream instanceof Stream) return TypeChecker.Any;
+		return null;
+	}
+}
+
+module.exports = StreamChecker;
+
+},{"../../libs/TypeChecker.js":5,"../../libs/sys/JavaLibraryScriptCore.js":7,"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./Stream.js":16,"./StreamInterface.js":18,"./StringStream.js":19}],18:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
+const Interface = require("../../base/Interface");
+
+/**
+ * Streamの基底クラス
+ * @class
+ */
 class StreamInterface extends JavaLibraryScriptCore {
-	static methodTypes = {
-		map: {
-			args: [Function],
-			returns: StreamInterface,
-		},
-		filter: {
-			args: [Function],
-			returns: StreamInterface,
-		},
-		flatMap: {
-			args: [Function],
-			returns: StreamInterface,
-		},
-		//
-		forEach: {
-			args: [[Function, Promise]],
-			returns: [undefined, Promise],
-		},
-	};
-
 	constructor() {
 		super();
 		if (new.target === StreamInterface) {
@@ -1431,56 +1965,102 @@ class StreamInterface extends JavaLibraryScriptCore {
 	}
 }
 
+Interface.applyTo(StreamInterface, {
+	map: {
+		args: [Function],
+		returns: StreamInterface,
+	},
+	filter: {
+		args: [Function],
+		returns: StreamInterface,
+	},
+	flatMap: {
+		args: [Function],
+		returns: StreamInterface,
+	},
+	//
+	forEach: {
+		args: [[Function, Promise]],
+		returns: [undefined, Promise],
+	},
+});
+
 module.exports = StreamInterface;
 
-},{"../../libs/sys/JavaLibraryScriptCore.js":7}],18:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],19:[function(require,module,exports){
 const Stream = require("./Stream.js");
+const Interface = require("../../base/Interface");
 
+/**
+ * 文字列専用Stream (LazyList)
+ * @class
+ */
 class StringStream extends Stream {
+	/**
+	 * @param {Iterable} source
+	 */
 	constructor(source) {
 		super(source);
 
 		this.mapToString = undefined;
 	}
 
-	join(separator = "") {
+	/**
+	 * 文字列連結
+	 * @param {string} separator
+	 * @returns {string}
+	 */
+	join(separator = " ") {
 		return Array.from(this).join(separator);
 	}
 
+	/**
+	 * 文字列を結合
+	 * @returns {string}
+	 */
 	concatAll() {
 		return this.join("");
 	}
 
+	/**
+	 * 最長の文字列を返す
+	 * @returns {string}
+	 */
 	longest() {
 		let max = "";
 		for (const str of this) {
-			if (typeof str !== "string") throw new TypeError("All elements must be strings");
 			if (str.length > max.length) max = str;
 		}
-		return max || undefined;
+		return max || null;
 	}
 
+	/**
+	 * 最短の文字列を返す
+	 * @returns {string}
+	 */
 	shortest() {
 		let min = null;
 		for (const str of this) {
-			if (typeof str !== "string") throw new TypeError("All elements must be strings");
 			if (min === null || str.length < min.length) min = str;
 		}
-		return min || undefined;
+		return min || null;
 	}
 }
 
+Interface.applyTo(StringStream);
+
 module.exports = StringStream;
 
-},{"./Stream.js":16}],19:[function(require,module,exports){
+},{"../../base/Interface":2,"./Stream.js":16}],20:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
     NumberStream: require("./NumberStream.js"),
     Stream: require("./Stream.js"),
+    StreamChecker: require("./StreamChecker.js"),
     StreamInterface: require("./StreamInterface.js"),
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./Stream.js":16,"./StreamInterface.js":17,"./StringStream.js":18}]},{},[9])
+},{"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./Stream.js":16,"./StreamChecker.js":17,"./StreamInterface.js":18,"./StringStream.js":19}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map

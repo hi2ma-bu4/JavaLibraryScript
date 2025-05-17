@@ -1,4 +1,4 @@
 module.exports = {
     TypeChecker: require("./TypeChecker.js"),
-    sys: require("./sys")
+    sys: require("./sys/index.js")
 };

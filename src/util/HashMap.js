@@ -4,6 +4,7 @@ const EntryStream = require("./stream/EntryStream.js");
 
 /**
  * 型チェック機能のついたMap
+ * @class
  */
 class HashMap extends BaseMap {
 	/**

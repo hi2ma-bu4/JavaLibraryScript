@@ -3,9 +3,13 @@
         "allowJs": true,
         "declaration": true,
         "emitDeclarationOnly": true,
-        "outDir": "test/types"
+        "esModuleInterop": true,
+        "outDir": "dev/tmp/types",
+        "module": "esnext",
+        "target": "ES2020",
+        "moduleResolution": "node",
     },
     "include": [
-        "dist/*.js"
+        "src/**/*.js"
     ]
 }

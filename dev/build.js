@@ -1,37 +1,47 @@
 const browserify = require("browserify");
 const exorcist = require("exorcist");
+const rollup = require("rollup");
+const dts = require("rollup-plugin-dts").default;
+const commonjs = require("@rollup/plugin-commonjs");
 const fs = require("node:fs");
 const path = require("node:path");
 const { minify } = require("terser");
 const { execSync } = require("node:child_process");
 
 const generateIndex = require("./generateIndex.js");
+const createEntryEndpoint = require("./createEntryEndpoint.js");
 const CL = require("./libs/ColorLogger.js");
 
 const script_name = "JavaLibraryScript";
+const entry_name = "main";
+const type_entry_name = "entrypoint";
 
 const baseDir = path.join(__dirname, "..");
 
-const distDir = path.join(baseDir, "dist");
 const entryDir = path.join(baseDir, "src");
+const distDir = path.join(baseDir, "dist");
+const typesTmpDir = path.join(baseDir, "dev/tmp/types");
+const typesDir = path.join(baseDir, "types");
 
-const entry = path.join(entryDir, "main.js");
+const entryPath = path.join(entryDir, `${entry_name}.js`);
 const bundlePath = path.join(distDir, `${script_name}.js`);
 const bundleMapPath = path.join(distDir, `${script_name}.js.map`);
 const minPath = path.join(distDir, `${script_name}.min.js`);
 const minMapPath = path.join(distDir, `${script_name}.min.js.map`);
+const entryTypesPath = path.join(typesTmpDir, `${type_entry_name}.d.ts`);
+const typesPath = path.join(typesDir, `${script_name}.d.ts`);
 
 // 相対座標を取得
 function getRelativePath(name) {
 	return path.relative(baseDir, name);
 }
 
-// distディレクトリのクリーン＆作成
-function prepareDist() {
-	if (fs.existsSync(distDir)) {
-		fs.rmSync(distDir, { recursive: true, force: true });
+// ディレクトリのクリーン＆作成
+function prepareDir(dir) {
+	if (fs.existsSync(dir)) {
+		fs.rmSync(dir, { recursive: true, force: true });
 	}
-	fs.mkdirSync(distDir, { recursive: true });
+	fs.mkdirSync(dir, { recursive: true });
 }
 
 // ファイルサイズを見やすく表示
@@ -44,13 +54,13 @@ function formatSize(bytes) {
 // ファイルサイズ取得
 function showFileSize(filePath) {
 	const stat = fs.statSync(filePath);
-	console.log(`┃📦 ${CL.brightWhite(path.basename(filePath))}: ${CL.brightGreen(formatSize(stat.size))}`);
+	console.log(`┃📊 ${CL.brightWhite(path.basename(filePath))}: ${CL.brightGreen(formatSize(stat.size))}`);
 }
 
 // Browserifyでバンドル
 function bundle() {
 	return new Promise((resolve, reject) => {
-		const b = browserify(entry, {
+		const b = browserify(entryPath, {
 			cache: {},
 			packageCache: {},
 			debug: true, // source map生成のため必須
@@ -95,6 +105,23 @@ async function minifyCode(code) {
 	fs.writeFileSync(minMapPath, result.map);
 }
 
+async function buildRollup() {
+	const bundle = await rollup.rollup({
+		input: entryTypesPath,
+		plugins: [
+			commonjs({
+				strictRequires: "auto",
+				sourceMap: false,
+			}),
+			dts(),
+		],
+	});
+	await bundle.write({
+		file: typesPath,
+		format: "es",
+	});
+}
+
 (async () => {
 	const debug = true;
 	try {
@@ -106,7 +133,7 @@ async function minifyCode(code) {
 		console.log(`┃┗🌱 ${CL.brightWhite("自動生成完了")}`);
 		//
 		console.log(`┃🗑️ ${CL.brightWhite("distフォルダリセット")}`);
-		prepareDist();
+		prepareDir(distDir);
 		//
 		console.log(`┃🗂️ ${CL.brightWhite("バンドル中...")}`);
 		const code = await bundle();
@@ -121,9 +148,19 @@ async function minifyCode(code) {
 		showFileSize(minPath);
 		//
 		if (debug) {
+			console.log(`┃🗑️ ${CL.brightWhite("types仮フォルダリセット")}`);
+			prepareDir(typesTmpDir);
 			console.log(`┃🗒️ ${CL.brightWhite("TypeScriptコンパイル中...")}`);
 			execSync("npx tsc", { stdio: "inherit" });
-			console.log(`┃┗✅ ${CL.brightWhite("TypeScriptコンパイル完了")}`);
+			console.log(`┃┗✅ ${CL.brightWhite("TypeScriptコンパイル完了")}: ${getRelativePath(typesTmpDir)}`);
+			console.log(`┃⛳ ${CL.brightWhite("rollup用entrypoint作成")}`);
+			createEntryEndpoint(entryTypesPath);
+			console.log("┃📦 .d.ts を rollup中...");
+			await buildRollup();
+			console.log(`┃┗✅ ${CL.brightWhite("rollup完了")}: ${getRelativePath(typesPath)}`);
+			console.log(`┃🗑️ ${CL.brightWhite("types仮フォルダcleanup")}`);
+			prepareDir(typesTmpDir);
+			showFileSize(typesPath);
 		}
 
 		console.log(`┣🎉 ${CL.brightYellow("ビルド完了")}`);

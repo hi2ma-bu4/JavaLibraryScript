@@ -57,7 +57,7 @@ function generateIndex(dir, baseDir = dir) {
 
 	// サブフォルダのindexもexport
 	subDirs.forEach((subDir) => {
-		exportLines.push(`${indent}${subDir.name}: require("./${subDir.name}")`);
+		exportLines.push(`${indent}${subDir.name}: require("./${subDir.name}/index.js")`);
 	});
 
 	// module.exportsの内容を文字列で作成

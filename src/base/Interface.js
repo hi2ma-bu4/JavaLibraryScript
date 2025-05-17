@@ -1,6 +1,10 @@
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
 
+/**
+ * インターフェイス管理
+ * @class
+ */
 class Interface extends JavaLibraryScriptCore {
 	static _isDebugMode = false;
 

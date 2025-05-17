@@ -1,5 +1,5 @@
 module.exports = {
-    base: require("./base"),
-    libs: require("./libs"),
-    util: require("./util")
+    base: require("./base/index.js"),
+    libs: require("./libs/index.js"),
+    util: require("./util/index.js")
 };

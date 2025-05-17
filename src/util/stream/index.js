@@ -3,6 +3,7 @@ module.exports = {
     EntryStream: require("./EntryStream.js"),
     NumberStream: require("./NumberStream.js"),
     Stream: require("./Stream.js"),
+    StreamChecker: require("./StreamChecker.js"),
     StreamInterface: require("./StreamInterface.js"),
     StringStream: require("./StringStream.js")
 };

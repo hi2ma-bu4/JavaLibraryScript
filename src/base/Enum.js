@@ -2,6 +2,7 @@ const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 
 /**
  * 単一のEnum要素を表すクラス
+ * @class
  */
 class _EnumItem extends JavaLibraryScriptCore {
 	/**
@@ -73,6 +74,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 /**
  * Enum を生成するクラス
+ * @class
  */
 class _EnumCore extends JavaLibraryScriptCore {
 	/**

@@ -1,4 +1,6 @@
 const Stream = require("./Stream.js");
+const Interface = require("../../base/Interface");
+const StreamChecker = require("./StreamChecker");
 
 let HashMap;
 function init() {
@@ -6,19 +8,38 @@ function init() {
 	HashMap = require("../HashMap.js");
 }
 
+/**
+ * Entry専用Stream (LazyList)
+ * @class
+ */
 class EntryStream extends Stream {
-	constructor(source) {
+	/**
+	 * @param {Iterable} source
+	 * @param {Function} KeyType
+	 * @param {Function} ValueType
+	 */
+	constructor(source, KeyType, ValueType) {
 		super(source);
 
 		this.mapToEntry = undefined;
+		this._KeyType = KeyType;
+		this._ValueType = ValueType;
 	}
 
+	/**
+	 * EntryStreamからキーのStreamを返却
+	 * @returns {Stream}
+	 */
 	keys() {
-		return this._convertToX(Stream).map(([k, _]) => k);
+		return this._convertToX(StreamChecker.typeToStream(this._KeyType)).map(([k, _]) => k);
 	}
 
+	/**
+	 * EntryStreamから値のStreamを返却
+	 * @returns {Stream}
+	 */
 	values() {
-		return this._convertToX(Stream).map(([_, v]) => v);
+		return this._convertToX(StreamChecker.typeToStream(this._ValueType)).map(([_, v]) => v);
 	}
 
 	mapKeys(fn) {
@@ -36,5 +57,7 @@ class EntryStream extends Stream {
 		return map;
 	}
 }
+
+Interface.applyTo(EntryStream);
 
 module.exports = EntryStream;

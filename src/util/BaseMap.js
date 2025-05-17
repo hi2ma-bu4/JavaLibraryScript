@@ -10,6 +10,7 @@ const NotEmpty = [NotNull, NotUndefined];
 
 /**
  * Mapの基底クラス
+ * @class
  */
 class BaseMap extends Map {
 	/**

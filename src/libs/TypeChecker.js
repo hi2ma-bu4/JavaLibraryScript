@@ -1,11 +1,23 @@
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
+/**
+ * 型チェッカー
+ * @class
+ */
 class TypeChecker extends JavaLibraryScriptCore {
 	static _CLASS_REG = /^\s*class\s+/;
 
 	// ==================================================
+	/**
+	 * Typeの否定
+	 * @class
+	 * @static
+	 */
 	static _NotType = class _NotType extends JavaLibraryScriptCore {
+		/**
+		 * @param {Function | Function[]} typeToExclude
+		 */
 		constructor(typeToExclude) {
 			super();
 			if (typeToExclude instanceof TypeChecker._NotType) throw new TypeError("typeToExclude must be instance of NotType");
@@ -13,20 +25,62 @@ class TypeChecker extends JavaLibraryScriptCore {
 		}
 	};
 
+	/**
+	 * 否定型を返す
+	 * @param {Function | Function[]} typeToExclude
+	 * @returns {TypeChecker._NotType}
+	 */
 	static NotType(typeToExclude) {
 		return new TypeChecker._NotType(typeToExclude);
 	}
 	// ==================================================
 
+	/**
+	 * 任意の型
+	 * @type {Symbol}
+	 * @static
+	 * @readonly
+	 */
 	static Any = Symbol("any");
+	/**
+	 * 返り値を返さない関数の型
+	 * @type {Symbol}
+	 * @static
+	 * @readonly
+	 */
 	static Void = Symbol("void");
+	/**
+	 * 返り値を返さない関数の型
+	 * @type {Symbol}
+	 * @static
+	 * @readonly
+	 */
 	static NoReturn = this.Void;
 
+	/**
+	 * null以外の型
+	 * @type {TypeChecker._NotType}
+	 * @static
+	 * @readonly
+	 */
 	static NotNull = this.NotType(null);
+	/**
+	 * undefined以外の型
+	 * @type {TypeChecker._NotType}
+	 * @static
+	 * @readonly
+	 */
 	static NotUndefined = this.NotType(undefined);
 
 	// ==================================================
 
+	/**
+	 * 型チェック(一括)
+	 * @param {any} value
+	 * @param {Function} expected
+	 * @returns {boolean}
+	 * @static
+	 */
 	static matchType(value, expected) {
 		if (Array.isArray(expected)) {
 			const notTypes = expected.filter((t) => t instanceof this._NotType);
@@ -39,6 +93,13 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return this.checkType(value, expected);
 	}
 
+	/**
+	 * 型チェック(個別)
+	 * @param {any} value
+	 * @param {Function} expected
+	 * @returns {boolean}
+	 * @static
+	 */
 	static checkType(value, expected) {
 		if (expected instanceof this._NotType) {
 			// 除外型なので、valueが除外型にマッチしたらfalse
@@ -62,11 +123,52 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return false;
 	}
 
+	/**
+	 * 型を取得する
+	 * @param {any} value
+	 * @returns {Function | null}
+	 */
+	static getType(value) {
+		if (value === null) return null;
+		if (value === undefined) return undefined;
+		const type = typeof value;
+		switch (type) {
+			case "string":
+				return String;
+			case "number":
+				return Number;
+			case "boolean":
+				return Boolean;
+			case "symbol":
+				return Symbol;
+			case "function":
+				return Function;
+			case "bigint":
+				return BigInt;
+			case "object":
+				if (Array.isArray(value)) return Array;
+				return value.constructor;
+		}
+		throw new TypeError(`TypeChecker: getType()に対応していない型:${type}`);
+	}
+
+	/**
+	 * 型名を取得
+	 * @param {Function} expected
+	 * @returns {string}
+	 * @static
+	 */
 	static typeNames(expected) {
 		if (Array.isArray(expected)) return expected.map((t) => t?.name || TypeChecker.stringify(t)).join(" | ");
 		return expected?.name || TypeChecker.stringify(expected);
 	}
 
+	/**
+	 * 値を文字列に変換
+	 * @param {any} value
+	 * @returns {string}
+	 * @static
+	 */
 	static stringify(value) {
 		if (value === null || value === undefined) {
 			return String(value);
@@ -106,12 +208,24 @@ class TypeChecker extends JavaLibraryScriptCore {
 		return String(value); // それ以外の型はそのまま文字列に変換
 	}
 
+	/**
+	 * 関数かチェック
+	 * @param {any} fn
+	 * @returns {boolean}
+	 * @static
+	 */
 	static checkFunction(fn) {
 		if (typeof fn !== "function") return false;
 		if (this.checkClass(fn)) return false;
 		return true;
 	}
 
+	/**
+	 * クラスかチェック
+	 * @param {any} fn
+	 * @returns {boolean}
+	 * @static
+	 */
 	static checkClass(fn) {
 		if (typeof fn !== "function") return false;
 		if (this._CLASS_REG.test(fn.toString())) return true;
