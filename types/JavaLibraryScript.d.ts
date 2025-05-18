@@ -1,5 +1,5 @@
 /**
- * 型チェック機能のついたMap
+ * 型チェック機能のついたSet
  * @template V
  * @extends {SetInterface<V>}
  * @class
@@ -65,11 +65,6 @@ declare class HashSet<V> {
      * @throws {TypeError}
      */
     removeAll(collection: Iterable<V>): boolean;
-    /**
-     * 空かどうかを返却する
-     * @returns {boolean}
-     */
-    isEmpty(): boolean;
     /**
      * 含まれない要素を全削除する
      * @param {Iterable<V>} collection
@@ -355,11 +350,6 @@ declare class HashMap<K, V> {
      */
     entrySet(): MapIterator<[...[K, V]]>;
     /**
-     * 空かどうかを返却する
-     * @returns {boolean}
-     */
-    isEmpty(): boolean;
-    /**
      * 等価判定を行う
      * @param {this} otherMap
      * @returns {boolean}
@@ -391,10 +381,10 @@ declare class HashMap<K, V> {
 /**
  * Entry専用Stream (LazyList)
  * @template K, V
- * @extends {Stream}
+ * @extends {Stream<V>}
  * @class
  */
-declare class EntryStream<K, V> extends Stream<any> {
+declare class EntryStream<K, V> extends Stream<V> {
     /**
      * Stream化
      * @template {EntryStream} T
@@ -454,10 +444,10 @@ type HashMapType = HashMap<any, any>;
 /**
  * 数値専用Stream (LazyList)
  * @template V
- * @extends {Stream}
+ * @extends {Stream<V>}
  * @class
  */
-declare class NumberStream<V> extends Stream<any> {
+declare class NumberStream<V> extends Stream<V> {
     /**
      * @param {Iterable<V} source
      */
@@ -698,10 +688,10 @@ type HashSetType = HashSet<any>;
 /**
  * 文字列専用Stream (LazyList)
  * @template V
- * @extends {Stream}
+ * @extends {Stream<V>}
  * @class
  */
-declare class StringStream<V> extends Stream<any> {
+declare class StringStream<V> extends Stream<V> {
     /**
      * @param {Iterable<V>} source
      */
@@ -756,6 +746,88 @@ declare class StreamChecker extends JavaLibraryScriptCore {
      * @static
      */
     static streamToType(stream: new (...args: any[]) => {}): Function;
+}
+
+/**
+ * 型チェック機能のついたList
+ * @template V
+ * @extends {ListInterface<V>}
+ * @class
+ */
+declare class ArrayList<V> {
+    /**
+     * @param {Function} ValueType
+     */
+    constructor(ValueType: Function);
+    _list: any[];
+    /**
+     * 要素を追加する
+     * @param {V} item
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    add(item: V): this;
+    /**
+     * 指定したインデックスの要素を取得する
+     * @param {Number} index
+     * @returns {V}
+     */
+    get(index: number): V;
+    /**
+     * 指定したインデックスの要素を設定する
+     * @param {Number} index
+     * @param {V} item
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    set(index: number, item: V): this;
+    /**
+     * 指定したインデックスの要素を削除する
+     * @param {Number} index
+     * @returns {V}
+     */
+    remove(index: number): V;
+    /**
+     * 要素数を返却する
+     * @returns {Number}
+     * @readonly
+     */
+    readonly get size(): number;
+    /**
+     * 全要素を削除する
+     */
+    clear(): void;
+    /**
+     * EnumのIteratorを返却する
+     * @returns {ArrayIterator<V>}
+     */
+    values(): ArrayIterator<V>;
+    /**
+     * 全てのデータを呼び出す
+     * @param {Function} callback
+     * @param {any} [thisArg]
+     */
+    forEach(callback: Function, thisArg?: any): void;
+    /**
+     * Streamを返却する
+     * @returns {Stream<V>}
+     */
+    stream(): Stream<V>;
+    /**
+     * 配列に変換する
+     * @returns {V[]}
+     */
+    toArray(): V[];
+    /**
+     * 文字列に変換する
+     * @returns {string}
+     */
+    toString(): string;
+    /**
+     * イテレータを返却する
+     * @returns {Iterator<V>}
+     */
+    [Symbol.iterator](): Iterator<V>;
 }
 
 /**
@@ -1179,13 +1251,20 @@ declare let libs: {
     };
 };
 declare let util: {
+    ArrayList: typeof ArrayList;
     HashMap: typeof HashMap;
     HashSet: typeof HashSet;
+    ListInterface: new (...args: any[]) => {
+        _ValueType: Function | Symbol;
+        _checkValue(value: unknown): void;
+        isEmpty(): boolean;
+    };
     MapInterface: new (...args: any[]) => {
         _KeyType: Function | Symbol;
         _ValueType: Function | Symbol;
         _checkKey(key: unknown): void;
         _checkValue(value: unknown): void;
+        isEmpty(): boolean;
         clear(): void;
         delete(key: unknown): boolean;
         forEach(callbackfn: (value: unknown, key: unknown, map: Map<unknown, unknown>) => void, thisArg?: any): void;
@@ -1202,6 +1281,7 @@ declare let util: {
     SetInterface: new (...args: any[]) => {
         _ValueType: Function | Symbol;
         _checkValue(value: unknown): void;
+        isEmpty(): boolean;
         add(value: unknown): /*elided*/ any;
         clear(): void;
         delete(value: unknown): boolean;

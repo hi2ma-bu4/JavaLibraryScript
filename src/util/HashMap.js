@@ -134,14 +134,6 @@ class HashMap extends MapInterface {
 		return this.entries();
 	}
 
-	/**
-	 * 空かどうかを返却する
-	 * @returns {boolean}
-	 */
-	isEmpty() {
-		return super.size === 0;
-	}
-
 	// ==================================================
 	// 追加機能
 	// ==================================================

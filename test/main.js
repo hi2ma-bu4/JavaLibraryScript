@@ -32,4 +32,10 @@ function main() {
 		set.add(i);
 	}
 	console.log(set.stream().toHashSet().toString());
+
+	const al = new JavaLibraryScript.util.ArrayList(Number);
+	for (let i = 0; i < 10; i++) {
+		al.add(i);
+	}
+	console.log(al.toString());
 }

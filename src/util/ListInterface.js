@@ -1,3 +1,4 @@
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -9,14 +10,14 @@ const NotUndefined = TypeChecker.NotUndefined;
 const NotEmpty = [NotNull, NotUndefined];
 
 /**
- * Setの基底クラス
+ * Listの基底クラス
  * @template V
- * @extends {Set<V>}
+ * @extends {JavaLibraryScriptCore}
  * @class
  * @abstract
  * @interface
  */
-class SetInterface extends Set {
+class ListInterface extends JavaLibraryScriptCore {
 	/**
 	 * @param {Function} ValueType
 	 */
@@ -45,12 +46,12 @@ class SetInterface extends Set {
 	}
 }
 
-module.exports = Interface.convert(SetInterface, {
-	add: { args: [NotEmpty], returns: SetInterface },
-	delete: { args: [NotEmpty], returns: Boolean },
-	remove: { args: [NotEmpty], returns: Boolean },
+module.exports = Interface.convert(ListInterface, {
+	add: { args: [NotEmpty], returns: ListInterface },
+	get: { args: [Number], returns: Any },
+	set: { args: [Number, NotEmpty], returns: ListInterface },
+	remove: { args: [Number], returns: Any },
 	isEmpty: { returns: Boolean, abstract: true },
 	clear: { returns: NoReturn },
-	has: { args: [NotEmpty], returns: Boolean },
-	contains: { args: [NotEmpty], returns: Boolean },
+	toArray: { returns: Array },
 });

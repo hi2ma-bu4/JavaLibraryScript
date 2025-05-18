@@ -4,7 +4,7 @@ const StreamChecker = require("./stream/StreamChecker");
 const Stream = require("./stream/Stream.js");
 
 /**
- * 型チェック機能のついたMap
+ * 型チェック機能のついたSet
  * @template V
  * @extends {SetInterface<V>}
  * @class
@@ -110,14 +110,6 @@ class HashSet extends SetInterface {
 			modified = this.delete(item) || modified;
 		}
 		return modified;
-	}
-
-	/**
-	 * 空かどうかを返却する
-	 * @returns {boolean}
-	 */
-	isEmpty() {
-		return this.size === 0;
 	}
 
 	/**
