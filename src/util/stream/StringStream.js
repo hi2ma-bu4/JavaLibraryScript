@@ -57,6 +57,4 @@ class StringStream extends Stream {
 	}
 }
 
-Interface.applyTo(StringStream);
-
 module.exports = StringStream;

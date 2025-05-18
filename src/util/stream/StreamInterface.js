@@ -4,17 +4,15 @@ const Interface = require("../../base/Interface");
 /**
  * Streamの基底クラス
  * @class
+ * @abstract
  */
 class StreamInterface extends JavaLibraryScriptCore {
 	constructor() {
 		super();
-		if (new.target === StreamInterface) {
-			throw new TypeError("Cannot instantiate abstract class StreamInterface");
-		}
 	}
 }
 
-Interface.applyTo(StreamInterface, {
+module.exports = Interface.convert(StreamInterface, {
 	map: {
 		args: [Function],
 		returns: StreamInterface,
@@ -33,5 +31,3 @@ Interface.applyTo(StreamInterface, {
 		returns: [undefined, Promise],
 	},
 });
-
-module.exports = StreamInterface;

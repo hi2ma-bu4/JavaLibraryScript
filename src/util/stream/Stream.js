@@ -449,6 +449,4 @@ class Stream extends StreamInterface {
 	}
 }
 
-Interface.applyTo(Stream);
-
 module.exports = Stream;

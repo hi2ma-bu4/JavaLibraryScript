@@ -87,6 +87,4 @@ class EntryStream extends Stream {
 	}
 }
 
-Interface.applyTo(EntryStream);
-
 module.exports = EntryStream;

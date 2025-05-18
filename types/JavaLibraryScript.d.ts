@@ -1,39 +1,8 @@
 /**
- * JavaLibraryScriptの共通継承元
- * @class
- */
-declare class JavaLibraryScriptCore {
-}
-declare namespace JavaLibraryScriptCore {
-    export { __index };
-    export type { LIBRARY_ID_TYPE };
-}
-type LIBRARY_ID_TYPE = symbol;
-
-declare namespace __libs_sys_JavaLibraryScriptCore_js {
-  export {
-    JavaLibraryScriptCore as default,
-  };
-}
-
-/**
- * Streamの基底クラス
- * @class
- */
-declare class StreamInterface extends JavaLibraryScriptCore {
-}
-
-declare namespace __util_stream_StreamInterface_js {
-  export {
-    StreamInterface as default,
-  };
-}
-
-/**
  * Streamオブジェクト(LazyList)
  * @class
  */
-declare class Stream extends StreamInterface {
+declare class Stream {
     /**
      * Stream化
      * @param {Iterable} iterable
@@ -260,6 +229,24 @@ declare namespace __util_stream_StringStream_js {
 }
 
 /**
+ * JavaLibraryScriptの共通継承元
+ * @class
+ */
+declare class JavaLibraryScriptCore {
+}
+declare namespace JavaLibraryScriptCore {
+    export { __index };
+    export type { LIBRARY_ID_TYPE };
+}
+type LIBRARY_ID_TYPE = symbol;
+
+declare namespace __libs_sys_JavaLibraryScriptCore_js {
+  export {
+    JavaLibraryScriptCore as default,
+  };
+}
+
+/**
  * Streamの型チェック
  * @class
  */
@@ -269,14 +256,36 @@ declare class StreamChecker extends JavaLibraryScriptCore {
      * @param {Function} expected
      * @returns {StreamInterface}
      */
-    static typeToStream(expected: Function): StreamInterface;
+    static typeToStream(expected: Function): {
+        apply(this: Function, thisArg: any, argArray?: any): any;
+        call(this: Function, thisArg: any, ...argArray: any[]): any;
+        bind(this: Function, thisArg: any, ...argArray: any[]): any;
+        toString(): string;
+        prototype: any;
+        readonly length: number;
+        arguments: any;
+        caller: Function;
+        readonly name: string;
+        [Symbol.hasInstance](value: any): boolean;
+    };
     /**
      * StreamをTypeに変換する
      * @param {StreamInterface} stream
      * @returns {Function}
      * @static
      */
-    static streamToType(stream: StreamInterface): Function;
+    static streamToType(stream: {
+        apply(this: Function, thisArg: any, argArray?: any): any;
+        call(this: Function, thisArg: any, ...argArray: any[]): any;
+        bind(this: Function, thisArg: any, ...argArray: any[]): any;
+        toString(): string;
+        prototype: any;
+        readonly length: number;
+        arguments: any;
+        caller: Function;
+        readonly name: string;
+        [Symbol.hasInstance](value: any): boolean;
+    }): Function;
 }
 
 declare namespace __util_stream_StreamChecker_js {
@@ -384,7 +393,7 @@ declare namespace __util_stream_EntryStream_js {
  * 非同期Stream (LazyAsyncList)
  * @class
  */
-declare class AsyncStream extends StreamInterface {
+declare class AsyncStream {
     /**
      * AsyncStream化
      * @param {Iterable | AsyncIterator} iterable
@@ -540,42 +549,15 @@ declare namespace __util_stream_AsyncStream_js {
 }
 
 /**
- * Mapの基底クラス
+ * 型チェック機能のついたMap
  * @class
  */
-declare class BaseMap extends Map<any, any> {
+declare class HashMap {
     /**
      * @param {Function} KeyType
      * @param {Function} ValueType
      */
     constructor(KeyType: Function, ValueType: Function);
-    _KeyType: Function;
-    _ValueType: Function;
-    /**
-     * Keyの型をチェックする
-     * @param {any} key
-     * @throws {TypeError}
-     */
-    _checkKey(key: any): void;
-    /**
-     * Valueの型をチェックする
-     * @param {any} value
-     * @throws {TypeError}
-     */
-    _checkValue(value: any): void;
-}
-
-declare namespace __util_BaseMap_js {
-  export {
-    BaseMap as default,
-  };
-}
-
-/**
- * 型チェック機能のついたMap
- * @class
- */
-declare class HashMap extends BaseMap {
     /**
      * データを追加・更新する
      * @param {any} key
@@ -606,6 +588,22 @@ declare class HashMap extends BaseMap {
      */
     putAll(map: Map<any, any>): void;
     /**
+     * データを取得する
+     * @param {any} key
+     * @returns {any}
+     * @throws {TypeError}
+     * @override
+     */
+    override get(key: any): any;
+    /**
+     * Keyの存在を確認する
+     * @param {any} key
+     * @returns {boolean}
+     * @throws {TypeError}
+     * @override
+     */
+    override has(key: any): boolean;
+    /**
      * Keyの存在を確認する
      * @param {any} key
      * @returns {boolean}
@@ -618,6 +616,14 @@ declare class HashMap extends BaseMap {
      * @returns {boolean}
      */
     containsValue(value: any): boolean;
+    /**
+     * データを削除する
+     * @param {any} key
+     * @returns {boolean}
+     * @throws {TypeError}
+     * @override
+     */
+    override delete(key: any): boolean;
     /**
      * データを削除する
      * @param {any} key
@@ -652,6 +658,12 @@ declare class HashMap extends BaseMap {
      * @returns {EntryStream}
      */
     stream(): EntryStream;
+    /**
+     * 文字列に変換する
+     * @returns {string}
+     * @override
+     */
+    override toString(): string;
     /**
      * イテレータを返却する
      * @returns {Iterator<any>}
@@ -931,7 +943,7 @@ declare function Enum(defs: Array<string | [string, any]> | Record<string, any>,
 declare class Interface extends JavaLibraryScriptCore {
     static _isDebugMode: boolean;
     /**
-     * 型定義とメゾットの強制実装
+     * 型定義
      * @param {Function} TargetClass - 型定義を追加するクラス
      * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
      * @param {Object} [opt] - オプション
@@ -942,6 +954,20 @@ declare class Interface extends JavaLibraryScriptCore {
     static applyTo(TargetClass: Function, newDefs?: {}, { inherit }?: {
         inherit?: boolean;
     }): undefined;
+    /**
+     * 型定義とメゾットの強制実装
+     * @param {Function} TargetClass - 型定義を追加するクラス
+     * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
+     * @param {Object} [opt] - オプション
+     * @param {boolean} [opt.inherit=true] - 継承モード
+     * @param {boolean} [opt.abstract=true] - 抽象クラス化
+     * @returns {Function}
+     * @static
+     */
+    static convert(TargetClass: Function, newDefs?: {}, { inherit, abstract }?: {
+        inherit?: boolean;
+        abstract?: boolean;
+    }): Function;
 }
 
 declare namespace __base_Interface_js {
@@ -963,15 +989,49 @@ declare let libs: {
     };
 };
 declare let util: {
-    BaseMap: typeof __util_BaseMap_js;
     HashMap: typeof __util_HashMap_js;
+    MapInterface: {
+        apply(this: Function, thisArg: any, argArray?: any): any;
+        call(this: Function, thisArg: any, ...argArray: any[]): any;
+        bind(this: Function, thisArg: any, ...argArray: any[]): any;
+        toString(): string;
+        prototype: any;
+        readonly length: number;
+        arguments: any;
+        caller: Function;
+        readonly name: string;
+        [Symbol.hasInstance](value: any): boolean;
+    };
+    SetInterface: {
+        apply(this: Function, thisArg: any, argArray?: any): any;
+        call(this: Function, thisArg: any, ...argArray: any[]): any;
+        bind(this: Function, thisArg: any, ...argArray: any[]): any;
+        toString(): string;
+        prototype: any;
+        readonly length: number;
+        arguments: any;
+        caller: Function;
+        readonly name: string;
+        [Symbol.hasInstance](value: any): boolean;
+    };
     stream: {
         AsyncStream: typeof __util_stream_AsyncStream_js;
         EntryStream: typeof __util_stream_EntryStream_js;
         NumberStream: typeof __util_stream_NumberStream_js;
         Stream: typeof __util_stream_Stream_js;
         StreamChecker: typeof __util_stream_StreamChecker_js;
-        StreamInterface: typeof __util_stream_StreamInterface_js;
+        StreamInterface: {
+            apply(this: Function, thisArg: any, argArray?: any): any;
+            call(this: Function, thisArg: any, ...argArray: any[]): any;
+            bind(this: Function, thisArg: any, ...argArray: any[]): any;
+            toString(): string;
+            prototype: any;
+            readonly length: number;
+            arguments: any;
+            caller: Function;
+            readonly name: string;
+            [Symbol.hasInstance](value: any): boolean;
+        };
         StringStream: typeof __util_stream_StringStream_js;
     };
 };

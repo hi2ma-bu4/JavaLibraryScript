@@ -1,4 +1,4 @@
-const BaseMap = require("./BaseMap");
+const MapInterface = require("./MapInterface");
 const Interface = require("../base/Interface");
 const EntryStream = require("./stream/EntryStream.js");
 
@@ -6,7 +6,7 @@ const EntryStream = require("./stream/EntryStream.js");
  * 型チェック機能のついたMap
  * @class
  */
-class HashMap extends BaseMap {
+class HashMap extends MapInterface {
 	/**
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
@@ -208,7 +208,5 @@ class HashMap extends BaseMap {
 		return this.entries()[Symbol.iterator]();
 	}
 }
-
-Interface.applyTo(HashMap);
 
 module.exports = HashMap;

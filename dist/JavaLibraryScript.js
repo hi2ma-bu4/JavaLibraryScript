@@ -299,10 +299,10 @@ const TypeChecker = require("../libs/TypeChecker.js");
  * @class
  */
 class Interface extends JavaLibraryScriptCore {
-	static _isDebugMode = false;
+	static _isDebugMode = true;
 
 	/**
-	 * 型定義とメゾットの強制実装
+	 * 型定義
 	 * @param {Function} TargetClass - 型定義を追加するクラス
 	 * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
@@ -311,8 +311,6 @@ class Interface extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static applyTo(TargetClass, newDefs = {}, { inherit = true } = {}) {
-		if (!this._isDebugMode) return;
-
 		const proto = TargetClass.prototype;
 
 		// 継承モードなら親の型定義をマージ
@@ -336,46 +334,80 @@ class Interface extends JavaLibraryScriptCore {
 
 		// 継承＋新規定義マージ（子定義優先）
 		Object.assign(proto.__interfaceTypes, inheritedDefs, newDefs);
+	}
 
-		for (const methodName in proto.__interfaceTypes) {
-			const def = proto.__interfaceTypes[methodName];
-			const original = proto[methodName];
+	/**
+	 * 型定義とメゾットの強制実装
+	 * @param {Function} TargetClass - 型定義を追加するクラス
+	 * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
+	 * @param {Object} [opt] - オプション
+	 * @param {boolean} [opt.inherit=true] - 継承モード
+	 * @param {boolean} [opt.abstract=true] - 抽象クラス化
+	 * @returns {Function}
+	 * @static
+	 */
+	static convert(TargetClass, newDefs = {}, { inherit = true, abstract = true } = {}) {
+		this.applyTo(TargetClass, newDefs, { inherit });
 
-			if (typeof original !== "function") {
-				throw new Error(`"${TargetClass.name}" はメソッド "${methodName}" を実装する必要があります`);
+		const interfaceClass = class extends TargetClass {
+			constructor(...args) {
+				if (abstract) {
+					if (new.target === interfaceClass) {
+						throw new TypeError(`Cannot instantiate abstract class ${TargetClass.name}`);
+					}
+				}
+				super(...args);
+
+				if (!Interface._isDebugMode) return;
+
+				const proto = Object.getPrototypeOf(this);
+				const defs = proto.__interfaceTypes || {};
+
+				for (const methodName of Object.keys(defs)) {
+					const def = defs[methodName];
+					const original = this[methodName];
+
+					if (typeof original !== "function") {
+						throw new Error(`"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+					}
+
+					// ラップは一度だけ（重複防止）
+					if (!original.__isWrapped) {
+						const wrapped = (...args) => {
+							// 引数チェック
+							const expectedArgs = def.args || [];
+							for (let i = 0; i < expectedArgs.length; i++) {
+								if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
+									throw new TypeError(`"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
+								}
+							}
+
+							const result = original.apply(this, args);
+							const expectedReturn = TypeChecker.checkFunction(def.returns) ? def.returns(args) : def.returns;
+
+							const validate = (val) => {
+								if (!TypeChecker.matchType(val, expectedReturn)) {
+									if (expectedReturn === TypeChecker.NoReturn) {
+										throw new TypeError(`"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
+									} else {
+										throw new TypeError(`"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
+									}
+								}
+								return val;
+							};
+
+							return result instanceof Promise ? result.then(validate) : validate(result);
+						};
+						wrapped.__isWrapped = true;
+						this[methodName] = wrapped;
+					}
+				}
 			}
+		};
 
-			proto[methodName] = function (...args) {
-				// 引数チェック
-				const expectedArgs = def.args || [];
-				for (let i = 0; i < expectedArgs.length; i++) {
-					if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
-						throw new TypeError(`"${TargetClass.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
-					}
-				}
+		Object.defineProperty(interfaceClass, "name", { value: TargetClass.name });
 
-				const result = original.apply(this, args);
-				const ret = def.returns;
-				const expectedReturn = TypeChecker.checkFunction(ret) ? ret(args) : ret;
-
-				const validate = (val) => {
-					if (!TypeChecker.matchType(val, expectedReturn)) {
-						if (expectedReturn === InterfaceTypeChecker.NO_RETURN) {
-							throw new TypeError(`"${TargetClass.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
-						} else {
-							throw new TypeError(`"${TargetClass.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
-						}
-					}
-					return val;
-				};
-
-				if (result instanceof Promise) {
-					return result.then(validate);
-				} else {
-					return validate(result);
-				}
-			};
-		}
+		return interfaceClass;
 	}
 }
 
@@ -394,7 +426,7 @@ module.exports = {
     util: require("./util/index.js")
 };
 
-},{"./base/index.js":3,"./libs/index.js":6,"./util/index.js":12}],5:[function(require,module,exports){
+},{"./base/index.js":3,"./libs/index.js":6,"./util/index.js":13}],5:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
@@ -678,75 +710,7 @@ if (typeof window !== "undefined") {
 module.exports = JavaLibraryScript;
 
 },{"./index.js":4}],10:[function(require,module,exports){
-const Interface = require("../base/Interface");
-const TypeChecker = require("../libs/TypeChecker");
-
-const Any = TypeChecker.Any;
-const NoReturn = TypeChecker.NoReturn;
-const NotNull = TypeChecker.NotNull;
-const NotUndefined = TypeChecker.NotUndefined;
-
-const NotEmpty = [NotNull, NotUndefined];
-
-/**
- * Mapの基底クラス
- * @class
- */
-class BaseMap extends Map {
-	/**
-	 * @param {Function} KeyType
-	 * @param {Function} ValueType
-	 */
-	constructor(KeyType, ValueType) {
-		super();
-		if (new.target === BaseMap) {
-			throw new TypeError("Cannot instantiate abstract class BaseMap");
-		}
-
-		this._KeyType = KeyType;
-		this._ValueType = ValueType;
-	}
-
-	/**
-	 * Keyの型をチェックする
-	 * @param {any} key
-	 * @throws {TypeError}
-	 */
-	_checkKey(key) {
-		if (!TypeChecker.matchType(key, this._KeyType)) {
-			throw new TypeError(`キー型が一致しません。期待: ${TypeChecker.typeNames(this._KeyType)} → 実際: ${TypeChecker.stringify(key)}`);
-		}
-	}
-
-	/**
-	 * Valueの型をチェックする
-	 * @param {any} value
-	 * @throws {TypeError}
-	 */
-	_checkValue(value) {
-		if (!TypeChecker.matchType(value, this._ValueType)) {
-			throw new TypeError(`値型が一致しません。期待: ${TypeChecker.typeNames(this._ValueType)} → 実際: ${TypeChecker.stringify(value)}`);
-		}
-	}
-}
-
-Interface.applyTo(BaseMap, {
-	set: { args: [NotEmpty, NotEmpty], returns: Any },
-	put: { args: [NotEmpty, NotEmpty], returns: Any },
-	get: { args: [NotEmpty], returns: Any },
-	delete: { args: [NotEmpty], returns: Boolean },
-	remove: { args: [NotEmpty], returns: Boolean },
-	isEmpty: { returns: Boolean },
-	clear: { returns: NoReturn },
-	has: { args: [NotEmpty], returns: Boolean },
-	containsKey: { args: [NotEmpty], returns: Boolean },
-	containsValue: { args: [NotEmpty], returns: Boolean },
-});
-
-module.exports = BaseMap;
-
-},{"../base/Interface":2,"../libs/TypeChecker":5}],11:[function(require,module,exports){
-const BaseMap = require("./BaseMap");
+const MapInterface = require("./MapInterface");
 const Interface = require("../base/Interface");
 const EntryStream = require("./stream/EntryStream.js");
 
@@ -754,7 +718,7 @@ const EntryStream = require("./stream/EntryStream.js");
  * 型チェック機能のついたMap
  * @class
  */
-class HashMap extends BaseMap {
+class HashMap extends MapInterface {
 	/**
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
@@ -957,20 +921,146 @@ class HashMap extends BaseMap {
 	}
 }
 
-Interface.applyTo(HashMap);
-
 module.exports = HashMap;
 
-},{"../base/Interface":2,"./BaseMap":10,"./stream/EntryStream.js":14}],12:[function(require,module,exports){
+},{"../base/Interface":2,"./MapInterface":11,"./stream/EntryStream.js":15}],11:[function(require,module,exports){
+const Interface = require("../base/Interface");
+const TypeChecker = require("../libs/TypeChecker");
+
+const Any = TypeChecker.Any;
+const NoReturn = TypeChecker.NoReturn;
+const NotNull = TypeChecker.NotNull;
+const NotUndefined = TypeChecker.NotUndefined;
+
+const NotEmpty = [NotNull, NotUndefined];
+
+/**
+ * Mapの基底クラス
+ * @class
+ * @abstract
+ * @interface
+ */
+class MapInterface extends Map {
+	/**
+	 * @param {Function} KeyType
+	 * @param {Function} ValueType
+	 */
+	constructor(KeyType, ValueType) {
+		super();
+		this._KeyType = KeyType;
+		this._ValueType = ValueType;
+	}
+
+	/**
+	 * Keyの型をチェックする
+	 * @param {any} key
+	 * @throws {TypeError}
+	 */
+	_checkKey(key) {
+		if (!TypeChecker.matchType(key, this._KeyType)) {
+			throw new TypeError(`キー型が一致しません。期待: ${TypeChecker.typeNames(this._KeyType)} → 実際: ${TypeChecker.stringify(key)}`);
+		}
+	}
+
+	/**
+	 * Valueの型をチェックする
+	 * @param {any} value
+	 * @throws {TypeError}
+	 */
+	_checkValue(value) {
+		if (!TypeChecker.matchType(value, this._ValueType)) {
+			throw new TypeError(`値型が一致しません。期待: ${TypeChecker.typeNames(this._ValueType)} → 実際: ${TypeChecker.stringify(value)}`);
+		}
+	}
+}
+
+module.exports = Interface.convert(MapInterface, {
+	set: { args: [NotEmpty, NotEmpty], returns: Any },
+	put: { args: [NotEmpty, NotEmpty], returns: Any },
+	get: { args: [NotEmpty], returns: Any },
+	delete: { args: [NotEmpty], returns: Boolean },
+	remove: { args: [NotEmpty], returns: Boolean },
+	isEmpty: { returns: Boolean },
+	clear: { returns: NoReturn },
+	has: { args: [NotEmpty], returns: Boolean },
+	containsKey: { args: [NotEmpty], returns: Boolean },
+	containsValue: { args: [NotEmpty], returns: Boolean },
+});
+
+},{"../base/Interface":2,"../libs/TypeChecker":5}],12:[function(require,module,exports){
+const Interface = require("../base/Interface");
+const TypeChecker = require("../libs/TypeChecker");
+
+const Any = TypeChecker.Any;
+const NoReturn = TypeChecker.NoReturn;
+const NotNull = TypeChecker.NotNull;
+const NotUndefined = TypeChecker.NotUndefined;
+
+const NotEmpty = [NotNull, NotUndefined];
+
+/**
+ * Mapの基底クラス
+ * @class
+ * @abstract
+ * @interface
+ */
+class SetInterface extends Set {
+	/**
+	 * @param {Function} ValueType
+	 */
+	constructor(ValueType) {
+		super();
+		this._ValueType = ValueType;
+	}
+
+	/**
+	 * Keyの型をチェックする
+	 * @param {any} key
+	 * @throws {TypeError}
+	 */
+	_checkKey(key) {
+		if (!TypeChecker.matchType(key, this._KeyType)) {
+			throw new TypeError(`キー型が一致しません。期待: ${TypeChecker.typeNames(this._KeyType)} → 実際: ${TypeChecker.stringify(key)}`);
+		}
+	}
+
+	/**
+	 * Valueの型をチェックする
+	 * @param {any} value
+	 * @throws {TypeError}
+	 */
+	_checkValue(value) {
+		if (!TypeChecker.matchType(value, this._ValueType)) {
+			throw new TypeError(`値型が一致しません。期待: ${TypeChecker.typeNames(this._ValueType)} → 実際: ${TypeChecker.stringify(value)}`);
+		}
+	}
+}
+
+module.exports = Interface.convert(SetInterface, {
+	set: { args: [NotEmpty, NotEmpty], returns: Any },
+	put: { args: [NotEmpty, NotEmpty], returns: Any },
+	get: { args: [NotEmpty], returns: Any },
+	delete: { args: [NotEmpty], returns: Boolean },
+	remove: { args: [NotEmpty], returns: Boolean },
+	isEmpty: { returns: Boolean },
+	clear: { returns: NoReturn },
+	has: { args: [NotEmpty], returns: Boolean },
+	containsKey: { args: [NotEmpty], returns: Boolean },
+	containsValue: { args: [NotEmpty], returns: Boolean },
+});
+
+},{"../base/Interface":2,"../libs/TypeChecker":5}],13:[function(require,module,exports){
 module.exports = {
-    BaseMap: require("./BaseMap.js"),
     HashMap: require("./HashMap.js"),
+    MapInterface: require("./MapInterface.js"),
+    SetInterface: require("./SetInterface.js"),
     stream: require("./stream/index.js")
 };
 
-},{"./BaseMap.js":10,"./HashMap.js":11,"./stream/index.js":20}],13:[function(require,module,exports){
+},{"./HashMap.js":10,"./MapInterface.js":11,"./SetInterface.js":12,"./stream/index.js":21}],14:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
 const Stream = require("./Stream.js");
+const Interface = require("../../base/Interface");
 
 /**
  * 非同期Stream (LazyAsyncList)
@@ -1300,7 +1390,7 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"./Stream.js":16,"./StreamInterface.js":18}],14:[function(require,module,exports){
+},{"../../base/Interface":2,"./Stream.js":17,"./StreamInterface.js":19}],15:[function(require,module,exports){
 const Stream = require("./Stream.js");
 const Interface = require("../../base/Interface");
 const StreamChecker = require("./StreamChecker");
@@ -1390,11 +1480,9 @@ class EntryStream extends Stream {
 	}
 }
 
-Interface.applyTo(EntryStream);
-
 module.exports = EntryStream;
 
-},{"../../base/Interface":2,"../HashMap.js":11,"./Stream.js":16,"./StreamChecker":17}],15:[function(require,module,exports){
+},{"../../base/Interface":2,"../HashMap.js":10,"./Stream.js":17,"./StreamChecker":18}],16:[function(require,module,exports){
 const Stream = require("./Stream.js");
 const Interface = require("../../base/Interface");
 
@@ -1463,11 +1551,9 @@ class NumberStream extends Stream {
 	}
 }
 
-Interface.applyTo(NumberStream);
-
 module.exports = NumberStream;
 
-},{"../../base/Interface":2,"./Stream.js":16}],16:[function(require,module,exports){
+},{"../../base/Interface":2,"./Stream.js":17}],17:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
 const Interface = require("../../base/Interface");
 const TypeChecker = require("../../libs/TypeChecker");
@@ -1919,11 +2005,9 @@ class Stream extends StreamInterface {
 	}
 }
 
-Interface.applyTo(Stream);
-
 module.exports = Stream;
 
-},{"../../base/Interface":2,"../../libs/TypeChecker":5,"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./StreamInterface.js":18,"./StringStream.js":19}],17:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/TypeChecker":5,"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./StreamInterface.js":19,"./StringStream.js":20}],18:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../../libs/TypeChecker.js");
 const StreamInterface = require("./StreamInterface.js");
@@ -1977,24 +2061,22 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker.js":5,"../../libs/sys/JavaLibraryScriptCore.js":7,"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./Stream.js":16,"./StreamInterface.js":18,"./StringStream.js":19}],18:[function(require,module,exports){
+},{"../../libs/TypeChecker.js":5,"../../libs/sys/JavaLibraryScriptCore.js":7,"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./Stream.js":17,"./StreamInterface.js":19,"./StringStream.js":20}],19:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
 const Interface = require("../../base/Interface");
 
 /**
  * Streamの基底クラス
  * @class
+ * @abstract
  */
 class StreamInterface extends JavaLibraryScriptCore {
 	constructor() {
 		super();
-		if (new.target === StreamInterface) {
-			throw new TypeError("Cannot instantiate abstract class StreamInterface");
-		}
 	}
 }
 
-Interface.applyTo(StreamInterface, {
+module.exports = Interface.convert(StreamInterface, {
 	map: {
 		args: [Function],
 		returns: StreamInterface,
@@ -2014,9 +2096,7 @@ Interface.applyTo(StreamInterface, {
 	},
 });
 
-module.exports = StreamInterface;
-
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],19:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],20:[function(require,module,exports){
 const Stream = require("./Stream.js");
 const Interface = require("../../base/Interface");
 
@@ -2076,11 +2156,9 @@ class StringStream extends Stream {
 	}
 }
 
-Interface.applyTo(StringStream);
-
 module.exports = StringStream;
 
-},{"../../base/Interface":2,"./Stream.js":16}],20:[function(require,module,exports){
+},{"../../base/Interface":2,"./Stream.js":17}],21:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
@@ -2091,5 +2169,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":13,"./EntryStream.js":14,"./NumberStream.js":15,"./Stream.js":16,"./StreamChecker.js":17,"./StreamInterface.js":18,"./StringStream.js":19}]},{},[9])
+},{"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./Stream.js":17,"./StreamChecker.js":18,"./StreamInterface.js":19,"./StringStream.js":20}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map

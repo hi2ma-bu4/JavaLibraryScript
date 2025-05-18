@@ -66,6 +66,4 @@ class NumberStream extends Stream {
 	}
 }
 
-Interface.applyTo(NumberStream);
-
 module.exports = NumberStream;

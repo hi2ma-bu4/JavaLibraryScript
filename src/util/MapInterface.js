@@ -11,18 +11,16 @@ const NotEmpty = [NotNull, NotUndefined];
 /**
  * Mapの基底クラス
  * @class
+ * @abstract
+ * @interface
  */
-class BaseMap extends Map {
+class MapInterface extends Map {
 	/**
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
 	 */
 	constructor(KeyType, ValueType) {
 		super();
-		if (new.target === BaseMap) {
-			throw new TypeError("Cannot instantiate abstract class BaseMap");
-		}
-
 		this._KeyType = KeyType;
 		this._ValueType = ValueType;
 	}
@@ -50,7 +48,7 @@ class BaseMap extends Map {
 	}
 }
 
-Interface.applyTo(BaseMap, {
+module.exports = Interface.convert(MapInterface, {
 	set: { args: [NotEmpty, NotEmpty], returns: Any },
 	put: { args: [NotEmpty, NotEmpty], returns: Any },
 	get: { args: [NotEmpty], returns: Any },
@@ -62,5 +60,3 @@ Interface.applyTo(BaseMap, {
 	containsKey: { args: [NotEmpty], returns: Boolean },
 	containsValue: { args: [NotEmpty], returns: Boolean },
 });
-
-module.exports = BaseMap;
