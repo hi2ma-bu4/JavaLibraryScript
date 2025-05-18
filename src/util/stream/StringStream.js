@@ -2,15 +2,16 @@ const Stream = require("./Stream.js");
 
 /**
  * 文字列専用Stream (LazyList)
- * @extends {Stream}
+ * @template V
+ * @extends {Stream<V>}
  * @class
  */
 class StringStream extends Stream {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<V>} source
 	 */
 	constructor(source) {
-		super(source);
+		super(source, String);
 
 		this.mapToString = undefined;
 	}

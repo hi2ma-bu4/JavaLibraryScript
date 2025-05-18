@@ -1,3 +1,4 @@
+const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
 const EntryStream = require("./stream/EntryStream.js");
 
@@ -151,7 +152,7 @@ class HashMap extends MapInterface {
 	 * @returns {boolean}
 	 */
 	equals(otherMap) {
-		if (this.size !== otherMap.size) return false;
+		if (!(otherMap instanceof Map) || this.size !== otherMap.size) return false;
 		for (const [k, v] of this.entries()) {
 			if (!otherMap.has(k) || otherMap.get(k) !== v) return false;
 		}
@@ -190,10 +191,7 @@ class HashMap extends MapInterface {
 	 * @returns {string}
 	 */
 	toString() {
-		const data = Array.from(this.entries())
-			.map(([k, v]) => `${k}=${v}`)
-			.join(", ");
-		return `{ ${data} }`;
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._KeyType)}, ${TypeChecker.typeNames(this._ValueType)}>(size=${this.size})`;
 	}
 
 	/**
@@ -201,7 +199,7 @@ class HashMap extends MapInterface {
 	 * @returns {Iterator<V>}
 	 */
 	[Symbol.iterator]() {
-		return this.entries()[Symbol.iterator]();
+		return this.entries();
 	}
 }
 

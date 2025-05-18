@@ -23,8 +23,8 @@ class MapInterface extends Map {
 	 */
 	constructor(KeyType, ValueType) {
 		super();
-		this._KeyType = KeyType;
-		this._ValueType = ValueType;
+		this._KeyType = KeyType || Any;
+		this._ValueType = ValueType || Any;
 	}
 
 	/**

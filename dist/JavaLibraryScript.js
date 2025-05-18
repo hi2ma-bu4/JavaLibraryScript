@@ -418,11 +418,13 @@ class Interface extends JavaLibraryScriptCore {
 	static convert(TargetClass, newDefs = {}, { inherit = true, abstract = true } = {}) {
 		this.applyTo(TargetClass, newDefs, { inherit });
 
+		const this_ = this;
+
 		const interfaceClass = class extends TargetClass {
 			constructor(...args) {
 				if (abstract) {
 					if (new.target === interfaceClass) {
-						this._handleError(TypeError, `Cannot instantiate abstract class ${TargetClass.name}`);
+						new TypeError(`Cannot instantiate abstract class ${TargetClass.name}`);
 					}
 				}
 				super(...args);
@@ -449,7 +451,7 @@ class Interface extends JavaLibraryScriptCore {
 							const expectedArgs = def.args || [];
 							for (let i = 0; i < expectedArgs.length; i++) {
 								if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
-									this._handleError(TypeError, `"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
+									this_._handleError(TypeError, `"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
 								}
 							}
 
@@ -459,9 +461,9 @@ class Interface extends JavaLibraryScriptCore {
 							const validate = (val) => {
 								if (!TypeChecker.matchType(val, expectedReturn)) {
 									if (expectedReturn === TypeChecker.NoReturn) {
-										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
+										this_._handleError(TypeError, `"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
 									} else {
-										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
+										this_._handleError(TypeError, `"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
 									}
 								}
 								return val;
@@ -587,7 +589,7 @@ module.exports = {
     util: require("./util/index.js")
 };
 
-},{"./base/index.js":3,"./libs/index.js":6,"./util/index.js":13}],5:[function(require,module,exports){
+},{"./base/index.js":3,"./libs/index.js":6,"./util/index.js":14}],5:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
@@ -875,6 +877,7 @@ if (typeof window !== "undefined") {
 module.exports = JavaLibraryScript;
 
 },{"./index.js":4}],10:[function(require,module,exports){
+const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
 const EntryStream = require("./stream/EntryStream.js");
 
@@ -1028,7 +1031,7 @@ class HashMap extends MapInterface {
 	 * @returns {boolean}
 	 */
 	equals(otherMap) {
-		if (this.size !== otherMap.size) return false;
+		if (!(otherMap instanceof Map) || this.size !== otherMap.size) return false;
 		for (const [k, v] of this.entries()) {
 			if (!otherMap.has(k) || otherMap.get(k) !== v) return false;
 		}
@@ -1067,10 +1070,7 @@ class HashMap extends MapInterface {
 	 * @returns {string}
 	 */
 	toString() {
-		const data = Array.from(this.entries())
-			.map(([k, v]) => `${k}=${v}`)
-			.join(", ");
-		return `{ ${data} }`;
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._KeyType)}, ${TypeChecker.typeNames(this._ValueType)}>(size=${this.size})`;
 	}
 
 	/**
@@ -1078,13 +1078,225 @@ class HashMap extends MapInterface {
 	 * @returns {Iterator<V>}
 	 */
 	[Symbol.iterator]() {
-		return this.entries()[Symbol.iterator]();
+		return this.entries();
 	}
 }
 
 module.exports = HashMap;
 
-},{"./MapInterface":11,"./stream/EntryStream.js":15}],11:[function(require,module,exports){
+},{"../libs":6,"./MapInterface":12,"./stream/EntryStream.js":16}],11:[function(require,module,exports){
+const SetInterface = require("./SetInterface");
+const TypeChecker = require("../libs/TypeChecker");
+const StreamChecker = require("./stream/StreamChecker");
+const Stream = require("./stream/Stream.js");
+
+/**
+ * 型チェック機能のついたMap
+ * @template V
+ * @extends {SetInterface<V>}
+ * @class
+ */
+class HashSet extends SetInterface {
+	/**
+	 * @param {Function} ValueType
+	 */
+	constructor(ValueType) {
+		super(ValueType);
+	}
+
+	// ==================================================
+	// 基本操作(override)
+	// ==================================================
+
+	/**
+	 * 値を追加する
+	 * @param {V} value
+	 * @returns {this}
+	 * @throws {TypeError}
+	 */
+	add(value) {
+		this._checkValue(value);
+		return super.add(value);
+	}
+
+	/**
+	 * 値を一括で追加する
+	 * @param {Iterable<V>} collection
+	 * @returns {this}
+	 * @throws {TypeError}
+	 */
+	addAll(collection) {
+		for (const item of collection) {
+			this.add(item);
+		}
+		return this;
+	}
+
+	/**
+	 * 値の存在を確認
+	 * @param {V} value
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	has(value) {
+		this._checkValue(value);
+		return super.has(value);
+	}
+	/**
+	 * 値の存在を確認
+	 * @param {V} value
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	contains(value) {
+		return this.has(value);
+	}
+
+	/**
+	 * 全ての値の存在を確認
+	 * @param {Iterable<V>} collection
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	containsAll(collection) {
+		for (const item of collection) {
+			if (!this.has(item)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 値を削除する
+	 * @param {V} value
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	delete(value) {
+		this._checkValue(value);
+		return super.delete(value);
+	}
+	/**
+	 * 値を削除する
+	 * @param {V} value
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	remove(value) {
+		return this.delete(value);
+	}
+
+	/**
+	 * 全ての値を削除する
+	 * @param {Iterable<V>} collection
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	removeAll(collection) {
+		let modified = false;
+		for (const item of collection) {
+			modified = this.delete(item) || modified;
+		}
+		return modified;
+	}
+
+	/**
+	 * 空かどうかを返却する
+	 * @returns {boolean}
+	 */
+	isEmpty() {
+		return this.size === 0;
+	}
+
+	/**
+	 * 含まれない要素を全削除する
+	 * @param {Iterable<V>} collection
+	 * @returns {boolean}
+	 * @throws {TypeError}
+	 */
+	retainAll(collection) {
+		const otherSet = new Set(collection);
+		let modified = false;
+		for (const item of this) {
+			if (!otherSet.has(item)) {
+				this.delete(item);
+				modified = true;
+			}
+		}
+		return modified;
+	}
+
+	// ==================================================
+	// 追加機能
+	// ==================================================
+
+	/**
+	 * 等価判定を行う
+	 * @param {this} otherSet
+	 * @returns {boolean}
+	 */
+	equals(otherSet) {
+		if (!(otherSet instanceof Set) || this.size !== otherSet.size) return false;
+		for (const item of this) {
+			if (!otherSet.has(item)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 全てのデータを呼び出す
+	 * @param {Function} callback
+	 * @param {any} [thisArg]
+	 */
+	forEach(callback, thisArg) {
+		for (const item of this) {
+			callback.call(thisArg, item, item, this);
+		}
+	}
+
+	// ==================================================
+	// Stream
+	// ==================================================
+
+	/**
+	 * Streamを返却する
+	 * @returns {Stream<V>}
+	 */
+	stream() {
+		return StreamChecker.typeToStream(this._ValueType).from(this.values(), this._ValueType);
+	}
+
+	// ==================================================
+	// 基本操作(システム)
+	// ==================================================
+
+	/**
+	 * 配列に変換する
+	 * @returns {V[]}
+	 */
+	toArray() {
+		return Array.from(this);
+	}
+
+	/**
+	 * 文字列に変換する
+	 * @returns {string}
+	 */
+	toString() {
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._ValueType)}>(size=${this.size})`;
+	}
+
+	/**
+	 * イテレータを返却する
+	 * @returns {Iterator<V>}
+	 */
+	[Symbol.iterator]() {
+		return this.values();
+	}
+}
+
+module.exports = HashSet;
+
+},{"../libs/TypeChecker":5,"./SetInterface":13,"./stream/Stream.js":18,"./stream/StreamChecker":19}],12:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1110,8 +1322,8 @@ class MapInterface extends Map {
 	 */
 	constructor(KeyType, ValueType) {
 		super();
-		this._KeyType = KeyType;
-		this._ValueType = ValueType;
+		this._KeyType = KeyType || Any;
+		this._ValueType = ValueType || Any;
 	}
 
 	/**
@@ -1150,7 +1362,7 @@ module.exports = Interface.convert(MapInterface, {
 	containsValue: { args: [NotEmpty], returns: Boolean },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":5}],12:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":5}],13:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1175,7 +1387,7 @@ class SetInterface extends Set {
 	 */
 	constructor(ValueType) {
 		super();
-		this._ValueType = ValueType;
+		this._ValueType = ValueType || Any;
 	}
 
 	/**
@@ -1191,25 +1403,25 @@ class SetInterface extends Set {
 }
 
 module.exports = Interface.convert(SetInterface, {
-	set: { args: [NotEmpty, NotEmpty], returns: Any },
-	put: { args: [NotEmpty, NotEmpty], returns: Any },
+	add: { args: [NotEmpty], returns: Any },
 	delete: { args: [NotEmpty], returns: Boolean },
 	remove: { args: [NotEmpty], returns: Boolean },
 	isEmpty: { returns: Boolean },
 	clear: { returns: NoReturn },
 	has: { args: [NotEmpty], returns: Boolean },
-	containsValue: { args: [NotEmpty], returns: Boolean },
+	contains: { args: [NotEmpty], returns: Boolean },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":5}],13:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":5}],14:[function(require,module,exports){
 module.exports = {
     HashMap: require("./HashMap.js"),
+    HashSet: require("./HashSet.js"),
     MapInterface: require("./MapInterface.js"),
     SetInterface: require("./SetInterface.js"),
     stream: require("./stream/index.js")
 };
 
-},{"./HashMap.js":10,"./MapInterface.js":11,"./SetInterface.js":12,"./stream/index.js":21}],14:[function(require,module,exports){
+},{"./HashMap.js":10,"./HashSet.js":11,"./MapInterface.js":12,"./SetInterface.js":13,"./stream/index.js":22}],15:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
 const Stream = require("./Stream.js");
 
@@ -1540,15 +1752,30 @@ class AsyncStream extends StreamInterface {
 		}
 		return new Stream(arr);
 	}
+
+	// ==================================================
+	// その他
+	// ==================================================
+
+	/**
+	 * 文字列に変換する
+	 * @returns {String}
+	 */
+	toString() {
+		return `${this.constructor.name}<Promise>`;
+	}
 }
 
 module.exports = AsyncStream;
 
-},{"./Stream.js":17,"./StreamInterface.js":19}],15:[function(require,module,exports){
+},{"./Stream.js":18,"./StreamInterface.js":20}],16:[function(require,module,exports){
 const Stream = require("./Stream.js");
 const StreamChecker = require("./StreamChecker");
+const TypeChecker = require("../../libs/TypeChecker");
 
 /** @typedef {import("../HashMap.js")} HashMapType */
+
+const Any = TypeChecker.Any;
 
 let HashMap;
 function init() {
@@ -1569,11 +1796,10 @@ class EntryStream extends Stream {
 	 * @param {Function} ValueType
 	 */
 	constructor(source, KeyType, ValueType) {
-		super(source);
+		super(source, ValueType);
 
 		this.mapToEntry = undefined;
-		this._KeyType = KeyType;
-		this._ValueType = ValueType;
+		this._KeyType = KeyType || Any;
 	}
 
 	/**
@@ -1625,6 +1851,10 @@ class EntryStream extends Stream {
 		return this.map(([k, v]) => [k, fn(v)]);
 	}
 
+	// ==================================================
+	// to
+	// ==================================================
+
 	/**
 	 * EntryStreamをHashMapに変換する
 	 * @param {Function} [KeyType]
@@ -1637,24 +1867,34 @@ class EntryStream extends Stream {
 		this.forEach(([k, v]) => map.set(k, v));
 		return map;
 	}
+
+	/**
+	 * 文字列に変換する
+	 * @returns {String}
+	 * @override
+	 */
+	toString() {
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._KeyType)}, ${TypeChecker.typeNames(this._ValueType)}>`;
+	}
 }
 
 module.exports = EntryStream;
 
-},{"../HashMap.js":10,"./Stream.js":17,"./StreamChecker":18}],16:[function(require,module,exports){
+},{"../../libs/TypeChecker":5,"../HashMap.js":10,"./Stream.js":18,"./StreamChecker":19}],17:[function(require,module,exports){
 const Stream = require("./Stream.js");
 
 /**
  * 数値専用Stream (LazyList)
+ * @template V
  * @extends {Stream}
  * @class
  */
 class NumberStream extends Stream {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<V} source
 	 */
 	constructor(source) {
-		super(source);
+		super(source, Number);
 
 		this.mapToNumber = undefined;
 	}
@@ -1712,39 +1952,45 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"./Stream.js":17}],17:[function(require,module,exports){
+},{"./Stream.js":18}],18:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
 const TypeChecker = require("../../libs/TypeChecker");
 
 const Any = TypeChecker.Any;
 
 /** @typedef {import("./NumberStream.js")} NumberStreamType */
-// /** @typedef {import("./StringStream.js")} StringStream_forceRep */
+// /** @typedef {import("./StringStream.js")} StringStream_forceRep */ // なぜかこいつだけ動かん
 /** @typedef {import("./EntryStream.js")} EntryStreamType */
 /** @typedef {import("./AsyncStream.js")} AsyncStreamType */
+/** @typedef {import("../HashSet.js")} HashSetType */
 
-let NumberStream, StringStream, EntryStream, AsyncStream;
+let NumberStream, StringStream, EntryStream, AsyncStream, HashSet;
 function init() {
 	if (NumberStream) return;
 	NumberStream = require("./NumberStream.js");
 	StringStream = require("./StringStream.js");
 	EntryStream = require("./EntryStream.js");
 	AsyncStream = require("./AsyncStream.js");
+	HashSet = require("../HashSet.js");
 }
 
 /**
  * Streamオブジェクト(LazyList)
+ * @template V
  * @extends {StreamInterface}
  * @class
  */
 class Stream extends StreamInterface {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<V>} source
+	 * @param {Function} ValueType
 	 */
-	constructor(source) {
+	constructor(source, ValueType) {
 		super();
 		this._iter = source[Symbol.iterator]();
 		this._pipeline = [];
+
+		this._ValueType = ValueType || Any;
 
 		init();
 	}
@@ -1753,12 +1999,13 @@ class Stream extends StreamInterface {
 	 * Stream化
 	 * @template {Stream} T
 	 * @this {new (Iterable) => T}
-	 * @param {Iterable} iterable
+	 * @param {Iterable<V>} iterable
+	 * @param {Function} ValueType
 	 * @returns {T}
 	 * @static
 	 */
-	static from(iterable) {
-		return new this(iterable);
+	static from(iterable, ValueType) {
+		return new this(iterable, ValueType);
 	}
 
 	// ==================================================
@@ -2011,7 +2258,7 @@ class Stream extends StreamInterface {
 
 	/**
 	 * Streamを配列化
-	 * @returns {Array}
+	 * @returns {V[]}
 	 */
 	toArray() {
 		return Array.from(this);
@@ -2169,11 +2416,34 @@ class Stream extends StreamInterface {
 
 		return new AsyncStream(asyncIterable);
 	}
+
+	// ==================================================
+	// to
+	// ==================================================
+
+	/**
+	 * StreamをHashSetに変換
+	 * @param {Function} [ValueType]
+	 * @returns {HashSetType}
+	 */
+	toHashSet(ValueType = this._ValueType) {
+		const set = new HashSet(ValueType);
+		for (const item of this) set.add(item);
+		return set;
+	}
+
+	/**
+	 * 文字列に変換する
+	 * @returns {String}
+	 */
+	toString() {
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._ValueType)}>`;
+	}
 }
 
 module.exports = Stream;
 
-},{"../../libs/TypeChecker":5,"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./StreamInterface.js":19,"./StringStream.js":20}],18:[function(require,module,exports){
+},{"../../libs/TypeChecker":5,"../HashSet.js":11,"./AsyncStream.js":15,"./EntryStream.js":16,"./NumberStream.js":17,"./StreamInterface.js":20,"./StringStream.js":21}],19:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../../libs/TypeChecker.js");
 const StreamInterface = require("./StreamInterface.js");
@@ -2230,7 +2500,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker.js":5,"../../libs/sys/JavaLibraryScriptCore.js":7,"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./Stream.js":17,"./StreamInterface.js":19,"./StringStream.js":20}],19:[function(require,module,exports){
+},{"../../libs/TypeChecker.js":5,"../../libs/sys/JavaLibraryScriptCore.js":7,"./AsyncStream.js":15,"./EntryStream.js":16,"./NumberStream.js":17,"./Stream.js":18,"./StreamInterface.js":20,"./StringStream.js":21}],20:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
 const Interface = require("../../base/Interface");
 
@@ -2266,20 +2536,21 @@ module.exports = Interface.convert(StreamInterface, {
 	},
 });
 
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],20:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],21:[function(require,module,exports){
 const Stream = require("./Stream.js");
 
 /**
  * 文字列専用Stream (LazyList)
+ * @template V
  * @extends {Stream}
  * @class
  */
 class StringStream extends Stream {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<V>} source
 	 */
 	constructor(source) {
-		super(source);
+		super(source, String);
 
 		this.mapToString = undefined;
 	}
@@ -2328,7 +2599,7 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"./Stream.js":17}],21:[function(require,module,exports){
+},{"./Stream.js":18}],22:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
@@ -2339,5 +2610,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./Stream.js":17,"./StreamChecker.js":18,"./StreamInterface.js":19,"./StringStream.js":20}]},{},[9])
+},{"./AsyncStream.js":15,"./EntryStream.js":16,"./NumberStream.js":17,"./Stream.js":18,"./StreamChecker.js":19,"./StreamInterface.js":20,"./StringStream.js":21}]},{},[9])
 //# sourceMappingURL=JavaLibraryScript.js.map

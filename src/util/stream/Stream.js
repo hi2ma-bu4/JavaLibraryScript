@@ -7,29 +7,35 @@ const Any = TypeChecker.Any;
 // /** @typedef {import("./StringStream.js")} StringStream_forceRep */ // なぜかこいつだけ動かん
 /** @typedef {import("./EntryStream.js")} EntryStreamType */
 /** @typedef {import("./AsyncStream.js")} AsyncStreamType */
+/** @typedef {import("../HashSet.js")} HashSetType */
 
-let NumberStream, StringStream, EntryStream, AsyncStream;
+let NumberStream, StringStream, EntryStream, AsyncStream, HashSet;
 function init() {
 	if (NumberStream) return;
 	NumberStream = require("./NumberStream.js");
 	StringStream = require("./StringStream.js");
 	EntryStream = require("./EntryStream.js");
 	AsyncStream = require("./AsyncStream.js");
+	HashSet = require("../HashSet.js");
 }
 
 /**
  * Streamオブジェクト(LazyList)
+ * @template V
  * @extends {StreamInterface}
  * @class
  */
 class Stream extends StreamInterface {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<V>} source
+	 * @param {Function} ValueType
 	 */
-	constructor(source) {
+	constructor(source, ValueType) {
 		super();
 		this._iter = source[Symbol.iterator]();
 		this._pipeline = [];
+
+		this._ValueType = ValueType || Any;
 
 		init();
 	}
@@ -38,12 +44,13 @@ class Stream extends StreamInterface {
 	 * Stream化
 	 * @template {Stream} T
 	 * @this {new (Iterable) => T}
-	 * @param {Iterable} iterable
+	 * @param {Iterable<V>} iterable
+	 * @param {Function} ValueType
 	 * @returns {T}
 	 * @static
 	 */
-	static from(iterable) {
-		return new this(iterable);
+	static from(iterable, ValueType) {
+		return new this(iterable, ValueType);
 	}
 
 	// ==================================================
@@ -296,7 +303,7 @@ class Stream extends StreamInterface {
 
 	/**
 	 * Streamを配列化
-	 * @returns {Array}
+	 * @returns {V[]}
 	 */
 	toArray() {
 		return Array.from(this);
@@ -453,6 +460,29 @@ class Stream extends StreamInterface {
 		})();
 
 		return new AsyncStream(asyncIterable);
+	}
+
+	// ==================================================
+	// to
+	// ==================================================
+
+	/**
+	 * StreamをHashSetに変換
+	 * @param {Function} [ValueType]
+	 * @returns {HashSetType}
+	 */
+	toHashSet(ValueType = this._ValueType) {
+		const set = new HashSet(ValueType);
+		for (const item of this) set.add(item);
+		return set;
+	}
+
+	/**
+	 * 文字列に変換する
+	 * @returns {String}
+	 */
+	toString() {
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._ValueType)}>`;
 	}
 }
 

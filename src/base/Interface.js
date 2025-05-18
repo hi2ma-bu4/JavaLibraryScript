@@ -123,11 +123,13 @@ class Interface extends JavaLibraryScriptCore {
 	static convert(TargetClass, newDefs = {}, { inherit = true, abstract = true } = {}) {
 		this.applyTo(TargetClass, newDefs, { inherit });
 
+		const this_ = this;
+
 		const interfaceClass = class extends TargetClass {
 			constructor(...args) {
 				if (abstract) {
 					if (new.target === interfaceClass) {
-						this._handleError(TypeError, `Cannot instantiate abstract class ${TargetClass.name}`);
+						new TypeError(`Cannot instantiate abstract class ${TargetClass.name}`);
 					}
 				}
 				super(...args);
@@ -154,7 +156,7 @@ class Interface extends JavaLibraryScriptCore {
 							const expectedArgs = def.args || [];
 							for (let i = 0; i < expectedArgs.length; i++) {
 								if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
-									this._handleError(TypeError, `"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
+									this_._handleError(TypeError, `"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
 								}
 							}
 
@@ -164,9 +166,9 @@ class Interface extends JavaLibraryScriptCore {
 							const validate = (val) => {
 								if (!TypeChecker.matchType(val, expectedReturn)) {
 									if (expectedReturn === TypeChecker.NoReturn) {
-										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
+										this_._handleError(TypeError, `"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
 									} else {
-										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
+										this_._handleError(TypeError, `"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
 									}
 								}
 								return val;

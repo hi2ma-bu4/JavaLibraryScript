@@ -328,6 +328,18 @@ class AsyncStream extends StreamInterface {
 		}
 		return new Stream(arr);
 	}
+
+	// ==================================================
+	// その他
+	// ==================================================
+
+	/**
+	 * 文字列に変換する
+	 * @returns {String}
+	 */
+	toString() {
+		return `${this.constructor.name}<Promise>`;
+	}
 }
 
 module.exports = AsyncStream;

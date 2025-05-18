@@ -22,7 +22,7 @@ class SetInterface extends Set {
 	 */
 	constructor(ValueType) {
 		super();
-		this._ValueType = ValueType;
+		this._ValueType = ValueType || Any;
 	}
 
 	/**
@@ -38,12 +38,11 @@ class SetInterface extends Set {
 }
 
 module.exports = Interface.convert(SetInterface, {
-	set: { args: [NotEmpty, NotEmpty], returns: Any },
-	put: { args: [NotEmpty, NotEmpty], returns: Any },
+	add: { args: [NotEmpty], returns: Any },
 	delete: { args: [NotEmpty], returns: Boolean },
 	remove: { args: [NotEmpty], returns: Boolean },
 	isEmpty: { returns: Boolean },
 	clear: { returns: NoReturn },
 	has: { args: [NotEmpty], returns: Boolean },
-	containsValue: { args: [NotEmpty], returns: Boolean },
+	contains: { args: [NotEmpty], returns: Boolean },
 });

@@ -1,7 +1,10 @@
 const Stream = require("./Stream.js");
 const StreamChecker = require("./StreamChecker");
+const TypeChecker = require("../../libs/TypeChecker");
 
 /** @typedef {import("../HashMap.js")} HashMapType */
+
+const Any = TypeChecker.Any;
 
 let HashMap;
 function init() {
@@ -12,7 +15,7 @@ function init() {
 /**
  * Entry専用Stream (LazyList)
  * @template K, V
- * @extends {Stream}
+ * @extends {Stream<V>}
  * @class
  */
 class EntryStream extends Stream {
@@ -22,11 +25,10 @@ class EntryStream extends Stream {
 	 * @param {Function} ValueType
 	 */
 	constructor(source, KeyType, ValueType) {
-		super(source);
+		super(source, ValueType);
 
 		this.mapToEntry = undefined;
-		this._KeyType = KeyType;
-		this._ValueType = ValueType;
+		this._KeyType = KeyType || Any;
 	}
 
 	/**
@@ -78,6 +80,10 @@ class EntryStream extends Stream {
 		return this.map(([k, v]) => [k, fn(v)]);
 	}
 
+	// ==================================================
+	// to
+	// ==================================================
+
 	/**
 	 * EntryStreamをHashMapに変換する
 	 * @param {Function} [KeyType]
@@ -89,6 +95,15 @@ class EntryStream extends Stream {
 		const map = new HashMap(KeyType, ValueType);
 		this.forEach(([k, v]) => map.set(k, v));
 		return map;
+	}
+
+	/**
+	 * 文字列に変換する
+	 * @returns {String}
+	 * @override
+	 */
+	toString() {
+		return `${this.constructor.name}<${TypeChecker.typeNames(this._KeyType)}, ${TypeChecker.typeNames(this._ValueType)}>`;
 	}
 }
 

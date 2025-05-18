@@ -15,18 +15,21 @@ jasc.on("DOMContentLoaded", () => {
 function main() {
 	const map = new JavaLibraryScript.util.HashMap(String, Number);
 
-	map.put("a", 1);
-	map.put("b", 2);
-	map.put("c", 3);
-	map.put("d", 4);
-	map.put("e", 5);
-
+	let sss = "abcdefghijklmnopqrstuvwxyz";
+	for (let i = 0; i < sss.length; i++) {
+		map.put(sss[i], i);
+	}
 	console.log(
 		map
 			.stream()
 			.mapValues((v) => v * 2)
 			.toHashMap()
+			.toString()
 	);
-	const m = new JavaLibraryScript.util.stream.Stream([1, 2, 3, 4, 5]);
-	console.log(m.mapToString((v) => "" + v).toArray());
+
+	const set = new JavaLibraryScript.util.HashSet(Number);
+	for (let i = 0; i < 10; i++) {
+		set.add(i);
+	}
+	console.log(set.stream().toHashSet().toString());
 }

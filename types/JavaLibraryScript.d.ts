@@ -1,3 +1,116 @@
+/**
+ * 型チェック機能のついたMap
+ * @template V
+ * @extends {SetInterface<V>}
+ * @class
+ */
+declare class HashSet<V> {
+    /**
+     * @param {Function} ValueType
+     */
+    constructor(ValueType: Function);
+    /**
+     * 値を追加する
+     * @param {V} value
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    add(value: V): this;
+    /**
+     * 値を一括で追加する
+     * @param {Iterable<V>} collection
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    addAll(collection: Iterable<V>): this;
+    /**
+     * 値の存在を確認
+     * @param {V} value
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    has(value: V): boolean;
+    /**
+     * 値の存在を確認
+     * @param {V} value
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    contains(value: V): boolean;
+    /**
+     * 全ての値の存在を確認
+     * @param {Iterable<V>} collection
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    containsAll(collection: Iterable<V>): boolean;
+    /**
+     * 値を削除する
+     * @param {V} value
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    delete(value: V): boolean;
+    /**
+     * 値を削除する
+     * @param {V} value
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    remove(value: V): boolean;
+    /**
+     * 全ての値を削除する
+     * @param {Iterable<V>} collection
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    removeAll(collection: Iterable<V>): boolean;
+    /**
+     * 空かどうかを返却する
+     * @returns {boolean}
+     */
+    isEmpty(): boolean;
+    /**
+     * 含まれない要素を全削除する
+     * @param {Iterable<V>} collection
+     * @returns {boolean}
+     * @throws {TypeError}
+     */
+    retainAll(collection: Iterable<V>): boolean;
+    /**
+     * 等価判定を行う
+     * @param {this} otherSet
+     * @returns {boolean}
+     */
+    equals(otherSet: this): boolean;
+    /**
+     * 全てのデータを呼び出す
+     * @param {Function} callback
+     * @param {any} [thisArg]
+     */
+    forEach(callback: Function, thisArg?: any): void;
+    /**
+     * Streamを返却する
+     * @returns {Stream<V>}
+     */
+    stream(): Stream<V>;
+    /**
+     * 配列に変換する
+     * @returns {V[]}
+     */
+    toArray(): V[];
+    /**
+     * 文字列に変換する
+     * @returns {string}
+     */
+    toString(): string;
+    /**
+     * イテレータを返却する
+     * @returns {Iterator<V>}
+     */
+    [Symbol.iterator](): Iterator<V>;
+}
+
 declare const AsyncStream_base: new (...args: any[]) => {};
 /**
  * 非同期Stream (LazyAsyncList)
@@ -147,7 +260,7 @@ declare class AsyncStream extends AsyncStream_base {
      * @returns {Stream}
      * @async
      */
-    toLazy(): Stream;
+    toLazy(): Stream<any>;
     /**
      * Streamをイテレータ化(非同期)
      * @returns {AsyncIterator}
@@ -281,7 +394,7 @@ declare class HashMap<K, V> {
  * @extends {Stream}
  * @class
  */
-declare class EntryStream<K, V> extends Stream {
+declare class EntryStream<K, V> extends Stream<any> {
     /**
      * Stream化
      * @template {EntryStream} T
@@ -301,18 +414,17 @@ declare class EntryStream<K, V> extends Stream {
      */
     constructor(source: Iterable<any>, KeyType: Function, ValueType: Function);
     mapToEntry: any;
-    _KeyType: Function;
-    _ValueType: Function;
+    _KeyType: Function | Symbol;
     /**
      * EntryStreamからキーのStreamを返却
      * @returns {Stream}
      */
-    keys(): Stream;
+    keys(): Stream<any>;
     /**
      * EntryStreamから値のStreamを返却
      * @returns {Stream}
      */
-    values(): Stream;
+    values(): Stream<any>;
     /**
      * EntryStreamのキーをマップ
      * @param {Function} fn
@@ -341,10 +453,15 @@ type HashMapType = HashMap<any, any>;
 
 /**
  * 数値専用Stream (LazyList)
+ * @template V
  * @extends {Stream}
  * @class
  */
-declare class NumberStream extends Stream {
+declare class NumberStream<V> extends Stream<any> {
+    /**
+     * @param {Iterable<V} source
+     */
+    constructor(source: Iterable<V>);
     mapToNumber: any;
     /**
      * 合計
@@ -371,25 +488,29 @@ declare class NumberStream extends Stream {
 declare const Stream_base: new (...args: any[]) => {};
 /**
  * Streamオブジェクト(LazyList)
+ * @template V
  * @extends {StreamInterface}
  * @class
  */
-declare class Stream extends Stream_base {
+declare class Stream<V> extends Stream_base {
     /**
      * Stream化
      * @template {Stream} T
      * @this {new (Iterable) => T}
-     * @param {Iterable} iterable
+     * @param {Iterable<V>} iterable
+     * @param {Function} ValueType
      * @returns {T}
      * @static
      */
-    static from<T extends Stream>(this: new (Iterable: any) => T, iterable: Iterable<any>): T;
+    static from<T extends Stream<any>>(this: new (Iterable: any) => T, iterable: Iterable<V>, ValueType: Function): T;
     /**
-     * @param {Iterable} source
+     * @param {Iterable<V>} source
+     * @param {Function} ValueType
      */
-    constructor(source: Iterable<any>);
-    _iter: Iterator<any, any, any>;
+    constructor(source: Iterable<V>, ValueType: Function);
+    _iter: Iterator<V, any, any>;
     _pipeline: any[];
+    _ValueType: Function | Symbol;
     /**
      * pipelineに追加
      * @param {Generator} fn
@@ -482,9 +603,9 @@ declare class Stream extends Stream_base {
     forEach(fn: Function): void;
     /**
      * Streamを配列化
-     * @returns {Array}
+     * @returns {V[]}
      */
-    toArray(): any[];
+    toArray(): V[];
     /**
      * Streamをreduce
      * @param {Function} fn
@@ -550,6 +671,12 @@ declare class Stream extends Stream_base {
      */
     mapToAsync(fn: Function): AsyncStreamType;
     /**
+     * StreamをHashSetに変換
+     * @param {Function} [ValueType]
+     * @returns {HashSetType}
+     */
+    toHashSet(ValueType?: Function): HashSetType;
+    /**
      * Streamをイテレータ化
      * @returns {Iterator}
      */
@@ -561,18 +688,24 @@ declare class Stream extends Stream_base {
     [Symbol.asyncIterator](): AsyncIterator<any, any, any>;
 }
 declare namespace Stream {
-    export type { NumberStreamType, EntryStreamType, AsyncStreamType };
+    export type { NumberStreamType, EntryStreamType, AsyncStreamType, HashSetType };
 }
-type NumberStreamType = NumberStream;
+type NumberStreamType = NumberStream<any>;
 type EntryStreamType = EntryStream<any, any>;
 type AsyncStreamType = AsyncStream;
+type HashSetType = HashSet<any>;
 
 /**
  * 文字列専用Stream (LazyList)
+ * @template V
  * @extends {Stream}
  * @class
  */
-declare class StringStream extends Stream {
+declare class StringStream<V> extends Stream<any> {
+    /**
+     * @param {Iterable<V>} source
+     */
+    constructor(source: Iterable<V>);
     mapToString: any;
     /**
      * 文字列連結
@@ -1047,9 +1180,10 @@ declare let libs: {
 };
 declare let util: {
     HashMap: typeof HashMap;
+    HashSet: typeof HashSet;
     MapInterface: new (...args: any[]) => {
-        _KeyType: Function;
-        _ValueType: Function;
+        _KeyType: Function | Symbol;
+        _ValueType: Function | Symbol;
         _checkKey(key: unknown): void;
         _checkValue(value: unknown): void;
         clear(): void;
@@ -1066,7 +1200,7 @@ declare let util: {
         readonly [Symbol.toStringTag]: string;
     };
     SetInterface: new (...args: any[]) => {
-        _ValueType: Function;
+        _ValueType: Function | Symbol;
         _checkValue(value: unknown): void;
         add(value: unknown): /*elided*/ any;
         clear(): void;
