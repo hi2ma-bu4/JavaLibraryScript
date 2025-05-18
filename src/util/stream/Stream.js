@@ -4,7 +4,7 @@ const TypeChecker = require("../../libs/TypeChecker");
 const Any = TypeChecker.Any;
 
 /** @typedef {import("./NumberStream.js")} NumberStreamType */
-/** @typedef {import("./StringStream.js")} StringStreamType */
+// /** @typedef {import("./StringStream.js")} StringStream_forceRep */ // なぜかこいつだけ動かん
 /** @typedef {import("./EntryStream.js")} EntryStreamType */
 /** @typedef {import("./AsyncStream.js")} AsyncStreamType */
 
@@ -36,8 +36,10 @@ class Stream extends StreamInterface {
 
 	/**
 	 * Stream化
+	 * @template {Stream} T
+	 * @this {new (Iterable) => T}
 	 * @param {Iterable} iterable
-	 * @returns {this}
+	 * @returns {T}
 	 * @static
 	 */
 	static from(iterable) {
@@ -398,7 +400,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをStringStreamに変換
 	 * @param {Function} fn
-	 * @returns {StringStreamType}
+	 * @returns {StringStream_forceRep}
 	 */
 	mapToString(fn) {
 		return this._convertToX(StringStream, function* (iter) {

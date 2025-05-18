@@ -31,11 +31,13 @@ class EntryStream extends Stream {
 
 	/**
 	 * Stream化
+	 * @template {EntryStream} T
+	 * @this {new (Iterable, Function, Function) => T}
 	 * @param {Iterable} iterable
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
-	 * @returns {this}
-	 * @override
+	 * @returns {T}
+	 * @overload
 	 * @static
 	 */
 	static from(iterable, KeyType, ValueType) {
@@ -80,7 +82,7 @@ class EntryStream extends Stream {
 	 * EntryStreamをHashMapに変換する
 	 * @param {Function} [KeyType]
 	 * @param {Function} [ValueType]
-	 * @returns {HashMapType<K, V>}
+	 * @returns {HashMapType}
 	 */
 	toHashMap(KeyType = this._KeyType, ValueType = this._ValueType) {
 		init();

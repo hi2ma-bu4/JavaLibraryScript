@@ -18,8 +18,10 @@ class AsyncStream extends StreamInterface {
 
 	/**
 	 * AsyncStream化
+	 * @template {AsyncStream} T
+	 * @this {new (iterable: Iterable | AsyncIterator) => T}
 	 * @param {Iterable | AsyncIterator} iterable
-	 * @returns {this}
+	 * @returns {T}
 	 * @static
 	 */
 	static from(iterable) {

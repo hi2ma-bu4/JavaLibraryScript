@@ -27,4 +27,6 @@ function main() {
 			.mapValues((v) => v * 2)
 			.toHashMap()
 	);
+	const m = new JavaLibraryScript.util.stream.Stream([1, 2, 3, 4, 5]);
+	console.log(m.mapToString((v) => "" + v).toArray());
 }

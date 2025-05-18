@@ -26,7 +26,6 @@ class HashMap extends MapInterface {
 	 * @param {V} value
 	 * @returns {this}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	set(key, value) {
 		this._checkKey(key);
@@ -68,7 +67,6 @@ class HashMap extends MapInterface {
 	 * @param {K} key
 	 * @returns {V}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	get(key) {
 		this._checkKey(key);
@@ -80,7 +78,6 @@ class HashMap extends MapInterface {
 	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	has(key) {
 		this._checkKey(key);
@@ -113,7 +110,6 @@ class HashMap extends MapInterface {
 	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	delete(key) {
 		this._checkKey(key);
@@ -131,7 +127,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * EntrySetを返却する
-	 * @returns {MapIterator<any, any>}
+	 * @returns {MapIterator<[...[K, V]]>}
 	 */
 	entrySet() {
 		return this.entries();
@@ -192,7 +188,6 @@ class HashMap extends MapInterface {
 	/**
 	 * 文字列に変換する
 	 * @returns {string}
-	 * @override
 	 */
 	toString() {
 		const data = Array.from(this.entries())

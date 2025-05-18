@@ -300,18 +300,18 @@ const { _EnumItem, Enum } = require("./Enum.js");
 /**
  * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
  */
-
+//
 /**
  * @typedef {Object} InterfaceTypeData
  * @property {Function[] | null} [args] - 引数の型定義
  * @property {Function | Function[] | null} [returns] - 戻り値の型定義
  * @property {boolean} [abstract=true] - 抽象クラス化
  */
-
+//
 /**
  * @typedef {Object.<string, InterfaceTypeData>} InterfaceTypeDataList
  */
-
+//
 /**
  * インターフェイス管理
  * @extends {JavaLibraryScriptCore}
@@ -406,12 +406,13 @@ class Interface extends JavaLibraryScriptCore {
 
 	/**
 	 * 型定義とメゾットの強制実装
-	 * @param {Function} TargetClass - 型定義を追加するクラス
+	 * @template T
+	 * @param {new (...args: any[]) => T} TargetClass - 型定義を追加するクラス
 	 * @param {InterfaceTypeDataList} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @param {boolean} [opt.abstract=true] - 抽象クラス化
-	 * @returns {Function}
+	 * @returns {new (...args: any[]) => T}
 	 * @static
 	 */
 	static convert(TargetClass, newDefs = {}, { inherit = true, abstract = true } = {}) {
@@ -849,19 +850,12 @@ module.exports = {
 
 },{"./TypeChecker.js":5,"./sys/index.js":8}],7:[function(require,module,exports){
 /**
- * @typedef {symbol} LIBRARY_ID_TYPE
- */
-
-/** @type {LIBRARY_ID_TYPE} */
-const LIBRARY_ID = Symbol.for("JavaLibraryScript");
-
-/**
  * JavaLibraryScriptの共通継承元
  * @class
  */
 class JavaLibraryScriptCore {
 	/** @type {true} */
-	static [LIBRARY_ID] = true;
+	static [Symbol.for("JavaLibraryScript")] = true;
 }
 
 module.exports = JavaLibraryScriptCore;
@@ -909,7 +903,6 @@ class HashMap extends MapInterface {
 	 * @param {V} value
 	 * @returns {this}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	set(key, value) {
 		this._checkKey(key);
@@ -951,7 +944,6 @@ class HashMap extends MapInterface {
 	 * @param {K} key
 	 * @returns {V}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	get(key) {
 		this._checkKey(key);
@@ -963,7 +955,6 @@ class HashMap extends MapInterface {
 	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	has(key) {
 		this._checkKey(key);
@@ -996,7 +987,6 @@ class HashMap extends MapInterface {
 	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
-	 * @override
 	 */
 	delete(key) {
 		this._checkKey(key);
@@ -1014,7 +1004,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * EntrySetを返却する
-	 * @returns {MapIterator<any, any>}
+	 * @returns {MapIterator<[...[K, V]]>}
 	 */
 	entrySet() {
 		return this.entries();
@@ -1075,7 +1065,6 @@ class HashMap extends MapInterface {
 	/**
 	 * 文字列に変換する
 	 * @returns {string}
-	 * @override
 	 */
 	toString() {
 		const data = Array.from(this.entries())
@@ -1241,8 +1230,10 @@ class AsyncStream extends StreamInterface {
 
 	/**
 	 * AsyncStream化
+	 * @template {AsyncStream} T
+	 * @this {new (iterable: Iterable | AsyncIterator) => T}
 	 * @param {Iterable | AsyncIterator} iterable
-	 * @returns {this}
+	 * @returns {T}
 	 * @static
 	 */
 	static from(iterable) {
@@ -1587,11 +1578,13 @@ class EntryStream extends Stream {
 
 	/**
 	 * Stream化
+	 * @template {EntryStream} T
+	 * @this {new (Iterable, Function, Function) => T}
 	 * @param {Iterable} iterable
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
-	 * @returns {this}
-	 * @override
+	 * @returns {T}
+	 * @overload
 	 * @static
 	 */
 	static from(iterable, KeyType, ValueType) {
@@ -1636,7 +1629,7 @@ class EntryStream extends Stream {
 	 * EntryStreamをHashMapに変換する
 	 * @param {Function} [KeyType]
 	 * @param {Function} [ValueType]
-	 * @returns {HashMapType<K, V>}
+	 * @returns {HashMapType}
 	 */
 	toHashMap(KeyType = this._KeyType, ValueType = this._ValueType) {
 		init();
@@ -1726,7 +1719,7 @@ const TypeChecker = require("../../libs/TypeChecker");
 const Any = TypeChecker.Any;
 
 /** @typedef {import("./NumberStream.js")} NumberStreamType */
-/** @typedef {import("./StringStream.js")} StringStreamType */
+// /** @typedef {import("./StringStream.js")} StringStream_forceRep */
 /** @typedef {import("./EntryStream.js")} EntryStreamType */
 /** @typedef {import("./AsyncStream.js")} AsyncStreamType */
 
@@ -1758,8 +1751,10 @@ class Stream extends StreamInterface {
 
 	/**
 	 * Stream化
+	 * @template {Stream} T
+	 * @this {new (Iterable) => T}
 	 * @param {Iterable} iterable
-	 * @returns {this}
+	 * @returns {T}
 	 * @static
 	 */
 	static from(iterable) {
@@ -2120,7 +2115,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをStringStreamに変換
 	 * @param {Function} fn
-	 * @returns {StringStreamType}
+	 * @returns {StringStream_forceRep}
 	 */
 	mapToString(fn) {
 		return this._convertToX(StringStream, function* (iter) {
@@ -2205,6 +2200,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 	 * @returns {StreamInterface}
 	 */
 	static typeToStream(expected) {
+		init();
 		if (expected == null) return Stream;
 		if (expected === String) return StringStream;
 		if (expected === Number) return NumberStream;
@@ -2220,6 +2216,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static streamToType(stream) {
+		init();
 		// Stream継承
 		if (stream instanceof StringStream) return String;
 		if (stream instanceof NumberStream) return Number;

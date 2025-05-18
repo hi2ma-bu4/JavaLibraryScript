@@ -3,7 +3,6 @@ const exorcist = require("exorcist");
 const rollup = require("rollup");
 const dts = require("rollup-plugin-dts").default;
 const commonjs = require("@rollup/plugin-commonjs");
-const { Extractor, ExtractorConfig } = require("@microsoft/api-extractor");
 const fs = require("node:fs");
 const path = require("node:path");
 const { minify } = require("terser");
@@ -124,22 +123,6 @@ async function buildRollup() {
 	});
 }
 
-function runApiExtractor() {
-	const extractorConfigPath = path.resolve(baseDir, "api-extractor.json");
-	const extractorConfig = ExtractorConfig.loadFileAndPrepare(extractorConfigPath);
-
-	const { succeeded, errors, warnings } = Extractor.invoke(extractorConfig, {
-		localBuild: true,
-		showVerboseMessages: true,
-	});
-
-	if (succeeded) {
-		console.log("✨ API Extractor completed successfully!");
-	} else {
-		throw new Error("💥API Extractor failed.");
-	}
-}
-
 function fixDtsOutputFlexible(filePath, log = false) {
 	let code = fs.readFileSync(filePath, "utf8");
 
@@ -157,6 +140,13 @@ function fixDtsOutputFlexible(filePath, log = false) {
 			(a, b, c, d) => {
 				if (log) console.log(`┃┃ ${c} -> ${d} : ${CL.cyan("統合")}`);
 				return `${b}${d}`;
+			},
+		],
+		[
+			`([A-Za-z][A-Za-z0-9]*)_forceRep`,
+			(a, b) => {
+				if (log) console.log(`┃┃ ${b} : ${CL.cyan("強制変更")}`);
+				return b;
 			},
 		],
 	];
@@ -206,14 +196,13 @@ function fixDtsOutputFlexible(filePath, log = false) {
 			console.log(`┃⛳ ${CL.brightWhite("rollup用entrypoint作成")}`);
 			createEntryEndpoint(entryTypesPath);
 			console.log("┃📦 .d.ts を rollup中...");
-			//await buildRollup();
-			runApiExtractor();
+			await buildRollup();
 			console.log(`┃┗✅ ${CL.brightWhite("rollup完了")}: ${getRelativePath(typesPath)}`);
 			console.log(`┃🗑️ ${CL.brightWhite("types仮フォルダcleanup")}`);
-			//prepareDir(typesTmpDir);
-			console.log(`┃🌵 ${CL.brightWhite("予測候補問題を解決")}`);
+			prepareDir(typesTmpDir);
+			console.log(`┃🌵 ${CL.brightWhite("予測候補・コンパイル問題を解決")}`);
 			fixDtsOutputFlexible(typesPath, logView);
-			console.log(`┃┗✅ ${CL.brightWhite("予測候補問題 修正完了")}: ${getRelativePath(typesPath)}`);
+			console.log(`┃┗✅ ${CL.brightWhite("予測候補・コンパイル問題 修正完了")}: ${getRelativePath(typesPath)}`);
 			showFileSize(typesPath);
 		}
 

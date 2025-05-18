@@ -5,18 +5,18 @@ const { _EnumItem, Enum } = require("./Enum.js");
 /**
  * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
  */
-
+//
 /**
  * @typedef {Object} InterfaceTypeData
  * @property {Function[] | null} [args] - 引数の型定義
  * @property {Function | Function[] | null} [returns] - 戻り値の型定義
  * @property {boolean} [abstract=true] - 抽象クラス化
  */
-
+//
 /**
  * @typedef {Object.<string, InterfaceTypeData>} InterfaceTypeDataList
  */
-
+//
 /**
  * インターフェイス管理
  * @extends {JavaLibraryScriptCore}
@@ -111,12 +111,13 @@ class Interface extends JavaLibraryScriptCore {
 
 	/**
 	 * 型定義とメゾットの強制実装
-	 * @param {Function} TargetClass - 型定義を追加するクラス
+	 * @template T
+	 * @param {new (...args: any[]) => T} TargetClass - 型定義を追加するクラス
 	 * @param {InterfaceTypeDataList} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @param {boolean} [opt.abstract=true] - 抽象クラス化
-	 * @returns {Function}
+	 * @returns {new (...args: any[]) => T}
 	 * @static
 	 */
 	static convert(TargetClass, newDefs = {}, { inherit = true, abstract = true } = {}) {

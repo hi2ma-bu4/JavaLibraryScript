@@ -24,6 +24,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 	 * @returns {StreamInterface}
 	 */
 	static typeToStream(expected) {
+		init();
 		if (expected == null) return Stream;
 		if (expected === String) return StringStream;
 		if (expected === Number) return NumberStream;
@@ -39,6 +40,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static streamToType(stream) {
+		init();
 		// Stream継承
 		if (stream instanceof StringStream) return String;
 		if (stream instanceof NumberStream) return Number;
