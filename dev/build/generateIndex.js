@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const CL = require("./libs/ColorLogger.js");
+const CL = require("../libs/ColorLogger.js");
 
 const skipList = new Set([
 	"index.js", // 自動生成対象自身

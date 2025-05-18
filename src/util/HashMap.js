@@ -181,7 +181,7 @@ class HashMap extends BaseMap {
 	 * @returns {EntryStream}
 	 */
 	stream() {
-		return EntryStream.from(this.entries());
+		return EntryStream.from(this.entries(), this._KeyType, this._ValueType);
 	}
 
 	// ==================================================

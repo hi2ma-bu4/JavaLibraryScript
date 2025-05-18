@@ -325,6 +325,16 @@ declare namespace __util_stream_NumberStream_js {
  */
 declare class EntryStream extends Stream {
     /**
+     * Stream化
+     * @param {Iterable} iterable
+     * @param {Function} KeyType
+     * @param {Function} ValueType
+     * @returns {Stream}
+     * @override
+     * @static
+     */
+    static override from(iterable: Iterable<any>, KeyType: Function, ValueType: Function): Stream;
+    /**
      * @param {Iterable} source
      * @param {Function} KeyType
      * @param {Function} ValueType
@@ -343,9 +353,25 @@ declare class EntryStream extends Stream {
      * @returns {Stream}
      */
     values(): Stream;
-    mapKeys(fn: any): Stream;
-    mapValues(fn: any): Stream;
-    toHashMap(KeyType: any, ValueType: any): any;
+    /**
+     * EntryStreamのキーをマップ
+     * @param {Function} fn
+     * @returns {Stream}
+     */
+    mapKeys(fn: Function): Stream;
+    /**
+     * EntryStreamの値をマップ
+     * @param {Function} fn
+     * @returns {Stream}
+     */
+    mapValues(fn: Function): Stream;
+    /**
+     * EntryStreamをHashMapに変換する
+     * @param {Function} [KeyType]
+     * @param {Function} [ValueType]
+     * @returns {HashMap}
+     */
+    toHashMap(KeyType?: Function, ValueType?: Function): any;
 }
 
 declare namespace __util_stream_EntryStream_js {
@@ -961,4 +987,4 @@ declare namespace JavaLibraryScript {
   };
 }
 
-export default JavaLibraryScript;
+export { JavaLibraryScript as default };

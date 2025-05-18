@@ -27,6 +27,19 @@ class EntryStream extends Stream {
 	}
 
 	/**
+	 * Stream化
+	 * @param {Iterable} iterable
+	 * @param {Function} KeyType
+	 * @param {Function} ValueType
+	 * @returns {Stream}
+	 * @override
+	 * @static
+	 */
+	static from(iterable, KeyType, ValueType) {
+		return new this(iterable, KeyType, ValueType);
+	}
+
+	/**
 	 * EntryStreamからキーのStreamを返却
 	 * @returns {Stream}
 	 */
@@ -42,15 +55,31 @@ class EntryStream extends Stream {
 		return this._convertToX(StreamChecker.typeToStream(this._ValueType)).map(([_, v]) => v);
 	}
 
+	/**
+	 * EntryStreamのキーをマップ
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	mapKeys(fn) {
 		return this.map(([k, v]) => [fn(k), v]);
 	}
 
+	/**
+	 * EntryStreamの値をマップ
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	mapValues(fn) {
 		return this.map(([k, v]) => [k, fn(v)]);
 	}
 
-	toHashMap(KeyType, ValueType) {
+	/**
+	 * EntryStreamをHashMapに変換する
+	 * @param {Function} [KeyType]
+	 * @param {Function} [ValueType]
+	 * @returns {HashMap}
+	 */
+	toHashMap(KeyType = this._KeyType, ValueType = this._ValueType) {
 		init();
 		const map = new HashMap(KeyType, ValueType);
 		this.forEach(([k, v]) => map.set(k, v));

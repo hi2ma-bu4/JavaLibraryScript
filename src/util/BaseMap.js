@@ -34,7 +34,7 @@ class BaseMap extends Map {
 	 */
 	_checkKey(key) {
 		if (!TypeChecker.matchType(key, this._KeyType)) {
-			throw new TypeError(`キー型が一致しません。期待: ${this._KeyType.name} → 実際: ${TypeChecker.stringify(key)}`);
+			throw new TypeError(`キー型が一致しません。期待: ${TypeChecker.typeNames(this._KeyType)} → 実際: ${TypeChecker.stringify(key)}`);
 		}
 	}
 
@@ -45,7 +45,7 @@ class BaseMap extends Map {
 	 */
 	_checkValue(value) {
 		if (!TypeChecker.matchType(value, this._ValueType)) {
-			throw new TypeError(`値型が一致しません。期待: ${this._ValueType.name} → 実際: ${TypeChecker.stringify(value)}`);
+			throw new TypeError(`値型が一致しません。期待: ${TypeChecker.typeNames(this._ValueType)} → 実際: ${TypeChecker.stringify(value)}`);
 		}
 	}
 }

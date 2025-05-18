@@ -714,7 +714,7 @@ class BaseMap extends Map {
 	 */
 	_checkKey(key) {
 		if (!TypeChecker.matchType(key, this._KeyType)) {
-			throw new TypeError(`キー型が一致しません。期待: ${this._KeyType.name} → 実際: ${TypeChecker.stringify(key)}`);
+			throw new TypeError(`キー型が一致しません。期待: ${TypeChecker.typeNames(this._KeyType)} → 実際: ${TypeChecker.stringify(key)}`);
 		}
 	}
 
@@ -725,7 +725,7 @@ class BaseMap extends Map {
 	 */
 	_checkValue(value) {
 		if (!TypeChecker.matchType(value, this._ValueType)) {
-			throw new TypeError(`値型が一致しません。期待: ${this._ValueType.name} → 実際: ${TypeChecker.stringify(value)}`);
+			throw new TypeError(`値型が一致しません。期待: ${TypeChecker.typeNames(this._ValueType)} → 実際: ${TypeChecker.stringify(value)}`);
 		}
 	}
 }
@@ -929,7 +929,7 @@ class HashMap extends BaseMap {
 	 * @returns {EntryStream}
 	 */
 	stream() {
-		return EntryStream.from(this.entries());
+		return EntryStream.from(this.entries(), this._KeyType, this._ValueType);
 	}
 
 	// ==================================================
@@ -1330,6 +1330,19 @@ class EntryStream extends Stream {
 	}
 
 	/**
+	 * Stream化
+	 * @param {Iterable} iterable
+	 * @param {Function} KeyType
+	 * @param {Function} ValueType
+	 * @returns {Stream}
+	 * @override
+	 * @static
+	 */
+	static from(iterable, KeyType, ValueType) {
+		return new this(iterable, KeyType, ValueType);
+	}
+
+	/**
 	 * EntryStreamからキーのStreamを返却
 	 * @returns {Stream}
 	 */
@@ -1345,15 +1358,31 @@ class EntryStream extends Stream {
 		return this._convertToX(StreamChecker.typeToStream(this._ValueType)).map(([_, v]) => v);
 	}
 
+	/**
+	 * EntryStreamのキーをマップ
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	mapKeys(fn) {
 		return this.map(([k, v]) => [fn(k), v]);
 	}
 
+	/**
+	 * EntryStreamの値をマップ
+	 * @param {Function} fn
+	 * @returns {Stream}
+	 */
 	mapValues(fn) {
 		return this.map(([k, v]) => [k, fn(v)]);
 	}
 
-	toHashMap(KeyType, ValueType) {
+	/**
+	 * EntryStreamをHashMapに変換する
+	 * @param {Function} [KeyType]
+	 * @param {Function} [ValueType]
+	 * @returns {HashMap}
+	 */
+	toHashMap(KeyType = this._KeyType, ValueType = this._ValueType) {
 		init();
 		const map = new HashMap(KeyType, ValueType);
 		this.forEach(([k, v]) => map.set(k, v));

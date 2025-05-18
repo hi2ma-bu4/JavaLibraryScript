@@ -8,8 +8,8 @@ const path = require("node:path");
 const { minify } = require("terser");
 const { execSync } = require("node:child_process");
 
-const generateIndex = require("./generateIndex.js");
-const createEntryEndpoint = require("./createEntryEndpoint.js");
+const generateIndex = require("./build/generateIndex.js");
+const createEntryEndpoint = require("./build/createEntryEndpoint.js");
 const CL = require("./libs/ColorLogger.js");
 
 const script_name = "JavaLibraryScript";
@@ -175,9 +175,9 @@ function fixDtsOutputFlexible(filePath) {
 			showFileSize(typesPath);
 		}
 
-		console.log(`┣🎉 ${CL.brightYellow("ビルド完了")}`);
 		const end = performance.now() - start;
-		console.log(`┗🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);
+		console.log(`┣🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);
+		console.log(`┗🎉 ${CL.brightYellow("ビルド完了")}`);
 	} catch (e) {
 		console.error("┗❌ ビルド失敗:", e);
 		process.exit(1);

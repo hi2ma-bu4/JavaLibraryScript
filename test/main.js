@@ -1,4 +1,7 @@
-const { default: JavaLibraryScript } = require("../types/JavaLibraryScript");
+try {
+	// IDEの型表示用
+	const { default: JavaLibraryScript } = require("../types/JavaLibraryScript");
+} catch (e) {}
 
 jasc.on("DOMContentLoaded", () => {
 	console.log("JavaLibraryScript");
@@ -21,7 +24,7 @@ function main() {
 	console.log(
 		map
 			.stream()
-			.map(([k, v]) => [k, "a"])
-			.toHashMap(String, Number)
+			.mapValues((v) => v * 2)
+			.toHashMap()
 	);
 }
