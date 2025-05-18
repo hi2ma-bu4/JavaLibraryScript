@@ -1,8 +1,8 @@
 const Stream = require("./Stream.js");
-const Interface = require("../../base/Interface");
 
 /**
  * 文字列専用Stream (LazyList)
+ * @extends {Stream}
  * @class
  */
 class StringStream extends Stream {

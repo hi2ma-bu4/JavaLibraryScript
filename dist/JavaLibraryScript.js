@@ -3,6 +3,7 @@ const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 
 /**
  * 単一のEnum要素を表すクラス
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class _EnumItem extends JavaLibraryScriptCore {
@@ -48,7 +49,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 	/**
 	 * ordinalでの比較
-	 * @param {_EnumItem} other
+	 * @param {this} other
 	 * @returns {number}
 	 */
 	compareTo(other) {
@@ -57,7 +58,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 	/**
 	 * 同一EnumItemかチェック
-	 * @param {_EnumItem} other
+	 * @param {this} other
 	 * @returns {boolean}
 	 */
 	equals(other) {
@@ -75,6 +76,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 /**
  * Enum を生成するクラス
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class _EnumCore extends JavaLibraryScriptCore {
@@ -293,13 +295,26 @@ module.exports = {
 },{"../libs/sys/JavaLibraryScriptCore.js":7}],2:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
+const { _EnumItem, Enum } = require("./Enum.js");
 
 /**
- * @type {"throw" | "log" | "ignore"}
+ * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
+ */
+
+/**
+ * @typedef {Object} InterfaceTypeData
+ * @property {Function[] | null} [args] - 引数の型定義
+ * @property {Function | Function[] | null} [returns] - 戻り値の型定義
+ * @property {boolean} [abstract=true] - 抽象クラス化
+ */
+
+/**
+ * @typedef {Object.<string, InterfaceTypeData>} InterfaceTypeDataList
  */
 
 /**
  * インターフェイス管理
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class Interface extends JavaLibraryScriptCore {
@@ -309,22 +324,55 @@ class Interface extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static _isDebugMode = false;
+
 	/**
 	 * エラーモード
-	 * @type {"throw" | "log" | "ignore"}
+	 * @type {ErrorModeItem}
+	 * @static
+	 * @readonly
+	 */
+	static ErrorMode = Enum(["throw", "log", "ignore"]);
+
+	/**
+	 * エラーモード
+	 * @type {ErrorModeItem}
 	 * @static
 	 */
-	static _errorMode = "throw";
+	static _errorMode = this.ErrorMode.throw;
 
+	/**
+	 * エラーモード設定
+	 * @param {ErrorModeItem} mode - エラーモード
+	 * @static
+	 */
 	static setErrorMode(mode) {
-		if (!["throw", "log", "ignore"].includes(mode)) throw new Error(`不正な errorMode: ${mode}`);
+		if (!this.ErrorMode.has(mode)) throw new Error(`不正な errorMode: ${mode}`);
 		this._errorMode = mode;
+	}
+
+	/**
+	 * エラー処理
+	 * @param {typeof Error} error
+	 * @param {string} message - エラーメッセージ
+	 * @static
+	 */
+	static _handleError(error, message) {
+		const errorMode = this._errorMode;
+		switch (this._errorMode) {
+			case errorMode.throw:
+				throw new error(message);
+			case errorMode.log:
+				console.warn("[Interface Warning]", message);
+				break;
+			case errorMode.ignore:
+				break;
+		}
 	}
 
 	/**
 	 * 型定義
 	 * @param {Function} TargetClass - 型定義を追加するクラス
-	 * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
+	 * @param {InterfaceTypeDataList} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @returns {undefined}
@@ -359,7 +407,7 @@ class Interface extends JavaLibraryScriptCore {
 	/**
 	 * 型定義とメゾットの強制実装
 	 * @param {Function} TargetClass - 型定義を追加するクラス
-	 * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
+	 * @param {InterfaceTypeDataList} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @param {boolean} [opt.abstract=true] - 抽象クラス化
@@ -373,7 +421,7 @@ class Interface extends JavaLibraryScriptCore {
 			constructor(...args) {
 				if (abstract) {
 					if (new.target === interfaceClass) {
-						throw new TypeError(`Cannot instantiate abstract class ${TargetClass.name}`);
+						this._handleError(TypeError, `Cannot instantiate abstract class ${TargetClass.name}`);
 					}
 				}
 				super(...args);
@@ -390,7 +438,7 @@ class Interface extends JavaLibraryScriptCore {
 
 					if (typeof original !== "function") {
 						if (isAbstract) continue;
-						throw new Error(`"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+						this._handleError(Error, `"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
 					}
 
 					// ラップは一度だけ（重複防止）
@@ -400,7 +448,7 @@ class Interface extends JavaLibraryScriptCore {
 							const expectedArgs = def.args || [];
 							for (let i = 0; i < expectedArgs.length; i++) {
 								if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
-									throw new TypeError(`"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
+									this._handleError(TypeError, `"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
 								}
 							}
 
@@ -410,9 +458,9 @@ class Interface extends JavaLibraryScriptCore {
 							const validate = (val) => {
 								if (!TypeChecker.matchType(val, expectedReturn)) {
 									if (expectedReturn === TypeChecker.NoReturn) {
-										throw new TypeError(`"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
+										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
 									} else {
-										throw new TypeError(`"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
+										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
 									}
 								}
 								return val;
@@ -451,7 +499,7 @@ class Interface extends JavaLibraryScriptCore {
 	/**
 	 * 型定義を取得
 	 * @param {Function|Object} ClassOrInstance
-	 * @returns {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean}}}
+	 * @returns {InterfaceTypeDataList}
 	 * @static
 	 */
 	static getDefinition(ClassOrInstance) {
@@ -490,11 +538,42 @@ class Interface extends JavaLibraryScriptCore {
 			.filter(([_, def]) => !abstractOnly || def.abstract)
 			.map(([name]) => name);
 	}
+
+	/**
+	 * メソッド定義を取得
+	 * @param {Function|Object} classOrInstance
+	 * @param {string} methodName
+	 * @returns {InterfaceTypeData | null}
+	 * @static
+	 */
+	static getExpectedSignature(classOrInstance, methodName) {
+		const defs = this.getDefinition(classOrInstance);
+		if (!(methodName in defs)) return null;
+		return {
+			args: defs[methodName].args,
+			returns: defs[methodName].returns,
+			abstract: !!defs[methodName].abstract,
+		};
+	}
+
+	/**
+	 * 型定義を結合
+	 * @param {...InterfaceTypeDataList} defs
+	 * @returns {InterfaceTypeDataList}
+	 * @static
+	 */
+	static merge(...defs) {
+		const result = {};
+		for (const def of defs) {
+			Object.assign(result, def);
+		}
+		return result;
+	}
 }
 
 module.exports = Interface;
 
-},{"../libs/TypeChecker.js":5,"../libs/sys/JavaLibraryScriptCore.js":7}],3:[function(require,module,exports){
+},{"../libs/TypeChecker.js":5,"../libs/sys/JavaLibraryScriptCore.js":7,"./Enum.js":1}],3:[function(require,module,exports){
 module.exports = {
     ...require("./Enum.js"),
     Interface: require("./Interface.js")
@@ -513,6 +592,7 @@ const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
 /**
  * 型チェッカー
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class TypeChecker extends JavaLibraryScriptCore {
@@ -521,6 +601,7 @@ class TypeChecker extends JavaLibraryScriptCore {
 	// ==================================================
 	/**
 	 * Typeの否定
+	 * @extends {JavaLibraryScriptCore}
 	 * @class
 	 * @static
 	 */
@@ -801,11 +882,12 @@ module.exports = JavaLibraryScript;
 
 },{"./index.js":4}],10:[function(require,module,exports){
 const MapInterface = require("./MapInterface");
-const Interface = require("../base/Interface");
 const EntryStream = require("./stream/EntryStream.js");
 
 /**
  * 型チェック機能のついたMap
+ * @template K, V
+ * @extends {MapInterface<K, V>}
  * @class
  */
 class HashMap extends MapInterface {
@@ -823,9 +905,9 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを追加・更新する
-	 * @param {any} key
-	 * @param {any} value
-	 * @returns {any}
+	 * @param {K} key
+	 * @param {V} value
+	 * @returns {this}
 	 * @throws {TypeError}
 	 * @override
 	 */
@@ -836,9 +918,9 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * データを追加・更新する
-	 * @param {any} key
-	 * @param {any} value
-	 * @returns {any}
+	 * @param {K} key
+	 * @param {V} value
+	 * @returns {this}
 	 * @throws {TypeError}
 	 */
 	put(key, value) {
@@ -847,7 +929,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを一括で追加・更新する
-	 * @param {Map<any, any>} map
+	 * @param {Map<K, V>} map
 	 * @throws {TypeError}
 	 */
 	setAll(map) {
@@ -857,7 +939,7 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * データを一括で追加・更新する
-	 * @param {Map<any, any>} map
+	 * @param {Map<K, V>} map
 	 * @throws {TypeError}
 	 */
 	putAll(map) {
@@ -866,8 +948,8 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを取得する
-	 * @param {any} key
-	 * @returns {any}
+	 * @param {K} key
+	 * @returns {V}
 	 * @throws {TypeError}
 	 * @override
 	 */
@@ -878,7 +960,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * Keyの存在を確認する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 * @override
@@ -889,7 +971,7 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * Keyの存在を確認する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 */
@@ -899,7 +981,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * Valueの存在を確認する
-	 * @param {any} value
+	 * @param {V} value
 	 * @returns {boolean}
 	 */
 	containsValue(value) {
@@ -911,7 +993,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを削除する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 * @override
@@ -922,7 +1004,7 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * データを削除する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 */
@@ -952,7 +1034,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * 等価判定を行う
-	 * @param {HashMap} otherMap
+	 * @param {this} otherMap
 	 * @returns {boolean}
 	 */
 	equals(otherMap) {
@@ -980,7 +1062,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * Streamを返却する
-	 * @returns {EntryStream}
+	 * @returns {EntryStream<K, V>}
 	 */
 	stream() {
 		return EntryStream.from(this.entries(), this._KeyType, this._ValueType);
@@ -1004,7 +1086,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * イテレータを返却する
-	 * @returns {Iterator<any>}
+	 * @returns {Iterator<V>}
 	 */
 	[Symbol.iterator]() {
 		return this.entries()[Symbol.iterator]();
@@ -1013,7 +1095,7 @@ class HashMap extends MapInterface {
 
 module.exports = HashMap;
 
-},{"../base/Interface":2,"./MapInterface":11,"./stream/EntryStream.js":15}],11:[function(require,module,exports){
+},{"./MapInterface":11,"./stream/EntryStream.js":15}],11:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1026,6 +1108,8 @@ const NotEmpty = [NotNull, NotUndefined];
 
 /**
  * Mapの基底クラス
+ * @template K, V
+ * @extends {Map<K, V>}
  * @class
  * @abstract
  * @interface
@@ -1043,7 +1127,7 @@ class MapInterface extends Map {
 
 	/**
 	 * Keyの型をチェックする
-	 * @param {any} key
+	 * @param {K} key
 	 * @throws {TypeError}
 	 */
 	_checkKey(key) {
@@ -1054,7 +1138,7 @@ class MapInterface extends Map {
 
 	/**
 	 * Valueの型をチェックする
-	 * @param {any} value
+	 * @param {V} value
 	 * @throws {TypeError}
 	 */
 	_checkValue(value) {
@@ -1090,6 +1174,8 @@ const NotEmpty = [NotNull, NotUndefined];
 
 /**
  * Setの基底クラス
+ * @template V
+ * @extends {Set<V>}
  * @class
  * @abstract
  * @interface
@@ -1105,7 +1191,7 @@ class SetInterface extends Set {
 
 	/**
 	 * Valueの型をチェックする
-	 * @param {any} value
+	 * @param {V} value
 	 * @throws {TypeError}
 	 */
 	_checkValue(value) {
@@ -1137,10 +1223,10 @@ module.exports = {
 },{"./HashMap.js":10,"./MapInterface.js":11,"./SetInterface.js":12,"./stream/index.js":21}],14:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
 const Stream = require("./Stream.js");
-const Interface = require("../../base/Interface");
 
 /**
  * 非同期Stream (LazyAsyncList)
+ * @extends {StreamInterface}
  * @class
  */
 class AsyncStream extends StreamInterface {
@@ -1156,7 +1242,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStream化
 	 * @param {Iterable | AsyncIterator} iterable
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 * @static
 	 */
 	static from(iterable) {
@@ -1185,7 +1271,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * pipelineに追加
 	 * @param {Generator} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	_use(fn) {
 		this._pipeline.push(fn);
@@ -1194,7 +1280,7 @@ class AsyncStream extends StreamInterface {
 
 	/**
 	 * pipelineを圧縮
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	flattenPipeline() {
 		const flattenedFn = this._pipeline.reduceRight(
@@ -1230,7 +1316,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamをマップ
 	 * @param {Function | Promise} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	map(fn) {
 		return this._use(async function* (iter) {
@@ -1241,7 +1327,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamをフィルタ
 	 * @param {Function | Promise} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	filter(fn) {
 		return this._use(async function* (iter) {
@@ -1254,7 +1340,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamを展開
 	 * @param {Function | Promise} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	flatMap(fn) {
 		return this._use(async function* (iter) {
@@ -1268,7 +1354,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの重複を排除
 	 * @param {Function | Promise} keyFn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	distinct(keyFn = (x) => x) {
 		return this._use(async function* (iter) {
@@ -1286,7 +1372,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの要素は変更せずに関数のみを実行
 	 * @param {Function} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	peek(fn) {
 		return this._use(async function* (iter) {
@@ -1300,7 +1386,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの要素数を先頭から制限
 	 * @param {Number} n
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	limit(n) {
 		return this._use(async function* (iter) {
@@ -1315,7 +1401,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの要素数を先頭からスキップ
 	 * @param {Number} n
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	skip(n) {
 		return this._use(async function* (iter) {
@@ -1467,10 +1553,11 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"../../base/Interface":2,"./Stream.js":17,"./StreamInterface.js":19}],15:[function(require,module,exports){
+},{"./Stream.js":17,"./StreamInterface.js":19}],15:[function(require,module,exports){
 const Stream = require("./Stream.js");
-const Interface = require("../../base/Interface");
 const StreamChecker = require("./StreamChecker");
+
+/** @typedef {import("../HashMap.js")} HashMapType */
 
 let HashMap;
 function init() {
@@ -1480,6 +1567,8 @@ function init() {
 
 /**
  * Entry専用Stream (LazyList)
+ * @template K, V
+ * @extends {Stream}
  * @class
  */
 class EntryStream extends Stream {
@@ -1501,7 +1590,7 @@ class EntryStream extends Stream {
 	 * @param {Iterable} iterable
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
-	 * @returns {Stream}
+	 * @returns {this}
 	 * @override
 	 * @static
 	 */
@@ -1528,7 +1617,7 @@ class EntryStream extends Stream {
 	/**
 	 * EntryStreamのキーをマップ
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	mapKeys(fn) {
 		return this.map(([k, v]) => [fn(k), v]);
@@ -1537,7 +1626,7 @@ class EntryStream extends Stream {
 	/**
 	 * EntryStreamの値をマップ
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	mapValues(fn) {
 		return this.map(([k, v]) => [k, fn(v)]);
@@ -1547,7 +1636,7 @@ class EntryStream extends Stream {
 	 * EntryStreamをHashMapに変換する
 	 * @param {Function} [KeyType]
 	 * @param {Function} [ValueType]
-	 * @returns {HashMap}
+	 * @returns {HashMapType<K, V>}
 	 */
 	toHashMap(KeyType = this._KeyType, ValueType = this._ValueType) {
 		init();
@@ -1559,12 +1648,12 @@ class EntryStream extends Stream {
 
 module.exports = EntryStream;
 
-},{"../../base/Interface":2,"../HashMap.js":10,"./Stream.js":17,"./StreamChecker":18}],16:[function(require,module,exports){
+},{"../HashMap.js":10,"./Stream.js":17,"./StreamChecker":18}],16:[function(require,module,exports){
 const Stream = require("./Stream.js");
-const Interface = require("../../base/Interface");
 
 /**
  * 数値専用Stream (LazyList)
+ * @extends {Stream}
  * @class
  */
 class NumberStream extends Stream {
@@ -1630,12 +1719,16 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"../../base/Interface":2,"./Stream.js":17}],17:[function(require,module,exports){
+},{"./Stream.js":17}],17:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface.js");
-const Interface = require("../../base/Interface");
 const TypeChecker = require("../../libs/TypeChecker");
 
 const Any = TypeChecker.Any;
+
+/** @typedef {import("./NumberStream.js")} NumberStreamType */
+/** @typedef {import("./StringStream.js")} StringStreamType */
+/** @typedef {import("./EntryStream.js")} EntryStreamType */
+/** @typedef {import("./AsyncStream.js")} AsyncStreamType */
 
 let NumberStream, StringStream, EntryStream, AsyncStream;
 function init() {
@@ -1648,6 +1741,7 @@ function init() {
 
 /**
  * Streamオブジェクト(LazyList)
+ * @extends {StreamInterface}
  * @class
  */
 class Stream extends StreamInterface {
@@ -1665,7 +1759,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Stream化
 	 * @param {Iterable} iterable
-	 * @returns {Stream}
+	 * @returns {this}
 	 * @static
 	 */
 	static from(iterable) {
@@ -1679,7 +1773,7 @@ class Stream extends StreamInterface {
 	/**
 	 * pipelineに追加
 	 * @param {Generator} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	_use(fn) {
 		this._pipeline.push(fn);
@@ -1691,7 +1785,7 @@ class Stream extends StreamInterface {
 	 * @param {Function} construct
 	 * @param {Generator} fn
 	 * @param {...any} args
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	_convertToX(construct, fn, ...args) {
 		const newStream = new construct([], ...args);
@@ -1703,7 +1797,7 @@ class Stream extends StreamInterface {
 
 	/**
 	 * pipelineを圧縮
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	flattenPipeline() {
 		const flattenedFn = this._pipeline.reduceRight(
@@ -1738,7 +1832,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamをマップ
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	map(fn) {
 		return this._use(function* (iter) {
@@ -1749,7 +1843,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamをフィルタ
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	filter(fn) {
 		return this._use(function* (iter) {
@@ -1760,7 +1854,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamを展開
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	flatMap(fn) {
 		return this._use(function* (iter) {
@@ -1774,7 +1868,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの重複を排除
 	 * @param {Function} keyFn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	distinct(keyFn = JSON.stringify.bind(JSON)) {
 		return this._use(function* (iter) {
@@ -1792,7 +1886,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamをソート
 	 * @param {Function} compareFn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	sorted(compareFn = (a, b) => (a > b ? 1 : a < b ? -1 : 0)) {
 		return this._use(function* (iter) {
@@ -1804,7 +1898,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの要素は変更せずに関数のみを実行
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	peek(fn) {
 		return this._use(function* (iter) {
@@ -1818,7 +1912,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの要素数を先頭から制限
 	 * @param {Number} n
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	limit(n) {
 		return this._use(function* (iter) {
@@ -1833,7 +1927,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの要素数を先頭からスキップ
 	 * @param {Number} n
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	skip(n) {
 		return this._use(function* (iter) {
@@ -1848,7 +1942,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamを分割
 	 * @param {Number} size
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	chunk(size) {
 		return this._use(function* (iter) {
@@ -1868,7 +1962,7 @@ class Stream extends StreamInterface {
 	 * Streamをスライド分割
 	 * @param {Number} size
 	 * @param {Number} step
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	windowed(size, step = size) {
 		return this._use(function* (iter) {
@@ -2009,7 +2103,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをNumberStreamに変換
 	 * @param {Function} fn
-	 * @returns {NumberStream}
+	 * @returns {NumberStreamType}
 	 */
 	mapToNumber(fn) {
 		return this._convertToX(NumberStream, function* (iter) {
@@ -2026,7 +2120,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをStringStreamに変換
 	 * @param {Function} fn
-	 * @returns {StringStream}
+	 * @returns {StringStreamType}
 	 */
 	mapToString(fn) {
 		return this._convertToX(StringStream, function* (iter) {
@@ -2043,7 +2137,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをEntryStreamに変換
 	 * @param {Function} fn
-	 * @returns {EntryStream}
+	 * @returns {EntryStreamType}
 	 */
 	mapToEntry(fn) {
 		return this._convertToX(
@@ -2065,7 +2159,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをAsyncStreamに変換
 	 * @param {Function} fn
-	 * @returns {AsyncStream}
+	 * @returns {AsyncStreamType}
 	 */
 	mapToAsync(fn) {
 		const input = this.flattenPipeline();
@@ -2084,7 +2178,7 @@ class Stream extends StreamInterface {
 
 module.exports = Stream;
 
-},{"../../base/Interface":2,"../../libs/TypeChecker":5,"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./StreamInterface.js":19,"./StringStream.js":20}],18:[function(require,module,exports){
+},{"../../libs/TypeChecker":5,"./AsyncStream.js":14,"./EntryStream.js":15,"./NumberStream.js":16,"./StreamInterface.js":19,"./StringStream.js":20}],18:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../../libs/TypeChecker.js");
 const StreamInterface = require("./StreamInterface.js");
@@ -2101,6 +2195,7 @@ function init() {
 
 /**
  * Streamの型チェック
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class StreamChecker extends JavaLibraryScriptCore {
@@ -2144,6 +2239,7 @@ const Interface = require("../../base/Interface");
 
 /**
  * Streamの基底クラス
+ * @extends {JavaLibraryScriptCore}
  * @class
  * @abstract
  */
@@ -2175,10 +2271,10 @@ module.exports = Interface.convert(StreamInterface, {
 
 },{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],20:[function(require,module,exports){
 const Stream = require("./Stream.js");
-const Interface = require("../../base/Interface");
 
 /**
  * 文字列専用Stream (LazyList)
+ * @extends {Stream}
  * @class
  */
 class StringStream extends Stream {
@@ -2235,7 +2331,7 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"../../base/Interface":2,"./Stream.js":17}],21:[function(require,module,exports){
+},{"./Stream.js":17}],21:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),

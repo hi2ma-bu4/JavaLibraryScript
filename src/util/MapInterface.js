@@ -10,6 +10,8 @@ const NotEmpty = [NotNull, NotUndefined];
 
 /**
  * Mapの基底クラス
+ * @template K, V
+ * @extends {Map<K, V>}
  * @class
  * @abstract
  * @interface
@@ -27,7 +29,7 @@ class MapInterface extends Map {
 
 	/**
 	 * Keyの型をチェックする
-	 * @param {any} key
+	 * @param {K} key
 	 * @throws {TypeError}
 	 */
 	_checkKey(key) {
@@ -38,7 +40,7 @@ class MapInterface extends Map {
 
 	/**
 	 * Valueの型をチェックする
-	 * @param {any} value
+	 * @param {V} value
 	 * @throws {TypeError}
 	 */
 	_checkValue(value) {

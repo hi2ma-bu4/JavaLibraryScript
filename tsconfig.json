@@ -3,6 +3,7 @@
         "allowJs": true,
         "declaration": true,
         "emitDeclarationOnly": true,
+        "declarationMap": false,
         "esModuleInterop": true,
         "outDir": "dev/tmp/types",
         "module": "esnext",

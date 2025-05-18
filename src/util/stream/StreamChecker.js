@@ -14,6 +14,7 @@ function init() {
 
 /**
  * Streamの型チェック
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class StreamChecker extends JavaLibraryScriptCore {

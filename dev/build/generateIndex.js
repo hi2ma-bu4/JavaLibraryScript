@@ -23,7 +23,7 @@ function isPlainObjectExport(modulePath) {
  * index.jsを生成する
  * @param {string} dir
  */
-function generateIndex(dir, baseDir = dir) {
+function generateIndex(dir, log = false, baseDir = dir) {
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
 
 	// jsファイルだけ、かつindex.jsは除外
@@ -34,7 +34,7 @@ function generateIndex(dir, baseDir = dir) {
 
 	// 先にサブディレクトリも再帰処理（深い階層から順に）
 	for (const subDir of subDirs) {
-		generateIndex(path.join(dir, subDir.name), baseDir);
+		generateIndex(path.join(dir, subDir.name), log, baseDir);
 	}
 
 	// export文を作成
@@ -66,7 +66,7 @@ function generateIndex(dir, baseDir = dir) {
 	// index.jsを書き込み
 	fs.writeFileSync(path.join(dir, "index.js"), content, "utf8");
 
-	console.log(`┃┣📜 Generated index.js in ${CL.brightBlue(path.relative(path.dirname(baseDir), dir))}`);
+	if (log) console.log(`┃┣📜 Generated index.js in ${CL.brightBlue(path.relative(path.dirname(baseDir), dir))}`);
 }
 
 module.exports = generateIndex;

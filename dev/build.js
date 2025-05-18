@@ -3,6 +3,7 @@ const exorcist = require("exorcist");
 const rollup = require("rollup");
 const dts = require("rollup-plugin-dts").default;
 const commonjs = require("@rollup/plugin-commonjs");
+const { Extractor, ExtractorConfig } = require("@microsoft/api-extractor");
 const fs = require("node:fs");
 const path = require("node:path");
 const { minify } = require("terser");
@@ -123,23 +124,62 @@ async function buildRollup() {
 	});
 }
 
-function fixDtsOutputFlexible(filePath) {
+function runApiExtractor() {
+	const extractorConfigPath = path.resolve(baseDir, "api-extractor.json");
+	const extractorConfig = ExtractorConfig.loadFileAndPrepare(extractorConfigPath);
+
+	const { succeeded, errors, warnings } = Extractor.invoke(extractorConfig, {
+		localBuild: true,
+		showVerboseMessages: true,
+	});
+
+	if (succeeded) {
+		console.log("✨ API Extractor completed successfully!");
+	} else {
+		throw new Error("💥API Extractor failed.");
+	}
+}
+
+function fixDtsOutputFlexible(filePath, log = false) {
 	let code = fs.readFileSync(filePath, "utf8");
 
-	const reg = new RegExp(`export\s{\s${script_name}\sas\sdefault\s};`);
-	code = code.replace(reg, `export default ${script_name};`);
+	const regList = [
+		// 修正をここに追加
+		[
+			`declare\\s+namespace\\s+(__(?:[a-z]+_)+[A-Za-z]+_js)\\s+{\\s+export\\s+{[\\s\\S]*?\\s+};\\s+}\\s+`,
+			(a, b) => {
+				if (log) console.log(`┃┃ namespace ${b} : ${CL.cyan("削除")}`);
+				return "";
+			},
+		],
+		[
+			`(\\s+)(__(?:[a-z]+_)+([A-Za-z]+)_js)`,
+			(a, b, c, d) => {
+				if (log) console.log(`┃┃ ${c} -> ${d} : ${CL.cyan("統合")}`);
+				return `${b}${d}`;
+			},
+		],
+	];
+
+	for (const [reg, rep] of regList) {
+		const re = new RegExp(reg, "gm");
+		code = code.replace(re, rep);
+	}
 
 	fs.writeFileSync(filePath, code);
 }
 
 (async () => {
 	const debug = true;
+	// 動作確認用 ログ表示
+	const logView = true;
+	//
 	const start = performance.now();
 	try {
 		console.log(`🎉 ${CL.brightYellow("ビルド開始")}`);
 		//
 		console.log(`┣🔁 ${CL.brightWhite("index.js自動生成開始...")}`);
-		generateIndex(entryDir);
+		generateIndex(entryDir, logView);
 		console.log(`┃┗🌱 ${CL.brightWhite("自動生成完了")}`);
 		//
 		console.log(`┃🗑️ ${CL.brightWhite("distフォルダリセット")}`);
@@ -166,13 +206,14 @@ function fixDtsOutputFlexible(filePath) {
 			console.log(`┃⛳ ${CL.brightWhite("rollup用entrypoint作成")}`);
 			createEntryEndpoint(entryTypesPath);
 			console.log("┃📦 .d.ts を rollup中...");
-			await buildRollup();
+			//await buildRollup();
+			runApiExtractor();
 			console.log(`┃┗✅ ${CL.brightWhite("rollup完了")}: ${getRelativePath(typesPath)}`);
 			console.log(`┃🗑️ ${CL.brightWhite("types仮フォルダcleanup")}`);
-			prepareDir(typesTmpDir);
-			console.log(`┃🌵 ${CL.brightWhite("export問題を解決")}`);
-			fixDtsOutputFlexible(typesPath);
-			console.log(`┃┗✅ ${CL.brightWhite("export default 生成完了")}: ${getRelativePath(typesPath)}`);
+			//prepareDir(typesTmpDir);
+			console.log(`┃🌵 ${CL.brightWhite("予測候補問題を解決")}`);
+			fixDtsOutputFlexible(typesPath, logView);
+			console.log(`┃┗✅ ${CL.brightWhite("予測候補問題 修正完了")}: ${getRelativePath(typesPath)}`);
 			showFileSize(typesPath);
 		}
 

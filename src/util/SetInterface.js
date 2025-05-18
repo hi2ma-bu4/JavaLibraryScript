@@ -10,6 +10,8 @@ const NotEmpty = [NotNull, NotUndefined];
 
 /**
  * Setの基底クラス
+ * @template V
+ * @extends {Set<V>}
  * @class
  * @abstract
  * @interface
@@ -25,7 +27,7 @@ class SetInterface extends Set {
 
 	/**
 	 * Valueの型をチェックする
-	 * @param {any} value
+	 * @param {V} value
 	 * @throws {TypeError}
 	 */
 	_checkValue(value) {

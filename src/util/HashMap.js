@@ -1,9 +1,10 @@
 const MapInterface = require("./MapInterface");
-const Interface = require("../base/Interface");
 const EntryStream = require("./stream/EntryStream.js");
 
 /**
  * 型チェック機能のついたMap
+ * @template K, V
+ * @extends {MapInterface<K, V>}
  * @class
  */
 class HashMap extends MapInterface {
@@ -21,9 +22,9 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを追加・更新する
-	 * @param {any} key
-	 * @param {any} value
-	 * @returns {any}
+	 * @param {K} key
+	 * @param {V} value
+	 * @returns {this}
 	 * @throws {TypeError}
 	 * @override
 	 */
@@ -34,9 +35,9 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * データを追加・更新する
-	 * @param {any} key
-	 * @param {any} value
-	 * @returns {any}
+	 * @param {K} key
+	 * @param {V} value
+	 * @returns {this}
 	 * @throws {TypeError}
 	 */
 	put(key, value) {
@@ -45,7 +46,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを一括で追加・更新する
-	 * @param {Map<any, any>} map
+	 * @param {Map<K, V>} map
 	 * @throws {TypeError}
 	 */
 	setAll(map) {
@@ -55,7 +56,7 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * データを一括で追加・更新する
-	 * @param {Map<any, any>} map
+	 * @param {Map<K, V>} map
 	 * @throws {TypeError}
 	 */
 	putAll(map) {
@@ -64,8 +65,8 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを取得する
-	 * @param {any} key
-	 * @returns {any}
+	 * @param {K} key
+	 * @returns {V}
 	 * @throws {TypeError}
 	 * @override
 	 */
@@ -76,7 +77,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * Keyの存在を確認する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 * @override
@@ -87,7 +88,7 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * Keyの存在を確認する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 */
@@ -97,7 +98,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * Valueの存在を確認する
-	 * @param {any} value
+	 * @param {V} value
 	 * @returns {boolean}
 	 */
 	containsValue(value) {
@@ -109,7 +110,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * データを削除する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 * @override
@@ -120,7 +121,7 @@ class HashMap extends MapInterface {
 	}
 	/**
 	 * データを削除する
-	 * @param {any} key
+	 * @param {K} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
 	 */
@@ -150,7 +151,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * 等価判定を行う
-	 * @param {HashMap} otherMap
+	 * @param {this} otherMap
 	 * @returns {boolean}
 	 */
 	equals(otherMap) {
@@ -178,7 +179,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * Streamを返却する
-	 * @returns {EntryStream}
+	 * @returns {EntryStream<K, V>}
 	 */
 	stream() {
 		return EntryStream.from(this.entries(), this._KeyType, this._ValueType);
@@ -202,7 +203,7 @@ class HashMap extends MapInterface {
 
 	/**
 	 * イテレータを返却する
-	 * @returns {Iterator<any>}
+	 * @returns {Iterator<V>}
 	 */
 	[Symbol.iterator]() {
 		return this.entries()[Symbol.iterator]();

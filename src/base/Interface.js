@@ -1,12 +1,25 @@
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
+const { _EnumItem, Enum } = require("./Enum.js");
 
 /**
- * @type {"throw" | "log" | "ignore"}
+ * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
+ */
+
+/**
+ * @typedef {Object} InterfaceTypeData
+ * @property {Function[] | null} [args] - 引数の型定義
+ * @property {Function | Function[] | null} [returns] - 戻り値の型定義
+ * @property {boolean} [abstract=true] - 抽象クラス化
+ */
+
+/**
+ * @typedef {Object.<string, InterfaceTypeData>} InterfaceTypeDataList
  */
 
 /**
  * インターフェイス管理
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class Interface extends JavaLibraryScriptCore {
@@ -16,22 +29,55 @@ class Interface extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static _isDebugMode = false;
+
 	/**
 	 * エラーモード
-	 * @type {"throw" | "log" | "ignore"}
+	 * @type {ErrorModeItem}
+	 * @static
+	 * @readonly
+	 */
+	static ErrorMode = Enum(["throw", "log", "ignore"]);
+
+	/**
+	 * エラーモード
+	 * @type {ErrorModeItem}
 	 * @static
 	 */
-	static _errorMode = "throw";
+	static _errorMode = this.ErrorMode.throw;
 
+	/**
+	 * エラーモード設定
+	 * @param {ErrorModeItem} mode - エラーモード
+	 * @static
+	 */
 	static setErrorMode(mode) {
-		if (!["throw", "log", "ignore"].includes(mode)) throw new Error(`不正な errorMode: ${mode}`);
+		if (!this.ErrorMode.has(mode)) throw new Error(`不正な errorMode: ${mode}`);
 		this._errorMode = mode;
+	}
+
+	/**
+	 * エラー処理
+	 * @param {typeof Error} error
+	 * @param {string} message - エラーメッセージ
+	 * @static
+	 */
+	static _handleError(error, message) {
+		const errorMode = this._errorMode;
+		switch (this._errorMode) {
+			case errorMode.throw:
+				throw new error(message);
+			case errorMode.log:
+				console.warn("[Interface Warning]", message);
+				break;
+			case errorMode.ignore:
+				break;
+		}
 	}
 
 	/**
 	 * 型定義
 	 * @param {Function} TargetClass - 型定義を追加するクラス
-	 * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
+	 * @param {InterfaceTypeDataList} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @returns {undefined}
@@ -66,7 +112,7 @@ class Interface extends JavaLibraryScriptCore {
 	/**
 	 * 型定義とメゾットの強制実装
 	 * @param {Function} TargetClass - 型定義を追加するクラス
-	 * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
+	 * @param {InterfaceTypeDataList} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @param {boolean} [opt.abstract=true] - 抽象クラス化
@@ -80,7 +126,7 @@ class Interface extends JavaLibraryScriptCore {
 			constructor(...args) {
 				if (abstract) {
 					if (new.target === interfaceClass) {
-						throw new TypeError(`Cannot instantiate abstract class ${TargetClass.name}`);
+						this._handleError(TypeError, `Cannot instantiate abstract class ${TargetClass.name}`);
 					}
 				}
 				super(...args);
@@ -97,7 +143,7 @@ class Interface extends JavaLibraryScriptCore {
 
 					if (typeof original !== "function") {
 						if (isAbstract) continue;
-						throw new Error(`"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+						this._handleError(Error, `"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
 					}
 
 					// ラップは一度だけ（重複防止）
@@ -107,7 +153,7 @@ class Interface extends JavaLibraryScriptCore {
 							const expectedArgs = def.args || [];
 							for (let i = 0; i < expectedArgs.length; i++) {
 								if (!TypeChecker.matchType(args[i], expectedArgs[i])) {
-									throw new TypeError(`"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
+									this._handleError(TypeError, `"${this.constructor.name}.${methodName}" 第${i + 1}引数: ${TypeChecker.typeNames(expectedArgs[i])} を期待 → 実際: ${TypeChecker.stringify(args[i])}`);
 								}
 							}
 
@@ -117,9 +163,9 @@ class Interface extends JavaLibraryScriptCore {
 							const validate = (val) => {
 								if (!TypeChecker.matchType(val, expectedReturn)) {
 									if (expectedReturn === TypeChecker.NoReturn) {
-										throw new TypeError(`"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
+										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" は戻り値を返してはいけません → 実際: ${TypeChecker.stringify(val)}`);
 									} else {
-										throw new TypeError(`"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
+										this._handleError(TypeError, `"${this.constructor.name}.${methodName}" の戻り値: ${TypeChecker.typeNames(expectedReturn)} を期待 → 実際: ${TypeChecker.stringify(val)}`);
 									}
 								}
 								return val;
@@ -158,7 +204,7 @@ class Interface extends JavaLibraryScriptCore {
 	/**
 	 * 型定義を取得
 	 * @param {Function|Object} ClassOrInstance
-	 * @returns {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean}}}
+	 * @returns {InterfaceTypeDataList}
 	 * @static
 	 */
 	static getDefinition(ClassOrInstance) {
@@ -196,6 +242,37 @@ class Interface extends JavaLibraryScriptCore {
 		return Object.entries(defs)
 			.filter(([_, def]) => !abstractOnly || def.abstract)
 			.map(([name]) => name);
+	}
+
+	/**
+	 * メソッド定義を取得
+	 * @param {Function|Object} classOrInstance
+	 * @param {string} methodName
+	 * @returns {InterfaceTypeData | null}
+	 * @static
+	 */
+	static getExpectedSignature(classOrInstance, methodName) {
+		const defs = this.getDefinition(classOrInstance);
+		if (!(methodName in defs)) return null;
+		return {
+			args: defs[methodName].args,
+			returns: defs[methodName].returns,
+			abstract: !!defs[methodName].abstract,
+		};
+	}
+
+	/**
+	 * 型定義を結合
+	 * @param {...InterfaceTypeDataList} defs
+	 * @returns {InterfaceTypeDataList}
+	 * @static
+	 */
+	static merge(...defs) {
+		const result = {};
+		for (const def of defs) {
+			Object.assign(result, def);
+		}
+		return result;
 	}
 }
 

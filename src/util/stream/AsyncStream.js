@@ -1,9 +1,9 @@
 const StreamInterface = require("./StreamInterface.js");
 const Stream = require("./Stream.js");
-const Interface = require("../../base/Interface");
 
 /**
  * 非同期Stream (LazyAsyncList)
+ * @extends {StreamInterface}
  * @class
  */
 class AsyncStream extends StreamInterface {
@@ -19,7 +19,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStream化
 	 * @param {Iterable | AsyncIterator} iterable
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 * @static
 	 */
 	static from(iterable) {
@@ -48,7 +48,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * pipelineに追加
 	 * @param {Generator} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	_use(fn) {
 		this._pipeline.push(fn);
@@ -57,7 +57,7 @@ class AsyncStream extends StreamInterface {
 
 	/**
 	 * pipelineを圧縮
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	flattenPipeline() {
 		const flattenedFn = this._pipeline.reduceRight(
@@ -93,7 +93,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamをマップ
 	 * @param {Function | Promise} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	map(fn) {
 		return this._use(async function* (iter) {
@@ -104,7 +104,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamをフィルタ
 	 * @param {Function | Promise} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	filter(fn) {
 		return this._use(async function* (iter) {
@@ -117,7 +117,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamを展開
 	 * @param {Function | Promise} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	flatMap(fn) {
 		return this._use(async function* (iter) {
@@ -131,7 +131,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの重複を排除
 	 * @param {Function | Promise} keyFn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	distinct(keyFn = (x) => x) {
 		return this._use(async function* (iter) {
@@ -149,7 +149,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの要素は変更せずに関数のみを実行
 	 * @param {Function} fn
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	peek(fn) {
 		return this._use(async function* (iter) {
@@ -163,7 +163,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの要素数を先頭から制限
 	 * @param {Number} n
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	limit(n) {
 		return this._use(async function* (iter) {
@@ -178,7 +178,7 @@ class AsyncStream extends StreamInterface {
 	/**
 	 * AsyncStreamの要素数を先頭からスキップ
 	 * @param {Number} n
-	 * @returns {AsyncStream}
+	 * @returns {this}
 	 */
 	skip(n) {
 		return this._use(async function* (iter) {

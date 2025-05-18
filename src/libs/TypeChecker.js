@@ -3,6 +3,7 @@ const { _EnumCore, _EnumItem } = require("../base/Enum.js");
 
 /**
  * 型チェッカー
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class TypeChecker extends JavaLibraryScriptCore {
@@ -11,6 +12,7 @@ class TypeChecker extends JavaLibraryScriptCore {
 	// ==================================================
 	/**
 	 * Typeの否定
+	 * @extends {JavaLibraryScriptCore}
 	 * @class
 	 * @static
 	 */

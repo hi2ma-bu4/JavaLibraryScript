@@ -1,8 +1,12 @@
 const StreamInterface = require("./StreamInterface.js");
-const Interface = require("../../base/Interface");
 const TypeChecker = require("../../libs/TypeChecker");
 
 const Any = TypeChecker.Any;
+
+/** @typedef {import("./NumberStream.js")} NumberStreamType */
+/** @typedef {import("./StringStream.js")} StringStreamType */
+/** @typedef {import("./EntryStream.js")} EntryStreamType */
+/** @typedef {import("./AsyncStream.js")} AsyncStreamType */
 
 let NumberStream, StringStream, EntryStream, AsyncStream;
 function init() {
@@ -15,6 +19,7 @@ function init() {
 
 /**
  * Streamオブジェクト(LazyList)
+ * @extends {StreamInterface}
  * @class
  */
 class Stream extends StreamInterface {
@@ -32,7 +37,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Stream化
 	 * @param {Iterable} iterable
-	 * @returns {Stream}
+	 * @returns {this}
 	 * @static
 	 */
 	static from(iterable) {
@@ -46,7 +51,7 @@ class Stream extends StreamInterface {
 	/**
 	 * pipelineに追加
 	 * @param {Generator} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	_use(fn) {
 		this._pipeline.push(fn);
@@ -58,7 +63,7 @@ class Stream extends StreamInterface {
 	 * @param {Function} construct
 	 * @param {Generator} fn
 	 * @param {...any} args
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	_convertToX(construct, fn, ...args) {
 		const newStream = new construct([], ...args);
@@ -70,7 +75,7 @@ class Stream extends StreamInterface {
 
 	/**
 	 * pipelineを圧縮
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	flattenPipeline() {
 		const flattenedFn = this._pipeline.reduceRight(
@@ -105,7 +110,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamをマップ
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	map(fn) {
 		return this._use(function* (iter) {
@@ -116,7 +121,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamをフィルタ
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	filter(fn) {
 		return this._use(function* (iter) {
@@ -127,7 +132,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamを展開
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	flatMap(fn) {
 		return this._use(function* (iter) {
@@ -141,7 +146,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの重複を排除
 	 * @param {Function} keyFn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	distinct(keyFn = JSON.stringify.bind(JSON)) {
 		return this._use(function* (iter) {
@@ -159,7 +164,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamをソート
 	 * @param {Function} compareFn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	sorted(compareFn = (a, b) => (a > b ? 1 : a < b ? -1 : 0)) {
 		return this._use(function* (iter) {
@@ -171,7 +176,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの要素は変更せずに関数のみを実行
 	 * @param {Function} fn
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	peek(fn) {
 		return this._use(function* (iter) {
@@ -185,7 +190,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの要素数を先頭から制限
 	 * @param {Number} n
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	limit(n) {
 		return this._use(function* (iter) {
@@ -200,7 +205,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamの要素数を先頭からスキップ
 	 * @param {Number} n
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	skip(n) {
 		return this._use(function* (iter) {
@@ -215,7 +220,7 @@ class Stream extends StreamInterface {
 	/**
 	 * Streamを分割
 	 * @param {Number} size
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	chunk(size) {
 		return this._use(function* (iter) {
@@ -235,7 +240,7 @@ class Stream extends StreamInterface {
 	 * Streamをスライド分割
 	 * @param {Number} size
 	 * @param {Number} step
-	 * @returns {Stream}
+	 * @returns {this}
 	 */
 	windowed(size, step = size) {
 		return this._use(function* (iter) {
@@ -376,7 +381,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをNumberStreamに変換
 	 * @param {Function} fn
-	 * @returns {NumberStream}
+	 * @returns {NumberStreamType}
 	 */
 	mapToNumber(fn) {
 		return this._convertToX(NumberStream, function* (iter) {
@@ -393,7 +398,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをStringStreamに変換
 	 * @param {Function} fn
-	 * @returns {StringStream}
+	 * @returns {StringStreamType}
 	 */
 	mapToString(fn) {
 		return this._convertToX(StringStream, function* (iter) {
@@ -410,7 +415,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをEntryStreamに変換
 	 * @param {Function} fn
-	 * @returns {EntryStream}
+	 * @returns {EntryStreamType}
 	 */
 	mapToEntry(fn) {
 		return this._convertToX(
@@ -432,7 +437,7 @@ class Stream extends StreamInterface {
 	/**
 	 * StreamをAsyncStreamに変換
 	 * @param {Function} fn
-	 * @returns {AsyncStream}
+	 * @returns {AsyncStreamType}
 	 */
 	mapToAsync(fn) {
 		const input = this.flattenPipeline();

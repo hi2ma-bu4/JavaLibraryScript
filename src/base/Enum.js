@@ -2,6 +2,7 @@ const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 
 /**
  * 単一のEnum要素を表すクラス
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class _EnumItem extends JavaLibraryScriptCore {
@@ -47,7 +48,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 	/**
 	 * ordinalでの比較
-	 * @param {_EnumItem} other
+	 * @param {this} other
 	 * @returns {number}
 	 */
 	compareTo(other) {
@@ -56,7 +57,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 	/**
 	 * 同一EnumItemかチェック
-	 * @param {_EnumItem} other
+	 * @param {this} other
 	 * @returns {boolean}
 	 */
 	equals(other) {
@@ -74,6 +75,7 @@ class _EnumItem extends JavaLibraryScriptCore {
 
 /**
  * Enum を生成するクラス
+ * @extends {JavaLibraryScriptCore}
  * @class
  */
 class _EnumCore extends JavaLibraryScriptCore {

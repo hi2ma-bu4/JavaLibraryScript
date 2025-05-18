@@ -3,6 +3,7 @@ const Interface = require("../../base/Interface");
 
 /**
  * Streamの基底クラス
+ * @extends {JavaLibraryScriptCore}
  * @class
  * @abstract
  */
