@@ -34,6 +34,8 @@ class ColorLogger {
 
 	static STYLE = {
 		bold: "\x1b[1m",
+		dim: "\x1b[2m",
+		italic: "\x1b[3m",
 		underline: "\x1b[4m",
 		reverse: "\x1b[7m",
 	};
@@ -89,6 +91,12 @@ class ColorLogger {
 
 	static bold(text) {
 		return this.color(text, this.STYLE.bold);
+	}
+	static dim(text) {
+		return this.color(text, this.STYLE.dim);
+	}
+	static italic(text) {
+		return this.color(text, this.STYLE.italic);
 	}
 	static underline(text) {
 		return this.color(text, this.STYLE.underline);

@@ -588,7 +588,7 @@ declare class HashMap {
      */
     putAll(map: Map<any, any>): void;
     /**
-     * データを取得する
+     * データを取得する
      * @param {any} key
      * @returns {any}
      * @throws {TypeError}
@@ -617,7 +617,7 @@ declare class HashMap {
      */
     containsValue(value: any): boolean;
     /**
-     * データを削除する
+     * データを削除する
      * @param {any} key
      * @returns {boolean}
      * @throws {TypeError}
@@ -625,7 +625,7 @@ declare class HashMap {
      */
     override delete(key: any): boolean;
     /**
-     * データを削除する
+     * データを削除する
      * @param {any} key
      * @returns {boolean}
      * @throws {TypeError}
@@ -637,7 +637,7 @@ declare class HashMap {
      */
     entrySet(): MapIterator<any, any>;
     /**
-     * 空かどうかを返却する
+     * 空かどうかを返却する
      * @returns {boolean}
      */
     isEmpty(): boolean;
@@ -648,7 +648,7 @@ declare class HashMap {
      */
     equals(otherMap: HashMap): boolean;
     /**
-     * 全てのデータを呼び出す
+     * 全てのデータを呼び出す
      * @param {Function} callback
      * @param {any} thisArg
      */
@@ -937,15 +937,30 @@ declare class _EnumCore extends JavaLibraryScriptCore {
 declare function Enum(defs: Array<string | [string, any]> | Record<string, any>, options?: {}): _EnumCore & ProxyConstructor;
 
 /**
+ * @type {"throw" | "log" | "ignore"}
+ */
+/**
  * インターフェイス管理
  * @class
  */
 declare class Interface extends JavaLibraryScriptCore {
+    /**
+     * デバッグモード
+     * @type {boolean}
+     * @static
+     */
     static _isDebugMode: boolean;
+    /**
+     * エラーモード
+     * @type {"throw" | "log" | "ignore"}
+     * @static
+     */
+    static _errorMode: "throw" | "log" | "ignore";
+    static setErrorMode(mode: any): void;
     /**
      * 型定義
      * @param {Function} TargetClass - 型定義を追加するクラス
-     * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
+     * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
      * @param {Object} [opt] - オプション
      * @param {boolean} [opt.inherit=true] - 継承モード
      * @returns {undefined}
@@ -957,7 +972,7 @@ declare class Interface extends JavaLibraryScriptCore {
     /**
      * 型定義とメゾットの強制実装
      * @param {Function} TargetClass - 型定義を追加するクラス
-     * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
+     * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
      * @param {Object} [opt] - オプション
      * @param {boolean} [opt.inherit=true] - 継承モード
      * @param {boolean} [opt.abstract=true] - 抽象クラス化
@@ -968,6 +983,37 @@ declare class Interface extends JavaLibraryScriptCore {
         inherit?: boolean;
         abstract?: boolean;
     }): Function;
+    /**
+     * 抽象メソッドが未実装かを個別に検査
+     * @param {Object} instance
+     * @returns {boolean}
+     */
+    static isAbstractImplemented(instance: any): boolean;
+    /**
+     * 型定義を取得
+     * @param {Function|Object} ClassOrInstance
+     * @returns {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean}}}
+     * @static
+     */
+    static getDefinition(ClassOrInstance: Function | any): {};
+    /**
+     * 型定義を文字列化
+     * @param {Function|Object} ClassOrInstance
+     * @returns {string}
+     * @static
+     */
+    static describe(ClassOrInstance: Function | any): string;
+    /**
+     * メソッド名を取得
+     * @param {Function|Object} ClassOrInstance
+     * @param {Object} [opt]
+     * @param {boolean} [opt.abstractOnly=false]
+     * @returns {string[]}
+     * @static
+     */
+    static getMethodNames(ClassOrInstance: Function | any, { abstractOnly }?: {
+        abstractOnly?: boolean;
+    }): string[];
 }
 
 declare namespace __base_Interface_js {

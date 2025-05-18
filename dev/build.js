@@ -10,6 +10,7 @@ const { execSync } = require("node:child_process");
 
 const generateIndex = require("./build/generateIndex.js");
 const createEntryEndpoint = require("./build/createEntryEndpoint.js");
+const checkIllegalStrings = require("./build/checkIllegalStrings.js");
 const CL = require("./libs/ColorLogger.js");
 
 const script_name = "JavaLibraryScript";
@@ -133,9 +134,9 @@ function fixDtsOutputFlexible(filePath) {
 
 (async () => {
 	const debug = true;
+	const start = performance.now();
 	try {
-		const start = performance.now();
-		console.log(`🎉 ${CL.brightYellow("ビルド開始")}`);
+		console.log(`🎉 ${CL.brightYellow("ビルド開始")}`);
 		//
 		console.log(`┣🔁 ${CL.brightWhite("index.js自動生成開始...")}`);
 		generateIndex(entryDir);
@@ -175,11 +176,21 @@ function fixDtsOutputFlexible(filePath) {
 			showFileSize(typesPath);
 		}
 
+		console.log(`┃🔍 ${CL.brightWhite("問題性の高い文字列の検査を開始...")}`);
+		const illegalFound = checkIllegalStrings(baseDir);
+		if (illegalFound) {
+			console.log(`┃┗❌ ${CL.brightWhite("検査完了")} ${CL.red("(違法文字列発見)")}`);
+		} else {
+			console.log(`┃┗✅ ${CL.brightWhite("検査完了")}`);
+		}
+
 		const end = performance.now() - start;
-		console.log(`┣🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);
-		console.log(`┗🎉 ${CL.brightYellow("ビルド完了")}`);
+		console.log(`┣🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);
+		console.log(`┗🎉 ${CL.brightYellow("ビルド完了")}`);
 	} catch (e) {
-		console.error("┗❌ ビルド失敗:", e);
+		const end = performance.now() - start;
+		console.log(`┣🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);
+		console.error(`┗❌ ${CL.brightRed("ビルド失敗")}:`, e);
 		process.exit(1);
 	}
 })();

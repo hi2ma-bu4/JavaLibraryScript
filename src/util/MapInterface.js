@@ -49,14 +49,14 @@ class MapInterface extends Map {
 }
 
 module.exports = Interface.convert(MapInterface, {
-	set: { args: [NotEmpty, NotEmpty], returns: Any },
+	set: { args: [NotEmpty, NotEmpty], returns: Any, abstract: true },
 	put: { args: [NotEmpty, NotEmpty], returns: Any },
-	get: { args: [NotEmpty], returns: Any },
-	delete: { args: [NotEmpty], returns: Boolean },
+	get: { args: [NotEmpty], returns: Any, abstract: true },
+	delete: { args: [NotEmpty], returns: Boolean, abstract: true },
 	remove: { args: [NotEmpty], returns: Boolean },
 	isEmpty: { returns: Boolean },
 	clear: { returns: NoReturn },
-	has: { args: [NotEmpty], returns: Boolean },
+	has: { args: [NotEmpty], returns: Boolean, abstract: true },
 	containsKey: { args: [NotEmpty], returns: Boolean },
 	containsValue: { args: [NotEmpty], returns: Boolean },
 });

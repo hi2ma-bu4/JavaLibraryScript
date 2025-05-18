@@ -2,16 +2,36 @@ const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
 const TypeChecker = require("../libs/TypeChecker.js");
 
 /**
+ * @type {"throw" | "log" | "ignore"}
+ */
+
+/**
  * インターフェイス管理
  * @class
  */
 class Interface extends JavaLibraryScriptCore {
-	static _isDebugMode = true;
+	/**
+	 * デバッグモード
+	 * @type {boolean}
+	 * @static
+	 */
+	static _isDebugMode = false;
+	/**
+	 * エラーモード
+	 * @type {"throw" | "log" | "ignore"}
+	 * @static
+	 */
+	static _errorMode = "throw";
+
+	static setErrorMode(mode) {
+		if (!["throw", "log", "ignore"].includes(mode)) throw new Error(`不正な errorMode: ${mode}`);
+		this._errorMode = mode;
+	}
 
 	/**
 	 * 型定義
 	 * @param {Function} TargetClass - 型定義を追加するクラス
-	 * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
+	 * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @returns {undefined}
@@ -46,7 +66,7 @@ class Interface extends JavaLibraryScriptCore {
 	/**
 	 * 型定義とメゾットの強制実装
 	 * @param {Function} TargetClass - 型定義を追加するクラス
-	 * @param {{[String]: {"args": Function[], "returns": Function[]}}} [newMethods] - 追加するメソッド群
+	 * @param {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean"}}} [newMethods] - 追加するメソッド群
 	 * @param {Object} [opt] - オプション
 	 * @param {boolean} [opt.inherit=true] - 継承モード
 	 * @param {boolean} [opt.abstract=true] - 抽象クラス化
@@ -73,8 +93,10 @@ class Interface extends JavaLibraryScriptCore {
 				for (const methodName of Object.keys(defs)) {
 					const def = defs[methodName];
 					const original = this[methodName];
+					const isAbstract = !!def.abstract;
 
 					if (typeof original !== "function") {
+						if (isAbstract) continue;
 						throw new Error(`"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
 					}
 
@@ -115,6 +137,65 @@ class Interface extends JavaLibraryScriptCore {
 		Object.defineProperty(interfaceClass, "name", { value: TargetClass.name });
 
 		return interfaceClass;
+	}
+
+	/**
+	 * 抽象メソッドが未実装かを個別に検査
+	 * @param {Object} instance
+	 * @returns {boolean}
+	 */
+	static isAbstractImplemented(instance) {
+		const proto = Object.getPrototypeOf(instance);
+		const defs = proto.__interfaceTypes || {};
+
+		for (const [methodName, def] of Object.entries(defs)) {
+			if (!def.abstract) continue;
+			if (typeof instance[methodName] !== "function") return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 型定義を取得
+	 * @param {Function|Object} ClassOrInstance
+	 * @returns {{[String]: {"args": Function[], "returns": Function[], "abstract": boolean}}}
+	 * @static
+	 */
+	static getDefinition(ClassOrInstance) {
+		const proto = typeof ClassOrInstance === "function" ? ClassOrInstance.prototype : Object.getPrototypeOf(ClassOrInstance);
+		return proto.__interfaceTypes || {};
+	}
+
+	/**
+	 * 型定義を文字列化
+	 * @param {Function|Object} ClassOrInstance
+	 * @returns {string}
+	 * @static
+	 */
+	static describe(ClassOrInstance) {
+		const defs = this.getDefinition(ClassOrInstance);
+		const lines = [];
+		for (const [name, def] of Object.entries(defs)) {
+			const argsStr = (def.args || []).map((t) => TypeChecker.typeNames(t)).join(", ");
+			const retStr = TypeChecker.typeNames(def.returns);
+			lines.push(`${def.abstract ? "abstract " : ""}function ${name}(${argsStr}) → ${retStr}`);
+		}
+		return lines.join("\n");
+	}
+
+	/**
+	 * メソッド名を取得
+	 * @param {Function|Object} ClassOrInstance
+	 * @param {Object} [opt]
+	 * @param {boolean} [opt.abstractOnly=false]
+	 * @returns {string[]}
+	 * @static
+	 */
+	static getMethodNames(ClassOrInstance, { abstractOnly = false } = {}) {
+		const defs = this.getDefinition(ClassOrInstance);
+		return Object.entries(defs)
+			.filter(([_, def]) => !abstractOnly || def.abstract)
+			.map(([name]) => name);
 	}
 }
 

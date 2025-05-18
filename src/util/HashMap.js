@@ -63,7 +63,7 @@ class HashMap extends MapInterface {
 	}
 
 	/**
-	 * データを取得する
+	 * データを取得する
 	 * @param {any} key
 	 * @returns {any}
 	 * @throws {TypeError}
@@ -108,7 +108,7 @@ class HashMap extends MapInterface {
 	}
 
 	/**
-	 * データを削除する
+	 * データを削除する
 	 * @param {any} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
@@ -119,7 +119,7 @@ class HashMap extends MapInterface {
 		return super.delete(key);
 	}
 	/**
-	 * データを削除する
+	 * データを削除する
 	 * @param {any} key
 	 * @returns {boolean}
 	 * @throws {TypeError}
@@ -137,7 +137,7 @@ class HashMap extends MapInterface {
 	}
 
 	/**
-	 * 空かどうかを返却する
+	 * 空かどうかを返却する
 	 * @returns {boolean}
 	 */
 	isEmpty() {
@@ -162,7 +162,7 @@ class HashMap extends MapInterface {
 	}
 
 	/**
-	 * 全てのデータを呼び出す
+	 * 全てのデータを呼び出す
 	 * @param {Function} callback
 	 * @param {any} thisArg
 	 */

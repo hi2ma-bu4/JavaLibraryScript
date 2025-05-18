@@ -173,6 +173,15 @@ class TypeChecker extends JavaLibraryScriptCore {
 		if (value === null || value === undefined) {
 			return String(value);
 		}
+		if (typeof value === "symbol") {
+			switch (value) {
+				case this.Any:
+					return "Any";
+				case this.NoReturn:
+				case this.Void:
+					return "NoReturn";
+			}
+		}
 		if (typeof value === "object") {
 			if (value?.toString() !== "[object Object]") {
 				return String(value);
