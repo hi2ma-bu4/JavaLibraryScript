@@ -1,5 +1,5 @@
 module.exports = {
-    ArrayList: require("./ArrayList.js"),
+    ...require("./ArrayList.js"),
     HashMap: require("./HashMap.js"),
     HashSet: require("./HashSet.js"),
     ListInterface: require("./ListInterface.js"),

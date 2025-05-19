@@ -686,6 +686,134 @@ type AsyncStreamType = AsyncStream;
 type HashSetType = HashSet<any>;
 
 /**
+ * 型チェック機能のついたList
+ * @template V
+ * @extends {ListInterface<V>}
+ * @class
+ */
+declare class ArrayList<V> {
+    /**
+     * @param {Function} ValueType
+     * @param {Iterable<V>} [collection]
+     */
+    constructor(ValueType: Function, collection?: Iterable<V>);
+    _list: any[];
+    /**
+     * 要素を追加する
+     * @param {V} item
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    add(item: V): this;
+    /**
+     * 値を一括で追加する
+     * @param {Iterable<V>} collection
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    addAll(collection: Iterable<V>): this;
+    /**
+     * 指定したインデックスの要素を取得する
+     * @param {Number} index
+     * @returns {V}
+     */
+    get(index: number): V;
+    /**
+     * 指定したインデックスの要素を設定する
+     * @param {Number} index
+     * @param {V} item
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    set(index: number, item: V): this;
+    /**
+     * 指定したインデックスの要素を削除する
+     * @param {Number} index
+     * @returns {V}
+     */
+    remove(index: number): V;
+    /**
+     * 要素数を返却する
+     * @returns {Number}
+     * @readonly
+     */
+    readonly get size(): number;
+    /**
+     * 全要素を削除する
+     */
+    clear(): void;
+    /**
+     * 等価判定を行う
+     * @param {this} other
+     * @returns {boolean}
+     */
+    equals(other: this): boolean;
+    /**
+     * EnumのIteratorを返却する
+     * @returns {ArrayIterator<V>}
+     */
+    values(): ArrayIterator<V>;
+    /**
+     * 全てのデータを呼び出す
+     * @param {Function} callback
+     * @param {any} [thisArg]
+     */
+    forEach(callback: Function, thisArg?: any): void;
+    /**
+     * ソートする
+     * @param {Function} [compareFn]
+     * @returns {this}
+     */
+    sort(compareFn?: Function): this;
+    /**
+     * ソートしたStreamを返却する
+     * @param {Function} [compareFn]
+     * @returns {Generator<V>}
+     */
+    sorted(compareFn?: Function): Generator<V>;
+    /**
+     * 指定した範囲の配列を返却する
+     * @param {Number} from
+     * @param {Number} to
+     * @returns {ArrayList<V>}
+     */
+    subList(from: number, to: number): ArrayList<V>;
+    /**
+     * Streamを返却する
+     * @returns {Stream<V>}
+     */
+    stream(): Stream<V>;
+    /**
+     * 配列に変換する
+     * @returns {V[]}
+     */
+    toArray(): V[];
+    /**
+     * 文字列に変換する
+     * @returns {string}
+     */
+    toString(): string;
+    /**
+     * instanceof を実装する
+     * @param {any} obj
+     * @returns {boolean}
+     */
+    [Symbol.hasInstance](obj: any): boolean;
+    /**
+     * イテレータを返却する
+     * @returns {Iterator<V>}
+     */
+    [Symbol.iterator](): Iterator<V>;
+}
+/**
+ * 配列を返却する
+ * @param {Function} ValueType
+ * @param {Iterable<V>} [collection]
+ * @returns {ArrayList<V>}
+ */
+declare function arrayList(ValueType: Function, collection?: Iterable<V>): ArrayList<V>;
+
+/**
  * 文字列専用Stream (LazyList)
  * @template V
  * @extends {Stream<V>}
@@ -746,88 +874,6 @@ declare class StreamChecker extends JavaLibraryScriptCore {
      * @static
      */
     static streamToType(stream: new (...args: any[]) => {}): Function;
-}
-
-/**
- * 型チェック機能のついたList
- * @template V
- * @extends {ListInterface<V>}
- * @class
- */
-declare class ArrayList<V> {
-    /**
-     * @param {Function} ValueType
-     */
-    constructor(ValueType: Function);
-    _list: any[];
-    /**
-     * 要素を追加する
-     * @param {V} item
-     * @returns {this}
-     * @throws {TypeError}
-     */
-    add(item: V): this;
-    /**
-     * 指定したインデックスの要素を取得する
-     * @param {Number} index
-     * @returns {V}
-     */
-    get(index: number): V;
-    /**
-     * 指定したインデックスの要素を設定する
-     * @param {Number} index
-     * @param {V} item
-     * @returns {this}
-     * @throws {TypeError}
-     */
-    set(index: number, item: V): this;
-    /**
-     * 指定したインデックスの要素を削除する
-     * @param {Number} index
-     * @returns {V}
-     */
-    remove(index: number): V;
-    /**
-     * 要素数を返却する
-     * @returns {Number}
-     * @readonly
-     */
-    readonly get size(): number;
-    /**
-     * 全要素を削除する
-     */
-    clear(): void;
-    /**
-     * EnumのIteratorを返却する
-     * @returns {ArrayIterator<V>}
-     */
-    values(): ArrayIterator<V>;
-    /**
-     * 全てのデータを呼び出す
-     * @param {Function} callback
-     * @param {any} [thisArg]
-     */
-    forEach(callback: Function, thisArg?: any): void;
-    /**
-     * Streamを返却する
-     * @returns {Stream<V>}
-     */
-    stream(): Stream<V>;
-    /**
-     * 配列に変換する
-     * @returns {V[]}
-     */
-    toArray(): V[];
-    /**
-     * 文字列に変換する
-     * @returns {string}
-     */
-    toString(): string;
-    /**
-     * イテレータを返却する
-     * @returns {Iterator<V>}
-     */
-    [Symbol.iterator](): Iterator<V>;
 }
 
 /**
@@ -951,6 +997,61 @@ declare class TypeChecker extends JavaLibraryScriptCore {
      * @static
      */
     static checkClass(fn: any): boolean;
+}
+
+/**
+ * Index参照機能を提供する
+ * @template T
+ * @extends {JavaLibraryScriptCore}
+ * @class
+ */
+declare class IndexProxy<T> extends JavaLibraryScriptCore {
+    /**
+     * インスタンス化時に初期データを設定する
+     * @template C
+     * @param {C} targetInstance
+     */
+    static defineInitData<C>(targetInstance: C): void;
+    /**
+     * [Symbol.hasInstance]の処理を自動化
+     * @template S, C
+     * @param {new (...args: any[]) => S} targetClass - 多くの場合、this
+     * @param {C} otherInstance
+     */
+    static hasInstance<S, C>(targetClass: new (...args: any[]) => S, otherInstance: C): any;
+    /**
+     * @param {new (...args: any[]) => T} targetClass
+     * @param {{getMethod?: string, setMethod?: string, sizeMethod?: string, addMethod?: string, typeCheckMethod?: string | null, autoExtend?: boolean}} options
+     */
+    constructor(targetClass: new (...args: any[]) => T, { getMethod, setMethod, sizeMethod, addMethod, typeCheckMethod, autoExtend }?: {
+        getMethod?: string;
+        setMethod?: string;
+        sizeMethod?: string;
+        addMethod?: string;
+        typeCheckMethod?: string | null;
+        autoExtend?: boolean;
+    });
+    _TargetClass: new (...args: any[]) => T;
+    _config: {
+        getMethod: string;
+        setMethod: string;
+        sizeMethod: string;
+        addMethod: string;
+        typeCheckMethod: string;
+        autoExtend: boolean;
+    };
+    _cachedMethods: {
+        get: any;
+        set: any;
+        size: any;
+        add: any;
+        typeCheck: any;
+    };
+    /**
+     * @param {...any} args
+     * @returns {T}
+     */
+    create(...args: any[]): T;
 }
 
 /**
@@ -1134,9 +1235,11 @@ declare class Interface extends JavaLibraryScriptCore {
      * エラー処理
      * @param {typeof Error} error
      * @param {string} message - エラーメッセージ
+     * @returns {undefined}
+     * @throws {Error}
      * @static
      */
-    static _handleError(error: typeof Error, message: string): void;
+    static _handleError(error: typeof Error, message: string): undefined;
     /**
      * 型定義
      * @param {Function} TargetClass - 型定義を追加するクラス
@@ -1245,13 +1348,17 @@ declare let base: {
     Enum: typeof Enum;
 };
 declare let libs: {
+    IndexProxy: typeof IndexProxy;
     TypeChecker: typeof TypeChecker;
     sys: {
         JavaLibraryScriptCore: typeof JavaLibraryScriptCore;
+        symbol: {
+            JavaLibraryScript: symbol;
+            instanceofTarget: symbol;
+        };
     };
 };
 declare let util: {
-    ArrayList: typeof ArrayList;
     HashMap: typeof HashMap;
     HashSet: typeof HashSet;
     ListInterface: new (...args: any[]) => {
@@ -1303,6 +1410,8 @@ declare let util: {
         StreamInterface: new (...args: any[]) => {};
         StringStream: typeof StringStream;
     };
+    ArrayList: typeof ArrayList;
+    arrayList: typeof arrayList;
 };
 
 declare const JavaLibraryScript_base: typeof base;

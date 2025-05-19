@@ -37,5 +37,5 @@ function main() {
 	for (let i = 0; i < 10; i++) {
 		al.add(i);
 	}
-	console.log(al.toString());
+	console.log(al[0]);
 }

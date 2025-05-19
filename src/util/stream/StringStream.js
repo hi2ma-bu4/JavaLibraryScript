@@ -1,4 +1,4 @@
-const Stream = require("./Stream.js");
+const Stream = require("./Stream");
 
 /**
  * 文字列専用Stream (LazyList)

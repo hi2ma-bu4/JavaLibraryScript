@@ -1,4 +1,4 @@
-const Stream = require("./Stream.js");
+const Stream = require("./Stream");
 const StreamChecker = require("./StreamChecker");
 const TypeChecker = require("../../libs/TypeChecker");
 
@@ -9,7 +9,7 @@ const Any = TypeChecker.Any;
 let HashMap;
 function init() {
 	if (HashMap) return;
-	HashMap = require("../HashMap.js");
+	HashMap = require("../HashMap");
 }
 
 /**

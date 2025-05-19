@@ -1,4 +1,4 @@
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 
 /**
  * 単一のEnum要素を表すクラス

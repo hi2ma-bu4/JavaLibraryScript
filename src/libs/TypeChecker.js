@@ -1,5 +1,5 @@
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
-const { _EnumCore, _EnumItem } = require("../base/Enum.js");
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const { _EnumCore, _EnumItem } = require("../base/Enum");
 
 /**
  * 型チェッカー

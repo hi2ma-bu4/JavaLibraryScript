@@ -1,4 +1,4 @@
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 

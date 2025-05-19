@@ -1,15 +1,15 @@
-const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
-const TypeChecker = require("../../libs/TypeChecker.js");
-const StreamInterface = require("./StreamInterface.js");
+const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
+const TypeChecker = require("../../libs/TypeChecker");
+const StreamInterface = require("./StreamInterface");
 
 let Stream, NumberStream, StringStream, EntryStream, AsyncStream;
 function init() {
 	if (Stream) return;
-	Stream = require("./Stream.js");
-	NumberStream = require("./NumberStream.js");
-	StringStream = require("./StringStream.js");
-	EntryStream = require("./EntryStream.js");
-	AsyncStream = require("./AsyncStream.js");
+	Stream = require("./Stream");
+	NumberStream = require("./NumberStream");
+	StringStream = require("./StringStream");
+	EntryStream = require("./EntryStream");
+	AsyncStream = require("./AsyncStream");
 }
 
 /**

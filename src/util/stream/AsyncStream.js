@@ -1,5 +1,5 @@
-const StreamInterface = require("./StreamInterface.js");
-const Stream = require("./Stream.js");
+const StreamInterface = require("./StreamInterface");
+const Stream = require("./Stream");
 
 /**
  * 非同期Stream (LazyAsyncList)

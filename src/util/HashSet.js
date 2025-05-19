@@ -1,7 +1,7 @@
 const SetInterface = require("./SetInterface");
 const TypeChecker = require("../libs/TypeChecker");
 const StreamChecker = require("./stream/StreamChecker");
-const Stream = require("./stream/Stream.js");
+const Stream = require("./stream/Stream");
 
 /**
  * 型チェック機能のついたSet

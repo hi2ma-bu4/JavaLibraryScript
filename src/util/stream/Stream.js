@@ -1,4 +1,4 @@
-const StreamInterface = require("./StreamInterface.js");
+const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
 
 const Any = TypeChecker.Any;
@@ -12,11 +12,11 @@ const Any = TypeChecker.Any;
 let NumberStream, StringStream, EntryStream, AsyncStream, HashSet;
 function init() {
 	if (NumberStream) return;
-	NumberStream = require("./NumberStream.js");
-	StringStream = require("./StringStream.js");
-	EntryStream = require("./EntryStream.js");
-	AsyncStream = require("./AsyncStream.js");
-	HashSet = require("../HashSet.js");
+	NumberStream = require("./NumberStream");
+	StringStream = require("./StringStream");
+	EntryStream = require("./EntryStream");
+	AsyncStream = require("./AsyncStream");
+	HashSet = require("../HashSet");
 }
 
 /**

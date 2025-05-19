@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const CL = require("../libs/ColorLogger.js");
+const CL = require("../libs/ColorLogger");
 
 /**
  * 検査対象の設定

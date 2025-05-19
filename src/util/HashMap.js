@@ -1,6 +1,6 @@
 const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
-const EntryStream = require("./stream/EntryStream.js");
+const EntryStream = require("./stream/EntryStream");
 
 /**
  * 型チェック機能のついたMap

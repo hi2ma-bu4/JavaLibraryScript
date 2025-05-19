@@ -1,5 +1,5 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 
 /**
  * 単一のEnum要素を表すクラス
@@ -292,10 +292,10 @@ module.exports = {
 	Enum,
 };
 
-},{"../libs/sys/JavaLibraryScriptCore.js":7}],2:[function(require,module,exports){
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
-const TypeChecker = require("../libs/TypeChecker.js");
-const { _EnumItem, Enum } = require("./Enum.js");
+},{"../libs/sys/JavaLibraryScriptCore":8}],2:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const TypeChecker = require("../libs/TypeChecker");
+const { _EnumItem, Enum } = require("./Enum");
 
 /**
  * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
@@ -354,17 +354,19 @@ class Interface extends JavaLibraryScriptCore {
 	 * エラー処理
 	 * @param {typeof Error} error
 	 * @param {string} message - エラーメッセージ
+	 * @returns {undefined}
+	 * @throws {Error}
 	 * @static
 	 */
 	static _handleError(error, message) {
-		const errorMode = this._errorMode;
+		const ErrorMode = this.ErrorMode;
 		switch (this._errorMode) {
-			case errorMode.throw:
+			case ErrorMode.throw:
 				throw new error(message);
-			case errorMode.log:
+			case ErrorMode.log:
 				console.warn("[Interface Warning]", message);
 				break;
-			case errorMode.ignore:
+			case ErrorMode.ignore:
 				break;
 		}
 	}
@@ -441,7 +443,8 @@ class Interface extends JavaLibraryScriptCore {
 
 					if (typeof original !== "function") {
 						if (isAbstract) continue;
-						this._handleError(Error, `"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+						this_._handleError(Error, `"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+						return;
 					}
 
 					// ラップは一度だけ（重複防止）
@@ -576,7 +579,7 @@ class Interface extends JavaLibraryScriptCore {
 
 module.exports = Interface;
 
-},{"../libs/TypeChecker.js":5,"../libs/sys/JavaLibraryScriptCore.js":7,"./Enum.js":1}],3:[function(require,module,exports){
+},{"../libs/TypeChecker":6,"../libs/sys/JavaLibraryScriptCore":8,"./Enum":1}],3:[function(require,module,exports){
 module.exports = {
     ...require("./Enum.js"),
     Interface: require("./Interface.js")
@@ -589,9 +592,152 @@ module.exports = {
     util: require("./util/index.js")
 };
 
-},{"./base/index.js":3,"./libs/index.js":6,"./util/index.js":16}],5:[function(require,module,exports){
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
-const { _EnumCore, _EnumItem } = require("../base/Enum.js");
+},{"./base/index.js":3,"./libs/index.js":7,"./util/index.js":19}],5:[function(require,module,exports){
+const SymbolDict = require("./sys/symbol/SymbolDict");
+const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
+const TypeChecker = require("./TypeChecker");
+
+/** @type {Symbol} */
+const instanceofTarget = SymbolDict.instanceofTarget;
+
+/**
+ * Index参照機能を提供する
+ * @template T
+ * @extends {JavaLibraryScriptCore}
+ * @class
+ */
+class IndexProxy extends JavaLibraryScriptCore {
+	/**
+	 * @param {new (...args: any[]) => T} targetClass
+	 * @param {{getMethod?: string, setMethod?: string, sizeMethod?: string, addMethod?: string, typeCheckMethod?: string | null, autoExtend?: boolean}} options
+	 */
+	constructor(targetClass, { getMethod = "get", setMethod = "set", sizeMethod = "size", addMethod = "add", typeCheckMethod = null, autoExtend = true } = {}) {
+		super();
+		this._TargetClass = targetClass;
+		this._config = {
+			getMethod,
+			setMethod,
+			sizeMethod,
+			addMethod,
+			typeCheckMethod,
+			autoExtend,
+		};
+		this._cachedMethods = {
+			get: null,
+			set: null,
+			size: null,
+			add: null,
+			typeCheck: null,
+		};
+	}
+
+	/**
+	 * @param {...any} args
+	 * @returns {T}
+	 */
+	create(...args) {
+		const target = new this._TargetClass(...args);
+		const class_name = TypeChecker.typeNames(this._TargetClass);
+
+		const cfg = this._config;
+		const m = this._cachedMethods;
+
+		if (typeof target[cfg.getMethod] !== "function") {
+			throw new TypeError(`${class_name}.${cfg.getMethod}(index) メソッドが必要です。`);
+		}
+		if (typeof target[cfg.setMethod] !== "function") {
+			throw new TypeError(`${class_name}.${cfg.setMethod}(index, value) メソッドが必要です。`);
+		}
+		m.get = target[cfg.getMethod].bind(target);
+		m.set = target[cfg.setMethod].bind(target);
+
+		// sizeは関数かgetterか判定
+		const sizeVal = target[cfg.sizeMethod];
+		if (typeof sizeVal === "function") {
+			m.size = sizeVal.bind(target);
+		} else if (typeof sizeVal === "number") {
+			// getterはbind不要なので関数化
+			m.size = () => target[cfg.sizeMethod];
+		} else {
+			throw new TypeError(`${class_name}.${cfg.sizeMethod}() メソッドまたは、${class_name}.${cfg.sizeMethod} getterが必要です。`);
+		}
+
+		if (typeof target[cfg.addMethod] === "function") {
+			m.add = target[cfg.addMethod].bind(target);
+		} else if (this._config.autoExtend) {
+			throw new TypeError(`${this._TargetClass}.${cfg.addMethod}(item) メソッドが必要です。範囲外追加を許容しない場合はautoExtendをfalseにしてください。`);
+		}
+		if (typeof target[cfg.typeCheckMethod] === "function") {
+			m.typeCheck = target[cfg.typeCheckMethod].bind(target);
+		}
+
+		return new Proxy(target, {
+			get: (t, prop, r) => {
+				if (!isNaN(prop)) {
+					return m.get(Number(prop));
+				}
+				return Reflect.get(t, prop, r);
+			},
+			set: (t, prop, val, r) => {
+				if (!isNaN(prop)) {
+					const i = Number(prop);
+					if (m.typeCheck) {
+						m.typeCheck(val);
+					}
+					const size = m.size();
+
+					if (i < size) {
+						m.set(i, val);
+					} else if (i === size && this._config.autoExtend) {
+						m.add(val);
+					} else {
+						throw new RangeError(`インデックス ${i} は無効です（サイズ: ${size}）`);
+					}
+					return true;
+				}
+				return Reflect.set(t, prop, val, r);
+			},
+			has: (t, prop) => {
+				if (!isNaN(prop)) {
+					const i = Number(prop);
+					const size = m.size();
+					return i >= 0 && i < size;
+				}
+				return prop in t;
+			},
+		});
+	}
+
+	/**
+	 * インスタンス化時に初期データを設定する
+	 * @template C
+	 * @param {C} targetInstance
+	 */
+	static defineInitData(targetInstance) {
+		Object.defineProperty(targetInstance, instanceofTarget, {
+			value: targetInstance,
+			enumerable: false,
+			writable: false,
+		});
+	}
+
+	/**
+	 * [Symbol.hasInstance]の処理を自動化
+	 * @template S, C
+	 * @param {new (...args: any[]) => S} targetClass - 多くの場合、this
+	 * @param {C} otherInstance
+	 */
+	static hasInstance(targetClass, otherInstance) {
+		const target = otherInstance?.[instanceofTarget];
+		return typeof target === "object" && target !== null && targetClass.prototype.isPrototypeOf(target);
+	}
+}
+
+module.exports = IndexProxy;
+
+},{"./TypeChecker":6,"./sys/JavaLibraryScriptCore":8,"./sys/symbol/SymbolDict":10}],6:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const { _EnumCore, _EnumItem } = require("../base/Enum");
 
 /**
  * 型チェッカー
@@ -844,31 +990,60 @@ class TypeChecker extends JavaLibraryScriptCore {
 
 module.exports = TypeChecker;
 
-},{"../base/Enum.js":1,"../libs/sys/JavaLibraryScriptCore.js":7}],6:[function(require,module,exports){
+},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":8}],7:[function(require,module,exports){
 module.exports = {
+    IndexProxy: require("./IndexProxy.js"),
     TypeChecker: require("./TypeChecker.js"),
     sys: require("./sys/index.js")
 };
 
-},{"./TypeChecker.js":5,"./sys/index.js":8}],7:[function(require,module,exports){
+},{"./IndexProxy.js":5,"./TypeChecker.js":6,"./sys/index.js":9}],8:[function(require,module,exports){
+const SymbolDict = require("./symbol/SymbolDict");
+
 /**
  * JavaLibraryScriptの共通継承元
  * @class
  */
 class JavaLibraryScriptCore {
 	/** @type {true} */
-	static [Symbol.for("JavaLibraryScript")] = true;
+	static [SymbolDict.JavaLibraryScript] = true;
 }
 
 module.exports = JavaLibraryScriptCore;
 
-},{}],8:[function(require,module,exports){
+},{"./symbol/SymbolDict":10}],9:[function(require,module,exports){
 module.exports = {
-    JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js")
+    JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js"),
+    symbol: require("./symbol/index.js")
 };
 
-},{"./JavaLibraryScriptCore.js":7}],9:[function(require,module,exports){
-const JavaLibraryScript = require("./index.js");
+},{"./JavaLibraryScriptCore.js":8,"./symbol/index.js":11}],10:[function(require,module,exports){
+/**
+ * Symbolの共通プレフィックス
+ * @type {string}
+ * @readonly
+ */
+const prefix = "@@JLS_";
+
+/**
+ * 内部利用Symbolの辞書
+ * @enum {Symbol}
+ * @readonly
+ */
+const SYMBOL_DICT = {
+	JavaLibraryScript: Symbol.for(`${prefix}JavaLibraryScript`),
+	instanceofTarget: Symbol.for(`${prefix}instanceofTarget`),
+};
+
+module.exports = SYMBOL_DICT;
+
+},{}],11:[function(require,module,exports){
+module.exports = {
+    ...require("./SymbolDict.js")
+};
+
+},{"./SymbolDict.js":10}],12:[function(require,module,exports){
+const JavaLibraryScript = require("./index");
 
 if (typeof window !== "undefined") {
 	window.JavaLibraryScript = JavaLibraryScript;
@@ -876,11 +1051,12 @@ if (typeof window !== "undefined") {
 
 module.exports = JavaLibraryScript;
 
-},{"./index.js":4}],10:[function(require,module,exports){
-const ListInterface = require("./ListInterface.js");
-const TypeChecker = require("../libs/TypeChecker.js");
-const StreamChecker = require("./stream/StreamChecker.js");
-const Stream = require("./stream/Stream.js");
+},{"./index":4}],13:[function(require,module,exports){
+const IndexProxy = require("../libs/IndexProxy");
+const ListInterface = require("./ListInterface");
+const TypeChecker = require("../libs/TypeChecker");
+const StreamChecker = require("./stream/StreamChecker");
+const Stream = require("./stream/Stream");
 
 /**
  * 型チェック機能のついたList
@@ -891,10 +1067,24 @@ const Stream = require("./stream/Stream.js");
 class ArrayList extends ListInterface {
 	/**
 	 * @param {Function} ValueType
+	 * @param {Iterable<V>} [collection]
 	 */
-	constructor(ValueType) {
+	constructor(ValueType, collection) {
 		super(ValueType);
 		this._list = [];
+
+		if (collection) this.addAll(collection);
+
+		IndexProxy.defineInitData(this);
+	}
+
+	/**
+	 * instanceof を実装する
+	 * @param {any} obj
+	 * @returns {boolean}
+	 */
+	[Symbol.hasInstance](obj) {
+		return IndexProxy.hasInstance(this, obj);
 	}
 
 	// ==================================================
@@ -910,6 +1100,19 @@ class ArrayList extends ListInterface {
 	add(item) {
 		this._checkValue(item);
 		this._list.push(item);
+		return this;
+	}
+
+	/**
+	 * 値を一括で追加する
+	 * @param {Iterable<V>} collection
+	 * @returns {this}
+	 * @throws {TypeError}
+	 */
+	addAll(collection) {
+		for (const item of collection) {
+			this.add(item);
+		}
 		return this;
 	}
 
@@ -965,6 +1168,20 @@ class ArrayList extends ListInterface {
 	// ==================================================
 
 	/**
+	 * 等価判定を行う
+	 * @param {this} other
+	 * @returns {boolean}
+	 */
+	equals(other) {
+		if (!(other instanceof ArrayList) || this.size !== other.size) return false;
+
+		for (let i = 0; i < this.size; i++) {
+			if (this._list[i] !== other._list[i]) return false;
+		}
+		return true;
+	}
+
+	/**
 	 * EnumのIteratorを返却する
 	 * @returns {ArrayIterator<V>}
 	 */
@@ -981,6 +1198,37 @@ class ArrayList extends ListInterface {
 		for (const item of this._list) {
 			callback.call(thisArg, item, item, this._list);
 		}
+	}
+
+	/**
+	 * ソートする
+	 * @param {Function} [compareFn]
+	 * @returns {this}
+	 */
+	sort(compareFn = undefined) {
+		this._list.sort(compareFn);
+	}
+
+	/**
+	 * ソートしたStreamを返却する
+	 * @param {Function} [compareFn]
+	 * @returns {Generator<V>}
+	 */
+	*sorted(compareFn = undefined) {
+		yield* this.toArray().sort(compareFn);
+	}
+
+	/**
+	 * 指定した範囲の配列を返却する
+	 * @param {Number} from
+	 * @param {Number} to
+	 * @returns {ArrayList<V>}
+	 */
+	subList(from, to) {
+		if (from < 0 || to > this.size || from > to) {
+			throw new RangeError(`subList(${from}, ${to}) は無効な範囲です`);
+		}
+		return new this.constructor(this._ValueType, this._list.slice(from, to));
 	}
 
 	// ==================================================
@@ -1024,12 +1272,29 @@ class ArrayList extends ListInterface {
 	}
 }
 
-module.exports = ArrayList;
+/**
+ * 直接参照機能を提供する
+ * @type {IndexProxy<ArrayList>}
+ * @readonly
+ */
+const indProxy = new IndexProxy(ArrayList);
 
-},{"../libs/TypeChecker.js":5,"./ListInterface.js":13,"./stream/Stream.js":20,"./stream/StreamChecker.js":21}],11:[function(require,module,exports){
+/**
+ * 配列を返却する
+ * @param {Function} ValueType
+ * @param {Iterable<V>} [collection]
+ * @returns {ArrayList<V>}
+ */
+function arrayList(ValueType, collection) {
+	return indProxy.create(ValueType, collection);
+}
+
+module.exports = { ArrayList, arrayList };
+
+},{"../libs/IndexProxy":5,"../libs/TypeChecker":6,"./ListInterface":16,"./stream/Stream":23,"./stream/StreamChecker":24}],14:[function(require,module,exports){
 const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
-const EntryStream = require("./stream/EntryStream.js");
+const EntryStream = require("./stream/EntryStream");
 
 /**
  * 型チェック機能のついたMap
@@ -1226,11 +1491,11 @@ class HashMap extends MapInterface {
 
 module.exports = HashMap;
 
-},{"../libs":6,"./MapInterface":14,"./stream/EntryStream.js":18}],12:[function(require,module,exports){
+},{"../libs":7,"./MapInterface":17,"./stream/EntryStream":21}],15:[function(require,module,exports){
 const SetInterface = require("./SetInterface");
 const TypeChecker = require("../libs/TypeChecker");
 const StreamChecker = require("./stream/StreamChecker");
-const Stream = require("./stream/Stream.js");
+const Stream = require("./stream/Stream");
 
 /**
  * 型チェック機能のついたSet
@@ -1430,8 +1695,8 @@ class HashSet extends SetInterface {
 
 module.exports = HashSet;
 
-},{"../libs/TypeChecker":5,"./SetInterface":15,"./stream/Stream.js":20,"./stream/StreamChecker":21}],13:[function(require,module,exports){
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
+},{"../libs/TypeChecker":6,"./SetInterface":18,"./stream/Stream":23,"./stream/StreamChecker":24}],16:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1489,7 +1754,7 @@ module.exports = Interface.convert(ListInterface, {
 	toArray: { returns: Array },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":5,"../libs/sys/JavaLibraryScriptCore.js":7}],14:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":6,"../libs/sys/JavaLibraryScriptCore":8}],17:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1563,7 +1828,7 @@ module.exports = Interface.convert(MapInterface, {
 	containsValue: { args: [NotEmpty], returns: Boolean },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":5}],15:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":6}],18:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1621,9 +1886,9 @@ module.exports = Interface.convert(SetInterface, {
 	contains: { args: [NotEmpty], returns: Boolean },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":5}],16:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":6}],19:[function(require,module,exports){
 module.exports = {
-    ArrayList: require("./ArrayList.js"),
+    ...require("./ArrayList.js"),
     HashMap: require("./HashMap.js"),
     HashSet: require("./HashSet.js"),
     ListInterface: require("./ListInterface.js"),
@@ -1632,9 +1897,9 @@ module.exports = {
     stream: require("./stream/index.js")
 };
 
-},{"./ArrayList.js":10,"./HashMap.js":11,"./HashSet.js":12,"./ListInterface.js":13,"./MapInterface.js":14,"./SetInterface.js":15,"./stream/index.js":24}],17:[function(require,module,exports){
-const StreamInterface = require("./StreamInterface.js");
-const Stream = require("./Stream.js");
+},{"./ArrayList.js":13,"./HashMap.js":14,"./HashSet.js":15,"./ListInterface.js":16,"./MapInterface.js":17,"./SetInterface.js":18,"./stream/index.js":27}],20:[function(require,module,exports){
+const StreamInterface = require("./StreamInterface");
+const Stream = require("./Stream");
 
 /**
  * 非同期Stream (LazyAsyncList)
@@ -1979,8 +2244,8 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"./Stream.js":20,"./StreamInterface.js":22}],18:[function(require,module,exports){
-const Stream = require("./Stream.js");
+},{"./Stream":23,"./StreamInterface":25}],21:[function(require,module,exports){
+const Stream = require("./Stream");
 const StreamChecker = require("./StreamChecker");
 const TypeChecker = require("../../libs/TypeChecker");
 
@@ -1991,7 +2256,7 @@ const Any = TypeChecker.Any;
 let HashMap;
 function init() {
 	if (HashMap) return;
-	HashMap = require("../HashMap.js");
+	HashMap = require("../HashMap");
 }
 
 /**
@@ -2091,8 +2356,8 @@ class EntryStream extends Stream {
 
 module.exports = EntryStream;
 
-},{"../../libs/TypeChecker":5,"../HashMap.js":11,"./Stream.js":20,"./StreamChecker":21}],19:[function(require,module,exports){
-const Stream = require("./Stream.js");
+},{"../../libs/TypeChecker":6,"../HashMap":14,"./Stream":23,"./StreamChecker":24}],22:[function(require,module,exports){
+const Stream = require("./Stream");
 
 /**
  * 数値専用Stream (LazyList)
@@ -2163,8 +2428,8 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"./Stream.js":20}],20:[function(require,module,exports){
-const StreamInterface = require("./StreamInterface.js");
+},{"./Stream":23}],23:[function(require,module,exports){
+const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
 
 const Any = TypeChecker.Any;
@@ -2178,11 +2443,11 @@ const Any = TypeChecker.Any;
 let NumberStream, StringStream, EntryStream, AsyncStream, HashSet;
 function init() {
 	if (NumberStream) return;
-	NumberStream = require("./NumberStream.js");
-	StringStream = require("./StringStream.js");
-	EntryStream = require("./EntryStream.js");
-	AsyncStream = require("./AsyncStream.js");
-	HashSet = require("../HashSet.js");
+	NumberStream = require("./NumberStream");
+	StringStream = require("./StringStream");
+	EntryStream = require("./EntryStream");
+	AsyncStream = require("./AsyncStream");
+	HashSet = require("../HashSet");
 }
 
 /**
@@ -2654,19 +2919,19 @@ class Stream extends StreamInterface {
 
 module.exports = Stream;
 
-},{"../../libs/TypeChecker":5,"../HashSet.js":12,"./AsyncStream.js":17,"./EntryStream.js":18,"./NumberStream.js":19,"./StreamInterface.js":22,"./StringStream.js":23}],21:[function(require,module,exports){
-const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
-const TypeChecker = require("../../libs/TypeChecker.js");
-const StreamInterface = require("./StreamInterface.js");
+},{"../../libs/TypeChecker":6,"../HashSet":15,"./AsyncStream":20,"./EntryStream":21,"./NumberStream":22,"./StreamInterface":25,"./StringStream":26}],24:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
+const TypeChecker = require("../../libs/TypeChecker");
+const StreamInterface = require("./StreamInterface");
 
 let Stream, NumberStream, StringStream, EntryStream, AsyncStream;
 function init() {
 	if (Stream) return;
-	Stream = require("./Stream.js");
-	NumberStream = require("./NumberStream.js");
-	StringStream = require("./StringStream.js");
-	EntryStream = require("./EntryStream.js");
-	AsyncStream = require("./AsyncStream.js");
+	Stream = require("./Stream");
+	NumberStream = require("./NumberStream");
+	StringStream = require("./StringStream");
+	EntryStream = require("./EntryStream");
+	AsyncStream = require("./AsyncStream");
 }
 
 /**
@@ -2711,8 +2976,8 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker.js":5,"../../libs/sys/JavaLibraryScriptCore.js":7,"./AsyncStream.js":17,"./EntryStream.js":18,"./NumberStream.js":19,"./Stream.js":20,"./StreamInterface.js":22,"./StringStream.js":23}],22:[function(require,module,exports){
-const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore.js");
+},{"../../libs/TypeChecker":6,"../../libs/sys/JavaLibraryScriptCore":8,"./AsyncStream":20,"./EntryStream":21,"./NumberStream":22,"./Stream":23,"./StreamInterface":25,"./StringStream":26}],25:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../../base/Interface");
 
 /**
@@ -2747,8 +3012,8 @@ module.exports = Interface.convert(StreamInterface, {
 	},
 });
 
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore.js":7}],23:[function(require,module,exports){
-const Stream = require("./Stream.js");
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":8}],26:[function(require,module,exports){
+const Stream = require("./Stream");
 
 /**
  * 文字列専用Stream (LazyList)
@@ -2810,7 +3075,7 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"./Stream.js":20}],24:[function(require,module,exports){
+},{"./Stream":23}],27:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
@@ -2821,5 +3086,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":17,"./EntryStream.js":18,"./NumberStream.js":19,"./Stream.js":20,"./StreamChecker.js":21,"./StreamInterface.js":22,"./StringStream.js":23}]},{},[9])
+},{"./AsyncStream.js":20,"./EntryStream.js":21,"./NumberStream.js":22,"./Stream.js":23,"./StreamChecker.js":24,"./StreamInterface.js":25,"./StringStream.js":26}]},{},[12])
 //# sourceMappingURL=JavaLibraryScript.js.map

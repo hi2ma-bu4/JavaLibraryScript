@@ -8,10 +8,10 @@ const path = require("node:path");
 const { minify } = require("terser");
 const { execSync } = require("node:child_process");
 
-const generateIndex = require("./build/generateIndex.js");
-const createEntryEndpoint = require("./build/createEntryEndpoint.js");
-const checkIllegalStrings = require("./build/checkIllegalStrings.js");
-const CL = require("./libs/ColorLogger.js");
+const generateIndex = require("./build/generateIndex");
+const createEntryEndpoint = require("./build/createEntryEndpoint");
+const checkIllegalStrings = require("./build/checkIllegalStrings");
+const CL = require("./libs/ColorLogger");
 
 const script_name = "JavaLibraryScript";
 const entry_name = "main";

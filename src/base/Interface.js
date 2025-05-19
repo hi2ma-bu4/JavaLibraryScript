@@ -1,6 +1,6 @@
-const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore.js");
-const TypeChecker = require("../libs/TypeChecker.js");
-const { _EnumItem, Enum } = require("./Enum.js");
+const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const TypeChecker = require("../libs/TypeChecker");
+const { _EnumItem, Enum } = require("./Enum");
 
 /**
  * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
@@ -59,17 +59,19 @@ class Interface extends JavaLibraryScriptCore {
 	 * エラー処理
 	 * @param {typeof Error} error
 	 * @param {string} message - エラーメッセージ
+	 * @returns {undefined}
+	 * @throws {Error}
 	 * @static
 	 */
 	static _handleError(error, message) {
-		const errorMode = this._errorMode;
+		const ErrorMode = this.ErrorMode;
 		switch (this._errorMode) {
-			case errorMode.throw:
+			case ErrorMode.throw:
 				throw new error(message);
-			case errorMode.log:
+			case ErrorMode.log:
 				console.warn("[Interface Warning]", message);
 				break;
-			case errorMode.ignore:
+			case ErrorMode.ignore:
 				break;
 		}
 	}
@@ -146,7 +148,8 @@ class Interface extends JavaLibraryScriptCore {
 
 					if (typeof original !== "function") {
 						if (isAbstract) continue;
-						this._handleError(Error, `"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+						this_._handleError(Error, `"${this.constructor.name}" はメソッド "${methodName}" を実装する必要があります`);
+						return;
 					}
 
 					// ラップは一度だけ（重複防止）
