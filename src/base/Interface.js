@@ -5,18 +5,18 @@ const { _EnumItem, Enum } = require("./Enum");
 /**
  * @typedef {{throw: _EnumItem, log: _EnumItem, ignore: _EnumItem}} ErrorModeItem
  */
-//
+
 /**
  * @typedef {Object} InterfaceTypeData
  * @property {Function[] | null} [args] - 引数の型定義
  * @property {Function | Function[] | null} [returns] - 戻り値の型定義
  * @property {boolean} [abstract=true] - 抽象クラス化
  */
-//
+
 /**
  * @typedef {Object.<string, InterfaceTypeData>} InterfaceTypeDataList
  */
-//
+
 /**
  * インターフェイス管理
  * @extends {JavaLibraryScriptCore}
