@@ -2,7 +2,7 @@
 
 ## base\Enum.js
 
-### _EnumItem
+### _EnumItem (JavaLibraryScript.base._EnumItem)
 
 ```ts
 class _EnumItem(name: string, ordinal: number, value: any): _EnumItem
@@ -10,7 +10,7 @@ class _EnumItem(name: string, ordinal: number, value: any): _EnumItem
 
 単一のEnum要素を表すクラス
 
-### _EnumCore
+### _EnumCore (JavaLibraryScript.base._EnumCore)
 
 ```ts
 class _EnumCore(defs: Array<string | [string, any]> | Record<string, any>): _EnumCore
@@ -18,9 +18,17 @@ class _EnumCore(defs: Array<string | [string, any]> | Record<string, any>): _Enu
 
 Enum を生成するクラス
 
+### Enum (JavaLibraryScript.base.Enum)
+
+```ts
+function Enum(defs: Array<string | [string, any]> | Record<string, any>): _EnumCore & Proxy
+```
+
+DynamicEnum生成関数（インデックスアクセスに対応したProxy付き）
+
 ## base\Interface.js
 
-### Interface
+### Interface (JavaLibraryScript.base.Interface)
 
 ```ts
 class Interface(): Interface
@@ -30,7 +38,7 @@ class Interface(): Interface
 
 ## libs\IndexProxy.js
 
-### IndexProxy
+### IndexProxy (JavaLibraryScript.libs.IndexProxy)
 
 ```ts
 class IndexProxy<T>(targetClass: new (...args: any[]) => T): IndexProxy<T>
@@ -38,19 +46,19 @@ class IndexProxy<T>(targetClass: new (...args: any[]) => T): IndexProxy<T>
 
 Index参照機能を提供する
 
-## libs\sys\JavaLibraryScriptCore.js
+## libs\ProxyManager.js
 
-### JavaLibraryScriptCore
+### ProxyManager (JavaLibraryScript.libs.ProxyManager)
 
 ```ts
-class JavaLibraryScriptCore(): JavaLibraryScriptCore
+class ProxyManager(): ProxyManager
 ```
 
-JavaLibraryScriptの共通継承元
+プロキシマネージャー
 
 ## libs\TypeChecker.js
 
-### TypeChecker
+### TypeChecker (JavaLibraryScript.libs.TypeChecker)
 
 ```ts
 class TypeChecker(typeToExclude: Function | Function[]): TypeChecker
@@ -58,9 +66,19 @@ class TypeChecker(typeToExclude: Function | Function[]): TypeChecker
 
 型チェッカー
 
+## libs\sys\JavaLibraryScriptCore.js
+
+### JavaLibraryScriptCore (JavaLibraryScript.libs.sys.JavaLibraryScriptCore)
+
+```ts
+class JavaLibraryScriptCore(): JavaLibraryScriptCore
+```
+
+JavaLibraryScriptの共通継承元
+
 ## util\ArrayList.js
 
-### ArrayList
+### ArrayList (JavaLibraryScript.util.ArrayList)
 
 ```ts
 class ArrayList<V>(ValueType: Function): ArrayList<V>
@@ -68,19 +86,27 @@ class ArrayList<V>(ValueType: Function): ArrayList<V>
 
 型チェック機能のついたList
 
-## util\HashMap.js
-
-### HashMap
+### arrayList (JavaLibraryScript.util.arrayList)
 
 ```ts
-class HashMap<K>(KeyType: Function, ValueType: Function): HashMap<K>
+function arrayList(ValueType: Function): ArrayList<V>
+```
+
+配列を返却する
+
+## util\HashMap.js
+
+### HashMap (JavaLibraryScript.util.HashMap)
+
+```ts
+class HashMap<K, V>(KeyType: Function, ValueType: Function): HashMap<K, V>
 ```
 
 型チェック機能のついたMap
 
 ## util\HashSet.js
 
-### HashSet
+### HashSet (JavaLibraryScript.util.HashSet)
 
 ```ts
 class HashSet<V>(ValueType: Function): HashSet<V>
@@ -90,7 +116,7 @@ class HashSet<V>(ValueType: Function): HashSet<V>
 
 ## util\ListInterface.js
 
-### ListInterface
+### ListInterface (JavaLibraryScript.util.ListInterface)
 
 ```ts
 class ListInterface<V>(ValueType: Function): ListInterface<V>
@@ -100,17 +126,17 @@ Listの基底クラス
 
 ## util\MapInterface.js
 
-### MapInterface
+### MapInterface (JavaLibraryScript.util.MapInterface)
 
 ```ts
-class MapInterface<K>(KeyType: Function, ValueType: Function): MapInterface<K>
+class MapInterface<K, V>(KeyType: Function, ValueType: Function): MapInterface<K, V>
 ```
 
 Mapの基底クラス
 
 ## util\SetInterface.js
 
-### SetInterface
+### SetInterface (JavaLibraryScript.util.SetInterface)
 
 ```ts
 class SetInterface<V>(ValueType: Function): SetInterface<V>
@@ -120,7 +146,7 @@ Setの基底クラス
 
 ## util\stream\AsyncStream.js
 
-### AsyncStream
+### AsyncStream (JavaLibraryScript.util.stream.AsyncStream)
 
 ```ts
 class AsyncStream(source: Iterable | AsyncIterator): AsyncStream
@@ -130,17 +156,17 @@ class AsyncStream(source: Iterable | AsyncIterator): AsyncStream
 
 ## util\stream\EntryStream.js
 
-### EntryStream
+### EntryStream (JavaLibraryScript.util.stream.EntryStream)
 
 ```ts
-class EntryStream<K>(source: Iterable, KeyType: Function, ValueType: Function): EntryStream<K>
+class EntryStream<K, V>(source: Iterable, KeyType: Function, ValueType: Function): EntryStream<K, V>
 ```
 
 Entry専用Stream (LazyList)
 
 ## util\stream\NumberStream.js
 
-### NumberStream
+### NumberStream (JavaLibraryScript.util.stream.NumberStream)
 
 ```ts
 class NumberStream<V>(source: Iterable<V): NumberStream<V>
@@ -150,7 +176,7 @@ class NumberStream<V>(source: Iterable<V): NumberStream<V>
 
 ## util\stream\Stream.js
 
-### Stream
+### Stream (JavaLibraryScript.util.stream.Stream)
 
 ```ts
 class Stream<V>(source: Iterable<V>, ValueType: Function): Stream<V>
@@ -160,7 +186,7 @@ Streamオブジェクト(LazyList)
 
 ## util\stream\StreamChecker.js
 
-### StreamChecker
+### StreamChecker (JavaLibraryScript.util.stream.StreamChecker)
 
 ```ts
 class StreamChecker(): StreamChecker
@@ -170,7 +196,7 @@ Streamの型チェック
 
 ## util\stream\StreamInterface.js
 
-### StreamInterface
+### StreamInterface (JavaLibraryScript.util.stream.StreamInterface)
 
 ```ts
 class StreamInterface(): StreamInterface
@@ -180,7 +206,7 @@ Streamの基底クラス
 
 ## util\stream\StringStream.js
 
-### StringStream
+### StringStream (JavaLibraryScript.util.stream.StringStream)
 
 ```ts
 class StringStream<V>(source: Iterable<V>): StringStream<V>

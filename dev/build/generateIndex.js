@@ -22,6 +22,9 @@ function isPlainObjectExport(modulePath) {
 /**
  * index.jsを生成する
  * @param {string} dir
+ * @param {boolean} [log]
+ * @param {string} [baseDir]
+ * @returns {number}
  */
 function generateIndex(dir, log = false, baseDir = dir) {
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -32,9 +35,10 @@ function generateIndex(dir, log = false, baseDir = dir) {
 	// サブディレクトリ
 	const subDirs = entries.filter((e) => e.isDirectory() && !skipList.has(e.name));
 
+	let cou = 0;
 	// 先にサブディレクトリも再帰処理（深い階層から順に）
 	for (const subDir of subDirs) {
-		generateIndex(path.join(dir, subDir.name), log, baseDir);
+		cou += generateIndex(path.join(dir, subDir.name), log, baseDir);
 	}
 
 	// export文を作成
@@ -67,6 +71,13 @@ function generateIndex(dir, log = false, baseDir = dir) {
 	fs.writeFileSync(path.join(dir, "index.js"), content, "utf8");
 
 	if (log) console.log(`┃┣📜 Generated index.js in ${CL.brightBlue(path.relative(path.dirname(baseDir), dir))}`);
+
+	return cou + 1;
 }
 
-module.exports = generateIndex;
+function main(baseDir, log = false) {
+	const cou = generateIndex(baseDir, log, baseDir);
+	if (!log) console.log(`┃┣📜 Generated ${CL.brightBlue(cou)} index.js`);
+}
+
+module.exports = main;

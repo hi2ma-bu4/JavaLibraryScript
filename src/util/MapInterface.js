@@ -58,7 +58,7 @@ class MapInterface extends Map {
 	}
 }
 
-module.exports = Interface.convert(MapInterface, {
+MapInterface = Interface.convert(MapInterface, {
 	set: { args: [NotEmpty, NotEmpty], returns: MapInterface, abstract: true },
 	put: { args: [NotEmpty, NotEmpty], returns: MapInterface },
 	get: { args: [NotEmpty], returns: Any, abstract: true },
@@ -70,3 +70,5 @@ module.exports = Interface.convert(MapInterface, {
 	containsKey: { args: [NotEmpty], returns: Boolean },
 	containsValue: { args: [NotEmpty], returns: Boolean },
 });
+
+module.exports = MapInterface;

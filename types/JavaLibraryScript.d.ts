@@ -1,14 +1,71 @@
 /**
+ * JavaLibraryScriptの共通継承元
+ * @class
+ */
+declare class JavaLibraryScriptCore {
+}
+
+/**
+ * Listの基底クラス
+ * @template V
+ * @extends {JavaLibraryScriptCore}
+ * @class
+ * @abstract
+ * @interface
+ */
+declare class ListInterface<V> extends JavaLibraryScriptCore {
+    /**
+     * @param {Function} ValueType
+     */
+    constructor(ValueType: Function);
+    _ValueType: Function | Symbol;
+    /**
+     * Valueの型をチェックする
+     * @param {V} value
+     * @throws {TypeError}
+     */
+    _checkValue(value: V): void;
+    /**
+     * 空かどうかを返却する
+     * @returns {boolean}
+     */
+    isEmpty(): boolean;
+}
+
+/**
+ * Setの基底クラス
+ * @template V
+ * @extends {Set<V>}
+ * @class
+ * @abstract
+ * @interface
+ */
+declare class SetInterface<V> extends Set<V> {
+    /**
+     * @param {Function} ValueType
+     */
+    constructor(ValueType: Function);
+    _ValueType: Function | Symbol;
+    /**
+     * Valueの型をチェックする
+     * @param {V} value
+     * @throws {TypeError}
+     */
+    _checkValue(value: V): void;
+    /**
+     * 空かどうかを返却する
+     * @returns {boolean}
+     */
+    isEmpty(): boolean;
+}
+
+/**
  * 型チェック機能のついたSet
  * @template V
  * @extends {SetInterface<V>}
  * @class
  */
-declare class HashSet<V> {
-    /**
-     * @param {Function} ValueType
-     */
-    constructor(ValueType: Function);
+declare class HashSet<V> extends SetInterface<V> {
     /**
      * 値を追加する
      * @param {V} value
@@ -29,13 +86,6 @@ declare class HashSet<V> {
      * @returns {boolean}
      * @throws {TypeError}
      */
-    has(value: V): boolean;
-    /**
-     * 値の存在を確認
-     * @param {V} value
-     * @returns {boolean}
-     * @throws {TypeError}
-     */
     contains(value: V): boolean;
     /**
      * 全ての値の存在を確認
@@ -44,13 +94,6 @@ declare class HashSet<V> {
      * @throws {TypeError}
      */
     containsAll(collection: Iterable<V>): boolean;
-    /**
-     * 値を削除する
-     * @param {V} value
-     * @returns {boolean}
-     * @throws {TypeError}
-     */
-    delete(value: V): boolean;
     /**
      * 値を削除する
      * @param {V} value
@@ -95,24 +138,27 @@ declare class HashSet<V> {
      */
     toArray(): V[];
     /**
-     * 文字列に変換する
-     * @returns {string}
-     */
-    toString(): string;
-    /**
      * イテレータを返却する
      * @returns {Iterator<V>}
      */
     [Symbol.iterator](): Iterator<V>;
 }
 
-declare const AsyncStream_base: new (...args: any[]) => {};
+/**
+ * Streamの基底クラス
+ * @extends {JavaLibraryScriptCore}
+ * @class
+ * @abstract
+ */
+declare class StreamInterface extends JavaLibraryScriptCore {
+}
+
 /**
  * 非同期Stream (LazyAsyncList)
  * @extends {StreamInterface}
  * @class
  */
-declare class AsyncStream extends AsyncStream_base {
+declare class AsyncStream extends StreamInterface {
     /**
      * AsyncStream化
      * @template {AsyncStream} T
@@ -264,17 +310,47 @@ declare class AsyncStream extends AsyncStream_base {
 }
 
 /**
- * 型チェック機能のついたMap
+ * Mapの基底クラス
  * @template K, V
- * @extends {MapInterface<K, V>}
+ * @extends {Map<K, V>}
  * @class
+ * @abstract
+ * @interface
  */
-declare class HashMap<K, V> {
+declare class MapInterface<K, V> extends Map<K, V> {
     /**
      * @param {Function} KeyType
      * @param {Function} ValueType
      */
     constructor(KeyType: Function, ValueType: Function);
+    _KeyType: Function | Symbol;
+    _ValueType: Function | Symbol;
+    /**
+     * Keyの型をチェックする
+     * @param {K} key
+     * @throws {TypeError}
+     */
+    _checkKey(key: K): void;
+    /**
+     * Valueの型をチェックする
+     * @param {V} value
+     * @throws {TypeError}
+     */
+    _checkValue(value: V): void;
+    /**
+     * 空かどうかを返却する
+     * @returns {boolean}
+     */
+    isEmpty(): boolean;
+}
+
+/**
+ * 型チェック機能のついたMap
+ * @template K, V
+ * @extends {MapInterface<K, V>}
+ * @class
+ */
+declare class HashMap<K, V> extends MapInterface<K, V> {
     /**
      * データを追加・更新する
      * @param {K} key
@@ -304,20 +380,6 @@ declare class HashMap<K, V> {
      */
     putAll(map: Map<K, V>): void;
     /**
-     * データを取得する
-     * @param {K} key
-     * @returns {V}
-     * @throws {TypeError}
-     */
-    get(key: K): V;
-    /**
-     * Keyの存在を確認する
-     * @param {K} key
-     * @returns {boolean}
-     * @throws {TypeError}
-     */
-    has(key: K): boolean;
-    /**
      * Keyの存在を確認する
      * @param {K} key
      * @returns {boolean}
@@ -330,13 +392,6 @@ declare class HashMap<K, V> {
      * @returns {boolean}
      */
     containsValue(value: V): boolean;
-    /**
-     * データを削除する
-     * @param {K} key
-     * @returns {boolean}
-     * @throws {TypeError}
-     */
-    delete(key: K): boolean;
     /**
      * データを削除する
      * @param {K} key
@@ -366,11 +421,6 @@ declare class HashMap<K, V> {
      * @returns {EntryStream<K, V>}
      */
     stream(): EntryStream<K, V>;
-    /**
-     * 文字列に変換する
-     * @returns {string}
-     */
-    toString(): string;
     /**
      * イテレータを返却する
      * @returns {Iterator<V>}
@@ -475,14 +525,13 @@ declare class NumberStream<V> extends Stream<V> {
     max(): number | null;
 }
 
-declare const Stream_base: new (...args: any[]) => {};
 /**
  * Streamオブジェクト(LazyList)
  * @template V
  * @extends {StreamInterface}
  * @class
  */
-declare class Stream<V> extends Stream_base {
+declare class Stream<V> extends StreamInterface {
     /**
      * Stream化
      * @template {Stream} T
@@ -680,6 +729,7 @@ declare class Stream<V> extends Stream_base {
 declare namespace Stream {
     export type { NumberStreamType, EntryStreamType, AsyncStreamType, HashSetType };
 }
+
 type NumberStreamType = NumberStream<any>;
 type EntryStreamType = EntryStream<any, any>;
 type AsyncStreamType = AsyncStream;
@@ -691,7 +741,7 @@ type HashSetType = HashSet<any>;
  * @extends {ListInterface<V>}
  * @class
  */
-declare class ArrayList<V> {
+declare class ArrayList<V> extends ListInterface<V> {
     /**
      * @param {Function} ValueType
      * @param {Iterable<V>} [collection]
@@ -789,11 +839,6 @@ declare class ArrayList<V> {
      */
     toArray(): V[];
     /**
-     * 文字列に変換する
-     * @returns {string}
-     */
-    toString(): string;
-    /**
      * instanceof を実装する
      * @param {any} obj
      * @returns {boolean}
@@ -849,13 +894,6 @@ declare class StringStream<V> extends Stream<V> {
 }
 
 /**
- * JavaLibraryScriptの共通継承元
- * @class
- */
-declare class JavaLibraryScriptCore {
-}
-
-/**
  * Streamの型チェック
  * @extends {JavaLibraryScriptCore}
  * @class
@@ -866,14 +904,14 @@ declare class StreamChecker extends JavaLibraryScriptCore {
      * @param {Function} expected
      * @returns {StreamInterface}
      */
-    static typeToStream(expected: Function): new (...args: any[]) => {};
+    static typeToStream(expected: Function): StreamInterface;
     /**
      * StreamをTypeに変換する
      * @param {StreamInterface} stream
      * @returns {Function}
      * @static
      */
-    static streamToType(stream: new (...args: any[]) => {}): Function;
+    static streamToType(stream: StreamInterface): Function;
 }
 
 /**
@@ -997,6 +1035,21 @@ declare class TypeChecker extends JavaLibraryScriptCore {
      * @static
      */
     static checkClass(fn: any): boolean;
+}
+
+/**
+ * プロキシマネージャー
+ * @class
+ */
+declare class ProxyManager extends JavaLibraryScriptCore {
+    /**
+     * getのreturnのオーバーライド
+     * @param {any} target
+     * @param {any} prop
+     * @param {any} receiver
+     * @returns {any}
+     */
+    static over_get(target: any, prop: any, receiver: any): any;
 }
 
 /**
@@ -1349,6 +1402,7 @@ declare let base: {
 };
 declare let libs: {
     IndexProxy: typeof IndexProxy;
+    ProxyManager: typeof ProxyManager;
     TypeChecker: typeof TypeChecker;
     sys: {
         JavaLibraryScriptCore: typeof JavaLibraryScriptCore;
@@ -1361,53 +1415,16 @@ declare let libs: {
 declare let util: {
     HashMap: typeof HashMap;
     HashSet: typeof HashSet;
-    ListInterface: new (...args: any[]) => {
-        _ValueType: Function | Symbol;
-        _checkValue(value: unknown): void;
-        isEmpty(): boolean;
-    };
-    MapInterface: new (...args: any[]) => {
-        _KeyType: Function | Symbol;
-        _ValueType: Function | Symbol;
-        _checkKey(key: unknown): void;
-        _checkValue(value: unknown): void;
-        isEmpty(): boolean;
-        clear(): void;
-        delete(key: unknown): boolean;
-        forEach(callbackfn: (value: unknown, key: unknown, map: Map<unknown, unknown>) => void, thisArg?: any): void;
-        get(key: unknown): unknown;
-        has(key: unknown): boolean;
-        set(key: unknown, value: unknown): /*elided*/ any;
-        readonly size: number;
-        entries(): MapIterator<[unknown, unknown]>;
-        keys(): MapIterator<unknown>;
-        values(): MapIterator<unknown>;
-        [Symbol.iterator](): MapIterator<[unknown, unknown]>;
-        readonly [Symbol.toStringTag]: string;
-    };
-    SetInterface: new (...args: any[]) => {
-        _ValueType: Function | Symbol;
-        _checkValue(value: unknown): void;
-        isEmpty(): boolean;
-        add(value: unknown): /*elided*/ any;
-        clear(): void;
-        delete(value: unknown): boolean;
-        forEach(callbackfn: (value: unknown, value2: unknown, set: Set<unknown>) => void, thisArg?: any): void;
-        has(value: unknown): boolean;
-        readonly size: number;
-        entries(): SetIterator<[unknown, unknown]>;
-        keys(): SetIterator<unknown>;
-        values(): SetIterator<unknown>;
-        [Symbol.iterator](): SetIterator<unknown>;
-        readonly [Symbol.toStringTag]: string;
-    };
+    ListInterface: typeof ListInterface;
+    MapInterface: typeof MapInterface;
+    SetInterface: typeof SetInterface;
     stream: {
         AsyncStream: typeof AsyncStream;
         EntryStream: typeof EntryStream;
         NumberStream: typeof NumberStream;
         Stream: typeof Stream;
         StreamChecker: typeof StreamChecker;
-        StreamInterface: new (...args: any[]) => {};
+        StreamInterface: typeof StreamInterface;
         StringStream: typeof StringStream;
     };
     ArrayList: typeof ArrayList;

@@ -46,7 +46,7 @@ class ListInterface extends JavaLibraryScriptCore {
 	}
 }
 
-module.exports = Interface.convert(ListInterface, {
+ListInterface = Interface.convert(ListInterface, {
 	add: { args: [NotEmpty], returns: ListInterface },
 	get: { args: [Number], returns: Any },
 	set: { args: [Number, NotEmpty], returns: ListInterface },
@@ -55,3 +55,5 @@ module.exports = Interface.convert(ListInterface, {
 	clear: { returns: NoReturn },
 	toArray: { returns: Array },
 });
+
+module.exports = ListInterface;

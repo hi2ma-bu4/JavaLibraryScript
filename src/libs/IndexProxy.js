@@ -1,5 +1,6 @@
 const SymbolDict = require("./sys/symbol/SymbolDict");
 const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
+const ProxyManager = require("./ProxyManager");
 const TypeChecker = require("./TypeChecker");
 
 /** @type {Symbol} */
@@ -81,7 +82,7 @@ class IndexProxy extends JavaLibraryScriptCore {
 				if (!isNaN(prop)) {
 					return m.get(Number(prop));
 				}
-				return Reflect.get(t, prop, r);
+				return ProxyManager.over_get(t, prop, r);
 			},
 			set: (t, prop, val, r) => {
 				if (!isNaN(prop)) {

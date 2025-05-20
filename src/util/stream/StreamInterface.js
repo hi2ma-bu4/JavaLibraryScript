@@ -13,7 +13,7 @@ class StreamInterface extends JavaLibraryScriptCore {
 	}
 }
 
-module.exports = Interface.convert(StreamInterface, {
+StreamInterface = Interface.convert(StreamInterface, {
 	map: {
 		args: [Function],
 		returns: StreamInterface,
@@ -32,3 +32,5 @@ module.exports = Interface.convert(StreamInterface, {
 		returns: [undefined, Promise],
 	},
 });
+
+module.exports = StreamInterface;

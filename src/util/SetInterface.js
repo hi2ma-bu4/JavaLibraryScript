@@ -45,7 +45,7 @@ class SetInterface extends Set {
 	}
 }
 
-module.exports = Interface.convert(SetInterface, {
+SetInterface = Interface.convert(SetInterface, {
 	add: { args: [NotEmpty], returns: SetInterface },
 	delete: { args: [NotEmpty], returns: Boolean },
 	remove: { args: [NotEmpty], returns: Boolean },
@@ -54,3 +54,5 @@ module.exports = Interface.convert(SetInterface, {
 	has: { args: [NotEmpty], returns: Boolean },
 	contains: { args: [NotEmpty], returns: Boolean },
 });
+
+module.exports = SetInterface;

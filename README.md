@@ -23,38 +23,6 @@ https://cdn.jsdelivr.net/gh/hi2ma-bu4/JavaLibraryScript/dist/JavaLibraryScript.m
 
 ## 実装機能
 
-### base
+[code.mdを参照](./docs/code.md)
 
-#### Enum
-
-JavaのenumをJavaScriptにそれっぽく似せて作ったやつ
-
-#### Interface
-
-JavaのInterfaceをJavaScriptにそれっぽく似せて作ったやつ
-
-
-### util
-
-#### BaseMap
-
-JavaのMapをJavaScriptにそれっぽく似せて作ったやつ
-
-Mapが予約語だったので変更
-
-#### HashMap
-
-JavaのHashMapをJavaScriptにそれっぽく似せて作ったやつ
-
-使い道なし
-
-#### TreeMap
-
-JavaのTreeMapをJavaScriptにそれっぽく似せて作ったやつ
-
-使い道なし
-
-#### LinkedHashMap
-
-JavaのLinkedHashMapをJavaScriptにそれっぽく似せて作ったやつ
-
+※自動生成です

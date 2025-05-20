@@ -10,8 +10,9 @@ const { execSync } = require("node:child_process");
 
 const generateIndex = require("./build/generateIndex");
 const createEntryEndpoint = require("./build/createEntryEndpoint");
+const fixDtsOutputFlexible = require("./build/fixDtsOutputFlexible");
 const checkIllegalStrings = require("./build/checkIllegalStrings");
-const generateMdClass = require("./build/generateMdClass");
+const GenerateJsdocMd = require("./build/GenerateJsdocMd");
 const CL = require("./libs/ColorLogger");
 
 const script_name = "JavaLibraryScript";
@@ -127,46 +128,10 @@ async function buildRollup() {
 	});
 }
 
-function fixDtsOutputFlexible(filePath, log = false) {
-	let code = fs.readFileSync(filePath, "utf8");
-
-	const regList = [
-		// 修正をここに追加
-		[
-			`declare\\s+namespace\\s+(__(?:[a-z]+_)+[A-Za-z]+_js)\\s+{\\s+export\\s+{[\\s\\S]*?\\s+};\\s+}\\s+`,
-			(a, b) => {
-				if (log) console.log(`┃┃ namespace ${b} : ${CL.cyan("削除")}`);
-				return "";
-			},
-		],
-		[
-			`(\\s+)(__(?:[a-z]+_)+([A-Za-z]+)_js)`,
-			(a, b, c, d) => {
-				if (log) console.log(`┃┃ ${c} -> ${d} : ${CL.cyan("統合")}`);
-				return `${b}${d}`;
-			},
-		],
-		[
-			`([A-Za-z][A-Za-z0-9]*)_forceRep`,
-			(a, b) => {
-				if (log) console.log(`┃┃ ${b} : ${CL.cyan("強制変更")}`);
-				return b;
-			},
-		],
-	];
-
-	for (const [reg, rep] of regList) {
-		const re = new RegExp(reg, "gm");
-		code = code.replace(re, rep);
-	}
-
-	fs.writeFileSync(filePath, code);
-}
-
 (async () => {
 	const debug = true;
 	// 動作確認用 ログ表示
-	const logView = true;
+	const logView = false;
 	//
 	const start = performance.now();
 	try {
@@ -219,7 +184,9 @@ function fixDtsOutputFlexible(filePath, log = false) {
 		}
 
 		console.log(`┣ℹ️ ${CL.brightWhite("mdのコンテンツ生成中...")}`);
-		generateMdClass(entryDir, mdCodeDocsPath);
+		GenerateJsdocMd.isDebug = logView;
+		GenerateJsdocMd.endPointName = script_name;
+		GenerateJsdocMd.generate(entryDir, mdCodeDocsPath);
 		console.log(`┃┗✅ ${CL.brightWhite("mdのコンテンツ生成完了")}: ${mdCodeDocsPath}`);
 
 		const end = performance.now() - start;

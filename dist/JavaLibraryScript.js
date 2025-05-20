@@ -292,7 +292,7 @@ module.exports = {
 	Enum,
 };
 
-},{"../libs/sys/JavaLibraryScriptCore":8}],2:[function(require,module,exports){
+},{"../libs/sys/JavaLibraryScriptCore":9}],2:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const TypeChecker = require("../libs/TypeChecker");
 const { _EnumItem, Enum } = require("./Enum");
@@ -579,7 +579,7 @@ class Interface extends JavaLibraryScriptCore {
 
 module.exports = Interface;
 
-},{"../libs/TypeChecker":6,"../libs/sys/JavaLibraryScriptCore":8,"./Enum":1}],3:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9,"./Enum":1}],3:[function(require,module,exports){
 module.exports = {
     ...require("./Enum.js"),
     Interface: require("./Interface.js")
@@ -592,9 +592,10 @@ module.exports = {
     util: require("./util/index.js")
 };
 
-},{"./base/index.js":3,"./libs/index.js":7,"./util/index.js":19}],5:[function(require,module,exports){
+},{"./base/index.js":3,"./libs/index.js":8,"./util/index.js":20}],5:[function(require,module,exports){
 const SymbolDict = require("./sys/symbol/SymbolDict");
 const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
+const ProxyManager = require("./ProxyManager");
 const TypeChecker = require("./TypeChecker");
 
 /** @type {Symbol} */
@@ -676,7 +677,7 @@ class IndexProxy extends JavaLibraryScriptCore {
 				if (!isNaN(prop)) {
 					return m.get(Number(prop));
 				}
-				return Reflect.get(t, prop, r);
+				return ProxyManager.over_get(t, prop, r);
 			},
 			set: (t, prop, val, r) => {
 				if (!isNaN(prop)) {
@@ -735,7 +736,33 @@ class IndexProxy extends JavaLibraryScriptCore {
 
 module.exports = IndexProxy;
 
-},{"./TypeChecker":6,"./sys/JavaLibraryScriptCore":8,"./sys/symbol/SymbolDict":10}],6:[function(require,module,exports){
+},{"./ProxyManager":6,"./TypeChecker":7,"./sys/JavaLibraryScriptCore":9,"./sys/symbol/SymbolDict":11}],6:[function(require,module,exports){
+const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
+
+/**
+ * プロキシマネージャー
+ * @class
+ */
+class ProxyManager extends JavaLibraryScriptCore {
+	/**
+	 * getのreturnのオーバーライド
+	 * @param {any} target
+	 * @param {any} prop
+	 * @param {any} receiver
+	 * @returns {any}
+	 */
+	static over_get(target, prop, receiver) {
+		switch (prop) {
+			case "toString":
+				return () => `Proxy(${target.toString()})`;
+		}
+		return Reflect.get(target, prop, receiver);
+	}
+}
+
+module.exports = ProxyManager;
+
+},{"./sys/JavaLibraryScriptCore":9}],7:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const { _EnumCore, _EnumItem } = require("../base/Enum");
 
@@ -990,14 +1017,15 @@ class TypeChecker extends JavaLibraryScriptCore {
 
 module.exports = TypeChecker;
 
-},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":8}],7:[function(require,module,exports){
+},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":9}],8:[function(require,module,exports){
 module.exports = {
     IndexProxy: require("./IndexProxy.js"),
+    ProxyManager: require("./ProxyManager.js"),
     TypeChecker: require("./TypeChecker.js"),
     sys: require("./sys/index.js")
 };
 
-},{"./IndexProxy.js":5,"./TypeChecker.js":6,"./sys/index.js":9}],8:[function(require,module,exports){
+},{"./IndexProxy.js":5,"./ProxyManager.js":6,"./TypeChecker.js":7,"./sys/index.js":10}],9:[function(require,module,exports){
 const SymbolDict = require("./symbol/SymbolDict");
 
 /**
@@ -1011,13 +1039,13 @@ class JavaLibraryScriptCore {
 
 module.exports = JavaLibraryScriptCore;
 
-},{"./symbol/SymbolDict":10}],9:[function(require,module,exports){
+},{"./symbol/SymbolDict":11}],10:[function(require,module,exports){
 module.exports = {
     JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js"),
     symbol: require("./symbol/index.js")
 };
 
-},{"./JavaLibraryScriptCore.js":8,"./symbol/index.js":11}],10:[function(require,module,exports){
+},{"./JavaLibraryScriptCore.js":9,"./symbol/index.js":12}],11:[function(require,module,exports){
 /**
  * Symbolの共通プレフィックス
  * @type {string}
@@ -1037,12 +1065,12 @@ const SYMBOL_DICT = {
 
 module.exports = SYMBOL_DICT;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports = {
     ...require("./SymbolDict.js")
 };
 
-},{"./SymbolDict.js":10}],12:[function(require,module,exports){
+},{"./SymbolDict.js":11}],13:[function(require,module,exports){
 const JavaLibraryScript = require("./index");
 
 if (typeof window !== "undefined") {
@@ -1051,7 +1079,7 @@ if (typeof window !== "undefined") {
 
 module.exports = JavaLibraryScript;
 
-},{"./index":4}],13:[function(require,module,exports){
+},{"./index":4}],14:[function(require,module,exports){
 const IndexProxy = require("../libs/IndexProxy");
 const ListInterface = require("./ListInterface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -1291,7 +1319,7 @@ function arrayList(ValueType, collection) {
 
 module.exports = { ArrayList, arrayList };
 
-},{"../libs/IndexProxy":5,"../libs/TypeChecker":6,"./ListInterface":16,"./stream/Stream":23,"./stream/StreamChecker":24}],14:[function(require,module,exports){
+},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":17,"./stream/Stream":24,"./stream/StreamChecker":25}],15:[function(require,module,exports){
 const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
 const EntryStream = require("./stream/EntryStream");
@@ -1491,7 +1519,7 @@ class HashMap extends MapInterface {
 
 module.exports = HashMap;
 
-},{"../libs":7,"./MapInterface":17,"./stream/EntryStream":21}],15:[function(require,module,exports){
+},{"../libs":8,"./MapInterface":18,"./stream/EntryStream":22}],16:[function(require,module,exports){
 const SetInterface = require("./SetInterface");
 const TypeChecker = require("../libs/TypeChecker");
 const StreamChecker = require("./stream/StreamChecker");
@@ -1695,7 +1723,7 @@ class HashSet extends SetInterface {
 
 module.exports = HashSet;
 
-},{"../libs/TypeChecker":6,"./SetInterface":18,"./stream/Stream":23,"./stream/StreamChecker":24}],16:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"./SetInterface":19,"./stream/Stream":24,"./stream/StreamChecker":25}],17:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -1744,7 +1772,7 @@ class ListInterface extends JavaLibraryScriptCore {
 	}
 }
 
-module.exports = Interface.convert(ListInterface, {
+ListInterface = Interface.convert(ListInterface, {
 	add: { args: [NotEmpty], returns: ListInterface },
 	get: { args: [Number], returns: Any },
 	set: { args: [Number, NotEmpty], returns: ListInterface },
@@ -1754,7 +1782,9 @@ module.exports = Interface.convert(ListInterface, {
 	toArray: { returns: Array },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":6,"../libs/sys/JavaLibraryScriptCore":8}],17:[function(require,module,exports){
+module.exports = ListInterface;
+
+},{"../base/Interface":2,"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9}],18:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1815,7 +1845,7 @@ class MapInterface extends Map {
 	}
 }
 
-module.exports = Interface.convert(MapInterface, {
+MapInterface = Interface.convert(MapInterface, {
 	set: { args: [NotEmpty, NotEmpty], returns: MapInterface, abstract: true },
 	put: { args: [NotEmpty, NotEmpty], returns: MapInterface },
 	get: { args: [NotEmpty], returns: Any, abstract: true },
@@ -1828,7 +1858,9 @@ module.exports = Interface.convert(MapInterface, {
 	containsValue: { args: [NotEmpty], returns: Boolean },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":6}],18:[function(require,module,exports){
+module.exports = MapInterface;
+
+},{"../base/Interface":2,"../libs/TypeChecker":7}],19:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -1876,7 +1908,7 @@ class SetInterface extends Set {
 	}
 }
 
-module.exports = Interface.convert(SetInterface, {
+SetInterface = Interface.convert(SetInterface, {
 	add: { args: [NotEmpty], returns: SetInterface },
 	delete: { args: [NotEmpty], returns: Boolean },
 	remove: { args: [NotEmpty], returns: Boolean },
@@ -1886,7 +1918,9 @@ module.exports = Interface.convert(SetInterface, {
 	contains: { args: [NotEmpty], returns: Boolean },
 });
 
-},{"../base/Interface":2,"../libs/TypeChecker":6}],19:[function(require,module,exports){
+module.exports = SetInterface;
+
+},{"../base/Interface":2,"../libs/TypeChecker":7}],20:[function(require,module,exports){
 module.exports = {
     ...require("./ArrayList.js"),
     HashMap: require("./HashMap.js"),
@@ -1897,7 +1931,7 @@ module.exports = {
     stream: require("./stream/index.js")
 };
 
-},{"./ArrayList.js":13,"./HashMap.js":14,"./HashSet.js":15,"./ListInterface.js":16,"./MapInterface.js":17,"./SetInterface.js":18,"./stream/index.js":27}],20:[function(require,module,exports){
+},{"./ArrayList.js":14,"./HashMap.js":15,"./HashSet.js":16,"./ListInterface.js":17,"./MapInterface.js":18,"./SetInterface.js":19,"./stream/index.js":28}],21:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const Stream = require("./Stream");
 
@@ -2244,7 +2278,7 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"./Stream":23,"./StreamInterface":25}],21:[function(require,module,exports){
+},{"./Stream":24,"./StreamInterface":26}],22:[function(require,module,exports){
 const Stream = require("./Stream");
 const StreamChecker = require("./StreamChecker");
 const TypeChecker = require("../../libs/TypeChecker");
@@ -2356,7 +2390,7 @@ class EntryStream extends Stream {
 
 module.exports = EntryStream;
 
-},{"../../libs/TypeChecker":6,"../HashMap":14,"./Stream":23,"./StreamChecker":24}],22:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashMap":15,"./Stream":24,"./StreamChecker":25}],23:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
@@ -2428,7 +2462,7 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"./Stream":23}],23:[function(require,module,exports){
+},{"./Stream":24}],24:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
 
@@ -2919,7 +2953,7 @@ class Stream extends StreamInterface {
 
 module.exports = Stream;
 
-},{"../../libs/TypeChecker":6,"../HashSet":15,"./AsyncStream":20,"./EntryStream":21,"./NumberStream":22,"./StreamInterface":25,"./StringStream":26}],24:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashSet":16,"./AsyncStream":21,"./EntryStream":22,"./NumberStream":23,"./StreamInterface":26,"./StringStream":27}],25:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const TypeChecker = require("../../libs/TypeChecker");
 const StreamInterface = require("./StreamInterface");
@@ -2976,7 +3010,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker":6,"../../libs/sys/JavaLibraryScriptCore":8,"./AsyncStream":20,"./EntryStream":21,"./NumberStream":22,"./Stream":23,"./StreamInterface":25,"./StringStream":26}],25:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":9,"./AsyncStream":21,"./EntryStream":22,"./NumberStream":23,"./Stream":24,"./StreamInterface":26,"./StringStream":27}],26:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../../base/Interface");
 
@@ -2992,7 +3026,7 @@ class StreamInterface extends JavaLibraryScriptCore {
 	}
 }
 
-module.exports = Interface.convert(StreamInterface, {
+StreamInterface = Interface.convert(StreamInterface, {
 	map: {
 		args: [Function],
 		returns: StreamInterface,
@@ -3012,7 +3046,9 @@ module.exports = Interface.convert(StreamInterface, {
 	},
 });
 
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":8}],26:[function(require,module,exports){
+module.exports = StreamInterface;
+
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":9}],27:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
@@ -3075,7 +3111,7 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"./Stream":23}],27:[function(require,module,exports){
+},{"./Stream":24}],28:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
@@ -3086,5 +3122,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":20,"./EntryStream.js":21,"./NumberStream.js":22,"./Stream.js":23,"./StreamChecker.js":24,"./StreamInterface.js":25,"./StringStream.js":26}]},{},[12])
+},{"./AsyncStream.js":21,"./EntryStream.js":22,"./NumberStream.js":23,"./Stream.js":24,"./StreamChecker.js":25,"./StreamInterface.js":26,"./StringStream.js":27}]},{},[13])
 //# sourceMappingURL=JavaLibraryScript.js.map
