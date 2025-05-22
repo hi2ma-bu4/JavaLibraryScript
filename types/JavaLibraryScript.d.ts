@@ -915,6 +915,195 @@ declare class StreamChecker extends JavaLibraryScriptCore {
 }
 
 /**
+ * BigFloat の設定
+ * @class
+ */
+declare class BigFloatConfig extends JavaLibraryScriptCore {
+    /**
+     * 0に近い方向に切り捨て
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_TRUNCATE: number;
+    /**
+     * 絶対値が小さい方向に切り捨て（ROUND_TRUNCATEと同じ）
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_DOWN: number;
+    /**
+     * 絶対値が大きい方向に切り上げ
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_UP: number;
+    /**
+     * 正の無限大方向に切り上げ
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_CEIL: number;
+    /**
+     * 負の無限大方向に切り捨て
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_FLOOR: number;
+    /**
+     * 四捨五入
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_HALF_UP: number;
+    /**
+     * 五捨六入（5未満切り捨て）
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly ROUND_HALF_DOWN: number;
+    /**
+     * @param {Object | BigFloatConfig} [options]
+     * @param {boolean} [options.allowPrecisionMismatch=false] 精度の不一致を許容する
+     * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] 丸めモード
+     */
+    constructor({ allowPrecisionMismatch, roundingMode, }?: any | BigFloatConfig);
+    /**
+     * 精度の不一致を許容する
+     * @type {boolean}
+     * @default false
+     */
+    allowPrecisionMismatch: boolean;
+    /**
+     * 丸めモード
+     * @type {number}
+     * @default BigFloatConfig.ROUND_TRUNCATE
+     */
+    roundingMode: number;
+    /**
+     * 設定オブジェクトを複製する
+     * @returns {BigFloatConfig}
+     */
+    clone(): BigFloatConfig;
+    /**
+     * 精度の不一致を許容するかどうかを切り替える
+     */
+    toggleMismatch(): void;
+}
+/**
+ * メモリの限界までの大きな浮動小数点数を扱うクラス
+ * @class
+ */
+declare class BigFloat extends JavaLibraryScriptCore {
+    /**
+     * 最大精度 (Number.MAX_SAFE_INTEGERより大きくでも可)
+     * @type {BigInt}
+     * @static
+     */
+    static MAX_PRECISION: bigint;
+    /**
+     * 設定
+     * @type {BigFloatConfig}
+     * @static
+     */
+    static config: BigFloatConfig;
+    /**
+     * クラスを複製する (設定複製用)
+     * @returns {BigFloat}
+     * @static
+     */
+    static clone(): BigFloat;
+    /**
+     * @param {string | number | bigint | BigFloat} [value="0"] 初期値
+     * @param {number} [precision=20] 精度
+     */
+    constructor(value?: string | number | bigint | BigFloat, precision?: number);
+    value: any;
+    /** @type {BigInt} */
+    _precision: bigint;
+    /** @type {BigInt} */
+    _scale: bigint;
+    /**
+     * 文字列を解析して数値を取得
+     * @param {string} str 文字列
+     * @returns {{intPart: string, fracPart: string, sign: number}}
+     */
+    _parse(str: string): {
+        intPart: string;
+        fracPart: string;
+        sign: number;
+    };
+    /**
+     * 数値を正規化
+     * @param {BigInt} val
+     * @returns {string}
+     */
+    _normalize(val: bigint): string;
+    /**
+     * 精度を合わせる
+     * @param {BigFloat} other
+     * @returns {[BigInt, BigInt, BigInt]}
+     * @throws {Error}
+     */
+    _rescaleToMatch(other: BigFloat): [bigint, bigint, bigint];
+    /**
+     * 結果を作成する
+     * @param {BigInt} val
+     * @param {BigInt} precision
+     * @returns {this}
+     */
+    _makeResult(val: bigint, precision: bigint): this;
+    /**
+     * 数値を丸める
+     * @param {BigInt} val
+     * @param {BigInt} prec
+     * @returns {BigInt}
+     */
+    _round(val: bigint, prec: bigint): bigint;
+    /**
+     * 加算 (非破壊)
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    add(other: BigFloat): this;
+    /**
+     * 減算 (非破壊)
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    sub(other: BigFloat): this;
+    /**
+     * 乗算 (非破壊)
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    mul(other: BigFloat): this;
+    /**
+     * 除算 (非破壊)
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    div(other: BigFloat): this;
+    /**
+     * 剰余 (非破壊)
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    mod(other: BigFloat): this;
+}
+
+/**
  * 型チェッカー
  * @extends {JavaLibraryScriptCore}
  * @class
@@ -1412,6 +1601,10 @@ declare let libs: {
         };
     };
 };
+declare let math: {
+    BigFloatConfig: typeof BigFloatConfig;
+    BigFloat: typeof BigFloat;
+};
 declare let util: {
     HashMap: typeof HashMap;
     HashSet: typeof HashSet;
@@ -1433,11 +1626,13 @@ declare let util: {
 
 declare const JavaLibraryScript_base: typeof base;
 declare const JavaLibraryScript_libs: typeof libs;
+declare const JavaLibraryScript_math: typeof math;
 declare const JavaLibraryScript_util: typeof util;
 declare namespace JavaLibraryScript {
   export {
     JavaLibraryScript_base as base,
     JavaLibraryScript_libs as libs,
+    JavaLibraryScript_math as math,
     JavaLibraryScript_util as util,
   };
 }

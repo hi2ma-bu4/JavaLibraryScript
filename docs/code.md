@@ -76,6 +76,24 @@ class JavaLibraryScriptCore(): JavaLibraryScriptCore
 
 JavaLibraryScriptの共通継承元
 
+## math\BigFloat.js
+
+### BigFloatConfig (JavaLibraryScript.math.BigFloatConfig)
+
+```ts
+class BigFloatConfig(): BigFloatConfig
+```
+
+BigFloat の設定
+
+### BigFloat (JavaLibraryScript.math.BigFloat)
+
+```ts
+class BigFloat(): BigFloat
+```
+
+メモリの限界までの大きな浮動小数点数を扱うクラス
+
 ## util\ArrayList.js
 
 ### ArrayList (JavaLibraryScript.util.ArrayList)
