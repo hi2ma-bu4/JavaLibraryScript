@@ -5,7 +5,7 @@
 ### _EnumItem (JavaLibraryScript.base._EnumItem)
 
 ```ts
-class _EnumItem(name: string, ordinal: number, value: any): _EnumItem
+class _EnumItem(name: string, ordinal: number, value: any, owner: _EnumCore, methods: {[methodName: string]: (...args: any[]) => any}): _EnumItem
 ```
 
 単一のEnum要素を表すクラス
@@ -41,7 +41,7 @@ class Interface(): Interface
 ### IndexProxy (JavaLibraryScript.libs.IndexProxy)
 
 ```ts
-class IndexProxy<T>(targetClass: new (...args: any[]) => T): IndexProxy<T>
+class IndexProxy<T>(targetClass: new (...args: any[]) => T, options: {getMethod?: string, setMethod?: string, sizeMethod?: string, addMethod?: string, typeCheckMethod?: string | null, autoExtend?: boolean}): IndexProxy<T>
 ```
 
 Index参照機能を提供する
@@ -81,7 +81,7 @@ JavaLibraryScriptの共通継承元
 ### BigFloatConfig (JavaLibraryScript.math.BigFloatConfig)
 
 ```ts
-class BigFloatConfig(): BigFloatConfig
+class BigFloatConfig(options: Object | BigFloatConfig): BigFloatConfig
 ```
 
 BigFloat の設定
@@ -89,17 +89,25 @@ BigFloat の設定
 ### BigFloat (JavaLibraryScript.math.BigFloat)
 
 ```ts
-class BigFloat(): BigFloat
+class BigFloat(value: string | number | BigInt | BigFloat, precision: number): BigFloat
 ```
 
 メモリの限界までの大きな浮動小数点数を扱うクラス
+
+### bigFloat (JavaLibraryScript.math.bigFloat)
+
+```ts
+function bigFloat(value: string | number | BigInt | BigFloat, precision: number): BigFloat
+```
+
+BigFloat を作成する
 
 ## util\ArrayList.js
 
 ### ArrayList (JavaLibraryScript.util.ArrayList)
 
 ```ts
-class ArrayList<V>(ValueType: Function): ArrayList<V>
+class ArrayList<V>(ValueType: Function, collection: Iterable<V>): ArrayList<V>
 ```
 
 型チェック機能のついたList
@@ -107,7 +115,7 @@ class ArrayList<V>(ValueType: Function): ArrayList<V>
 ### arrayList (JavaLibraryScript.util.arrayList)
 
 ```ts
-function arrayList(ValueType: Function): ArrayList<V>
+function arrayList(ValueType: Function, collection: Iterable<V>): ArrayList<V>
 ```
 
 配列を返却する

@@ -200,6 +200,10 @@ ${block.description || "説明なし"}\n\n`;
 				returns: this._parseJsDocReturns(jsdoc),
 			};
 
+			if (data.description === "") {
+				console.log(`┃┃ ${CL.yellow("not get description")}: ${CL.brightCyan(name)}`);
+			}
+
 			if (type === "class") {
 				const constructorJsDoc = this._extractConstructor(code.slice(match.index));
 
@@ -291,13 +295,17 @@ ${block.description || "説明なし"}\n\n`;
 	 */
 	static _parseJsDocParams(code) {
 		const lines = code.split("\n");
-		const paramRegex = /@param\s+{([^}]+)}\s+(\w+)/;
+		const paramRegex = /@param\s+{((?:[^{}]|\{[^{}]*\})+)}\s+(?:([\w$]+)|\[([\w$]+)(?:=[^\s]+?)?\])/;
+		const notGetParamRegex = /@param\s+{.+?}\s+\[[^\s.]+?\]/;
 		const params = [];
 		for (const line of lines) {
 			const match = line.match(paramRegex);
 			if (match) {
-				const [, type, name] = match;
+				const type = match[1];
+				const name = match[2] || match[3];
 				params.push({ name, type });
+			} else if (notGetParamRegex.test(line)) {
+				console.log(`┃┃ ${CL.red("not get param")}: ${line.trim()}`);
 			}
 		}
 		return params;
@@ -311,12 +319,15 @@ ${block.description || "説明なし"}\n\n`;
 	static _parseJsDocReturns(code) {
 		const lines = code.split("\n");
 		const returnsRegex = /@returns?\s+{([^}]+)}/;
+		const notGetReturnsRegex = /@returns?\s+{/;
 		const returns = [];
 		for (const line of lines) {
 			const match = line.match(returnsRegex);
 			if (match) {
-				const [, type] = match;
+				const type = match[1];
 				returns.push(type);
+			} else if (notGetReturnsRegex.test(line)) {
+				console.log(`┃┃ ${CL.red("not get returns")}: ${line.trim()}`);
 			}
 		}
 		return returns;

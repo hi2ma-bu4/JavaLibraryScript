@@ -970,10 +970,13 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
     static readonly ROUND_HALF_DOWN: number;
     /**
      * @param {Object | BigFloatConfig} [options]
-     * @param {boolean} [options.allowPrecisionMismatch=false] 精度の不一致を許容する
-     * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] 丸めモード
+     * @param {boolean} [options.allowPrecisionMismatch=false] - 精度の不一致を許容する
+     * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
+     * @param {BigInt} [options.extraPrecision=1n] - 追加の精度
+     * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
+     * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
      */
-    constructor({ allowPrecisionMismatch, roundingMode, }?: any | BigFloatConfig);
+    constructor({ allowPrecisionMismatch, roundingMode, extraPrecision, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, }?: any | BigFloatConfig);
     /**
      * 精度の不一致を許容する
      * @type {boolean}
@@ -986,6 +989,24 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @default BigFloatConfig.ROUND_TRUNCATE
      */
     roundingMode: number;
+    /**
+     * 追加の精度
+     * @type {BigInt}
+     * @default 1n
+     */
+    extraPrecision: bigint;
+    /**
+     * 平方根[ニュートン法]の最大ステップ数
+     * @type {number}
+     * @default 50
+     */
+    sqrtMaxNewtonSteps: number;
+    /**
+     * 平方根[チェビシェフ法]の最大ステップ数
+     * @type {number}
+     * @default 30
+     */
+    sqrtMaxChebyshevSteps: number;
     /**
      * 設定オブジェクトを複製する
      * @returns {BigFloatConfig}
@@ -1020,18 +1041,21 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static clone(): BigFloat;
     /**
-     * @param {string | number | bigint | BigFloat} [value="0"] 初期値
-     * @param {number} [precision=20] 精度
+     * @param {string | number | BigInt | BigFloat} [value="0"] - 初期値
+     * @param {number} [precision=20] - 精度
      */
     constructor(value?: string | number | bigint | BigFloat, precision?: number);
     value: any;
     /** @type {BigInt} */
     _precision: bigint;
-    /** @type {BigInt} */
-    _scale: bigint;
+    /**
+     * 数値に変換する
+     * @returns {number}
+     */
+    toNumber(): number;
     /**
      * 文字列を解析して数値を取得
-     * @param {string} str 文字列
+     * @param {string} str - 文字列
      * @returns {{intPart: string, fracPart: string, sign: number}}
      */
     _parse(str: string): {
@@ -1048,24 +1072,27 @@ declare class BigFloat extends JavaLibraryScriptCore {
     /**
      * 精度を合わせる
      * @param {BigFloat} other
-     * @returns {[BigInt, BigInt, BigInt]}
+     * @param {boolean} [useExPrecision=false] - 追加の精度を使う
+     * @returns {[BigInt, BigInt, BigInt, BigInt]}
      * @throws {Error}
      */
-    _rescaleToMatch(other: BigFloat): [bigint, bigint, bigint];
+    _rescaleToMatch(other: BigFloat, useExPrecision?: boolean): [bigint, bigint, bigint, bigint];
     /**
      * 結果を作成する
      * @param {BigInt} val
      * @param {BigInt} precision
+     * @param {BigInt} [exPrecision]
      * @returns {this}
      */
-    _makeResult(val: bigint, precision: bigint): this;
+    _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): this;
     /**
      * 数値を丸める
      * @param {BigInt} val
-     * @param {BigInt} prec
+     * @param {BigInt} currentPrec
+     * @param {BigInt} targetPrec
      * @returns {BigInt}
      */
-    _round(val: bigint, prec: bigint): bigint;
+    _round(val: bigint, currentPrec: bigint, targetPrec: bigint): bigint;
     /**
      * 加算 (非破壊)
      * @param {BigFloat} other
@@ -1101,7 +1128,32 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @throws {Error}
      */
     mod(other: BigFloat): this;
+    /**
+     * べき乗 (非破壊)
+     * @param {number | BigInt} exponent - 指数（整数のみ対応）
+     * @returns {this}
+     * @throws {Error}
+     */
+    pow(exponent: number | bigint): this;
+    /**
+     * 平方根[ニュートン法] (非破壊)
+     * @returns {this}
+     */
+    sqrt(): this;
+    /**
+     * 平方根[チェビシェフ法] (非破壊)
+     * @returns {this}
+     */
+    sqrtChebyshev(): this;
 }
+/**
+ * BigFloat を作成する
+ * @param {string | number | BigInt | BigFloat} value 初期値
+ * @param {number} [precision=20] 精度
+ * @returns {BigFloat}
+ * @throws {Error}
+ */
+declare function bigFloat(value: string | number | bigint | BigFloat, precision?: number): BigFloat;
 
 /**
  * 型チェッカー
@@ -1604,6 +1656,7 @@ declare let libs: {
 declare let math: {
     BigFloatConfig: typeof BigFloatConfig;
     BigFloat: typeof BigFloat;
+    bigFloat: typeof bigFloat;
 };
 declare let util: {
     HashMap: typeof HashMap;

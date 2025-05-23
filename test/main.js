@@ -38,4 +38,10 @@ function main() {
 		al.add(i);
 	}
 	console.log(al[0]);
+
+	JavaLibraryScript.math.BigFloat.config.allowPrecisionMismatch = true;
+	//JavaLibraryScript.math.BigFloat.config.roundingMode = JavaLibraryScript.math.BigFloatConfig.ROUND_HALF_UP;
+
+	const bf = new JavaLibraryScript.math.BigFloat("1.5", 2);
+	console.log(bf.pow(3).toString());
 }
