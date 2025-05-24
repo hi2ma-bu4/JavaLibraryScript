@@ -1177,10 +1177,11 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 	 * @param {boolean} [options.allowPrecisionMismatch=false] - 精度の不一致を許容する
 	 * @param {boolean} [options.mutateResult=false] - 破壊的な計算(自身の上書き)をする (falseは新インスタンスを作成)
 	 * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
-	 * @param {BigInt} [options.extraPrecision=1n] - 追加の精度
+	 * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
 	 * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
 	 * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
 	 * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
+	 * @param {BigInt} [options.trigFuncsMaxSteps=100n] - 三角関数の最大ステップ数
 	 * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
 	 */
 	constructor({
@@ -1188,10 +1189,11 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		allowPrecisionMismatch = false,
 		mutateResult = false,
 		roundingMode = BigFloatConfig.ROUND_TRUNCATE,
-		extraPrecision = 1n,
+		extraPrecision = 2n,
 		piAlgorithm = BigFloatConfig.PI_CHUDNOVSKY,
 		sqrtMaxNewtonSteps = 50,
 		sqrtMaxChebyshevSteps = 30,
+		trigFuncsMaxSteps = 100n,
 		lnMaxSteps = 10000n,
 	} = {}) {
 		super();
@@ -1216,7 +1218,7 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		/**
 		 * 追加の精度
 		 * @type {BigInt}
-		 * @default 1n
+		 * @default 2n
 		 */
 		this.extraPrecision = extraPrecision;
 		/**
@@ -1237,6 +1239,12 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		 * @default 30
 		 */
 		this.sqrtMaxChebyshevSteps = sqrtMaxChebyshevSteps;
+		/**
+		 * 三角関数の最大ステップ数
+		 * @type {BigInt}
+		 * @default 100n
+		 */
+		this.trigFuncsMaxSteps = trigFuncsMaxSteps;
 		/**
 		 * 自然対数の最大ステップ数
 		 * @type {BigInt}
@@ -1438,7 +1446,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @param {BigInt} val
 	 * @param {BigInt} precision
 	 * @param {BigInt} [exPrecision]
-	 * @returns {this}
+	 * @returns {BigFloat}
 	 * @static
 	 */
 	static _makeResult(val, precision, exPrecision = precision) {
@@ -1524,7 +1532,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * 円周率[Gregory-Leibniz法] (超高速・超低収束)
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
-	 * @returns {this}
+	 * @returns {BigFloat}
 	 * @throws {Error}
 	 * @static
 	 */
@@ -1560,7 +1568,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * 円周率[ニュートン法] (高速・低収束)
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @param {BigInt} [mulPrecision=5n] - 計算精度の倍率 (丸め誤差の配慮)
-	 * @returns {this}
+	 * @returns {BigFloat}
 	 * @throws {Error}
 	 * @static
 	 */
@@ -1630,7 +1638,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	/**
 	 * 円周率[Chudnovsky法] (低速・高収束)
 	 * @param {BigInt} [precision=20n] - 精度
-	 * @returns {this}
+	 * @returns {BigFloat}
 	 * @throws {Error}
 	 * @static
 	 */
@@ -1679,7 +1687,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	/**
 	 * 円周率
 	 * @param {BigInt} [precision=20n] - 精度
-	 * @returns {this}
+	 * @returns {BigFloat}
 	 * @throws {Error}
 	 * @static
 	 */
@@ -1721,7 +1729,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	/**
 	 * ネイピア数
 	 * @param {BigInt} [precision=20n] - 精度
-	 * @returns {this}
+	 * @returns {BigFloat}
 	 * @throws {Error}
 	 * @static
 	 */
@@ -1950,6 +1958,336 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
+	 * 正弦
+	 * @param {BigInt} x
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _sin(x, precision, maxSteps) {
+		const scale = 10n ** precision;
+
+		let term = x; // x^1 / 1!
+		let result = term;
+		let x2 = (x * x) / scale;
+		let sign = -1n;
+
+		for (let n = 1n; n <= maxSteps; n++) {
+			const denom = 2n * n;
+
+			term = (term * x2) / scale;
+			term = term / (denom * (denom + 1n));
+
+			if (term === 0n) break;
+
+			result += sign * term;
+			sign *= -1n;
+		}
+		return result;
+	}
+
+	/**
+	 * 正弦
+	 * @returns {this}
+	 */
+	sin() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const result = construct._sin(val, totalPr, maxSteps);
+		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	/**
+	 * 余弦
+	 * @param {BigInt} x
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _cos(x, precision, maxSteps) {
+		const scale = 10n ** precision;
+
+		let term = scale; // x^0 / 0! = 1
+		let result = term;
+		let x2 = (x * x) / scale;
+		let sign = -1n;
+
+		for (let n = 1n, denom = 2n; n <= maxSteps; n++, denom += 2n) {
+			term = (term * x2) / scale;
+			term = term / (denom * (denom - 1n));
+			if (term === 0n) break;
+			result += sign * term;
+			sign *= -1n;
+		}
+
+		return result;
+	}
+
+	/**
+	 * 余弦
+	 * @returns {this}
+	 */
+	cos() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const result = construct._cos(val, totalPr, maxSteps);
+		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	/**
+	 * 正接
+	 * @param {BigInt} x
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _tan(x, precision, maxSteps) {
+		const cosX = this._cos(x, precision, maxSteps);
+		const EPSILON = 10n ** (precision - 4n);
+		if (cosX === 0n || (cosX > -EPSILON && cosX < EPSILON)) throw new Error("tan(x) is undefined or numerically unstable at this point");
+		const sinX = this._sin(x, precision, maxSteps);
+		const scale = 10n ** precision;
+		return (sinX * scale) / cosX;
+	}
+
+	/**
+	 * 正接
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	tan() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const result = construct._tan(val, totalPr, maxSteps);
+		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	/**
+	 * Newton法
+	 * @param {(x:BigInt) => BigInt} f
+	 * @param {(x:BigInt) => BigInt} df
+	 * @param {BigInt} initial
+	 * @param {BigInt} precision
+	 * @param {number} maxSteps
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _trigFuncsNewton(f, df, initial, precision, maxSteps = 50) {
+		const scale = 10n ** precision;
+		const EPSILON = 10n ** (precision / 2n);
+		let x = initial;
+
+		for (let i = 0; i < maxSteps; i++) {
+			const fx = f(x);
+			if (fx === 0n) break;
+			const dfx = df(x);
+			if (dfx === 0n) throw new Error("Derivative zero during Newton iteration");
+
+			// dx = fx / dfx （整数で割り算）
+			// dx は分母あるから SCALEかけて割る
+			const dx = fx / dfx;
+			x = x - dx;
+
+			if ((dx < 0n ? -dx : dx) < EPSILON) break; // 収束判定
+		}
+
+		return x;
+	}
+
+	/**
+	 * 逆正弦
+	 * @param {BigInt} x
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _asin(x, precision, maxSteps) {
+		const scale = 10n ** precision;
+		if (x > scale || x < -scale) throw new Error("asin input out of range [-1,1]");
+
+		const halfPi = this.pi(precision).value / 2n;
+		// 初期値を x * π/2 にして必ず [-π/2, π/2] に収める
+		const initial = (x * halfPi) / scale;
+
+		const f = (theta) => this._sin(theta, precision, maxSteps) - x;
+		const df = (theta) => this._cos(theta, precision, maxSteps);
+		return this._trigFuncsNewton(f, df, initial, precision, BigInt(maxSteps));
+	}
+
+	/**
+	 * 逆正弦
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	asin() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const result = construct._asin(val, totalPr, maxSteps);
+		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	/**
+	 * 逆余弦
+	 * @param {BigInt} x
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _acos(x, precision, maxSteps) {
+		const halfPi = this.pi(precision).value / 2n;
+		const asinX = this._asin(x, precision, maxSteps);
+		return halfPi - asinX;
+	}
+
+	/**
+	 * 逆余弦
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	acos() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const result = construct._acos(val, totalPr, maxSteps);
+		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	/**
+	 * 逆正接
+	 * @param {BigInt} x
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _atan(x, precision, maxSteps) {
+		const scale = 10n ** precision;
+		const absX = x < 0n ? -x : x;
+
+		// |x| <= 1 → そのままニュートン法
+		if (absX <= scale) {
+			const f = (theta) => this._tan(theta, precision, maxSteps) - x;
+			const df = (theta) => {
+				const cosTheta = this._cos(theta, precision, maxSteps);
+				if (cosTheta === 0n) throw new Error("Derivative undefined");
+				return (scale * scale) / (cosTheta * cosTheta);
+			};
+			return this._trigFuncsNewton(f, df, x, precision, BigInt(maxSteps));
+		}
+
+		// |x| > 1 → atan(x) = sign * (π/2 - atan(1 / |x|))
+		const sign = x < 0n ? -1n : 1n;
+		const halfPi = this.pi(precision).value / 2n;
+		const invX = (scale * scale) / absX;
+		const innerAtan = this._atan(invX, precision, maxSteps);
+		return sign * (halfPi - innerAtan);
+	}
+
+	/**
+	 * 逆正接
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	atan() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const result = construct._atan(val, totalPr, maxSteps);
+		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	static _atan2(y, x, precision, maxSteps) {
+		// x == 0
+		if (x === 0n) {
+			if (y > 0n) return this.pi(precision).value / 2n;
+			if (y < 0n) return -this.pi(precision).value / 2n;
+			throw new Error("atan2(0, 0) is undefined");
+		}
+
+		// y == 0
+		if (y === 0n) {
+			if (x > 0n) return 0n;
+			if (x < 0n) return this.pi(precision).value;
+		}
+		const scale = 10n ** precision;
+
+		const ratio = (y * scale) / x;
+
+		const angle = this._atan(ratio, precision, maxSteps);
+
+		if (x > 0n) {
+			// 第1,4象限: そのまま
+			return angle;
+		}
+		const pi = this.pi(precision).value;
+		// 第2,3象限: πを足す
+		if (y >= 0n) {
+			return angle + pi;
+		}
+		return angle - pi;
+	}
+
+	/**
+	 * 逆正接2 (atan2(y, x))
+	 * @param {BigFloat} x
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	atan2(x) {
+		const [valA, valB, exPrec, prec] = this._rescaleToMatch(x, true);
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.trigFuncsMaxSteps;
+		const result = construct._atan2(valA, valB, exPrec, maxSteps);
+		return this._makeResult(result, prec, exPrec);
+	}
+
+	/**
 	 * 自然対数[Atanh法]
 	 * @param {BigInt} value
 	 * @param {BigInt} precision
@@ -2047,10 +2385,9 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static _log(value, baseValue, precision, maxSteps) {
-		const lnX = this._ln(value, precision, maxSteps);
 		const lnB = this._ln(baseValue, precision, maxSteps);
-
 		if (lnB === 0n) throw new Error("log base cannot be 1 or 0");
+		const lnX = this._ln(value, precision, maxSteps);
 
 		// log_b(x) = ln(x) / ln(b)
 		const SCALE = 10n ** precision;

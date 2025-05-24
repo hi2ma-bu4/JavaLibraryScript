@@ -1001,13 +1001,14 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @param {boolean} [options.allowPrecisionMismatch=false] - 精度の不一致を許容する
      * @param {boolean} [options.mutateResult=false] - 破壊的な計算(自身の上書き)をする (falseは新インスタンスを作成)
      * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
-     * @param {BigInt} [options.extraPrecision=1n] - 追加の精度
+     * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
      * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
      * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
      * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
+     * @param {BigInt} [options.trigFuncsMaxSteps=100n] - 三角関数の最大ステップ数
      * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
      */
-    constructor({ allowPrecisionMismatch, mutateResult, roundingMode, extraPrecision, piAlgorithm, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, lnMaxSteps, }?: any | BigFloatConfig);
+    constructor({ allowPrecisionMismatch, mutateResult, roundingMode, extraPrecision, piAlgorithm, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, trigFuncsMaxSteps, lnMaxSteps, }?: any | BigFloatConfig);
     /**
      * 精度の不一致を許容する
      * @type {boolean}
@@ -1029,7 +1030,7 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
     /**
      * 追加の精度
      * @type {BigInt}
-     * @default 1n
+     * @default 2n
      */
     extraPrecision: bigint;
     /**
@@ -1050,6 +1051,12 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @default 30
      */
     sqrtMaxChebyshevSteps: number;
+    /**
+     * 三角関数の最大ステップ数
+     * @type {BigInt}
+     * @default 100n
+     */
+    trigFuncsMaxSteps: bigint;
     /**
      * 自然対数の最大ステップ数
      * @type {BigInt}
@@ -1099,10 +1106,10 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @param {BigInt} val
      * @param {BigInt} precision
      * @param {BigInt} [exPrecision]
-     * @returns {this}
+     * @returns {BigFloat}
      * @static
      */
-    static _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): this;
+    static _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): BigFloat;
     /**
      * 数値を丸める
      * @param {BigInt} val
@@ -1116,20 +1123,20 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * 円周率[Gregory-Leibniz法] (超高速・超低収束)
      * @param {BigInt} [precision=20n] - 精度
      * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
-     * @returns {this}
+     * @returns {BigFloat}
      * @throws {Error}
      * @static
      */
-    static piLeibniz(precision?: bigint, mulPrecision?: bigint): this;
+    static piLeibniz(precision?: bigint, mulPrecision?: bigint): BigFloat;
     /**
      * 円周率[ニュートン法] (高速・低収束)
      * @param {BigInt} [precision=20n] - 精度
      * @param {BigInt} [mulPrecision=5n] - 計算精度の倍率 (丸め誤差の配慮)
-     * @returns {this}
+     * @returns {BigFloat}
      * @throws {Error}
      * @static
      */
-    static piNewton(precision?: bigint, mulPrecision?: bigint): this;
+    static piNewton(precision?: bigint, mulPrecision?: bigint): BigFloat;
     /**
      * BigIntの平方根を計算 (高速ニュートン法)
      * @param {BigInt} n
@@ -1140,19 +1147,19 @@ declare class BigFloat extends JavaLibraryScriptCore {
     /**
      * 円周率[Chudnovsky法] (低速・高収束)
      * @param {BigInt} [precision=20n] - 精度
-     * @returns {this}
+     * @returns {BigFloat}
      * @throws {Error}
      * @static
      */
-    static piChudnovsky(precision?: bigint): this;
+    static piChudnovsky(precision?: bigint): BigFloat;
     /**
      * 円周率
      * @param {BigInt} [precision=20n] - 精度
-     * @returns {this}
+     * @returns {BigFloat}
      * @throws {Error}
      * @static
      */
-    static pi(precision?: bigint): this;
+    static pi(precision?: bigint): BigFloat;
     /**
      * 指数関数のTaylor展開
      * @param {BigInt} x
@@ -1164,11 +1171,82 @@ declare class BigFloat extends JavaLibraryScriptCore {
     /**
      * ネイピア数
      * @param {BigInt} [precision=20n] - 精度
-     * @returns {this}
+     * @returns {BigFloat}
      * @throws {Error}
      * @static
      */
-    static e(precision?: bigint): this;
+    static e(precision?: bigint): BigFloat;
+    /**
+     * 正弦
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @static
+     */
+    static _sin(x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * 余弦
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @static
+     */
+    static _cos(x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * 正接
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _tan(x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * Newton法
+     * @param {(x:BigInt) => BigInt} f
+     * @param {(x:BigInt) => BigInt} df
+     * @param {BigInt} initial
+     * @param {BigInt} precision
+     * @param {number} maxSteps
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _trigFuncsNewton(f: (x: bigint) => bigint, df: (x: bigint) => bigint, initial: bigint, precision: bigint, maxSteps?: number): bigint;
+    /**
+     * 逆正弦
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _asin(x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * 逆余弦
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _acos(x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * 逆正接
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _atan(x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    static _atan2(y: any, x: any, precision: any, maxSteps: any): any;
     /**
      * 自然対数[Atanh法]
      * @param {BigInt} value
@@ -1312,6 +1390,47 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {this}
      */
     sqrtChebyshev(): this;
+    /**
+     * 正弦
+     * @returns {this}
+     */
+    sin(): this;
+    /**
+     * 余弦
+     * @returns {this}
+     */
+    cos(): this;
+    /**
+     * 正接
+     * @returns {this}
+     * @throws {Error}
+     */
+    tan(): this;
+    /**
+     * 逆正弦
+     * @returns {this}
+     * @throws {Error}
+     */
+    asin(): this;
+    /**
+     * 逆余弦
+     * @returns {this}
+     * @throws {Error}
+     */
+    acos(): this;
+    /**
+     * 逆正接
+     * @returns {this}
+     * @throws {Error}
+     */
+    atan(): this;
+    /**
+     * 逆正接2 (atan2(y, x))
+     * @param {BigFloat} x
+     * @returns {this}
+     * @throws {Error}
+     */
+    atan2(x: BigFloat): this;
     /**
      * 自然対数 ln(x)
      * @returns {BigFloat}
