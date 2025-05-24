@@ -1173,11 +1173,12 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * 自然対数[Atanh法]
      * @param {BigInt} value
      * @param {BigInt} precision
+     * @param {BigInt} maxSteps
      * @returns {BigInt}
      * @throws {Error}
      * @static
      */
-    static _ln(value: bigint, precision: bigint): bigint;
+    static _ln(value: bigint, precision: bigint, maxSteps: bigint): bigint;
     /**
      * 自然対数 ln(10) (簡易計算用)
      * @param {BigInt} precision - 精度
@@ -1189,11 +1190,12 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * 対数
      * @param {BigInt} baseValue
      * @param {BigInt} precision
+     * @param {BigInt} maxSteps
      * @returns {BigInt}
      * @throws {Error}
      * @static
      */
-    static _log(value: any, baseValue: bigint, precision: bigint): bigint;
+    static _log(value: any, baseValue: bigint, precision: bigint, maxSteps: bigint): bigint;
     /**
      * @param {string | number | BigInt | BigFloat} value - 初期値
      * @param {number} [precision=20] - 精度

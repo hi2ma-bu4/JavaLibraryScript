@@ -1953,16 +1953,15 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * 自然対数[Atanh法]
 	 * @param {BigInt} value
 	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
 	 * @returns {BigInt}
 	 * @throws {Error}
 	 * @static
 	 */
-	static _ln(value, precision) {
+	static _ln(value, precision, maxSteps) {
 		if (value <= 0n) throw new Error("ln(x) is undefined for x <= 0");
 
 		const scale = 10n ** precision;
-
-		const maxSteps = this.config.lnMaxSteps;
 
 		let x = value;
 		let k = 0n;
@@ -2027,12 +2026,14 @@ class BigFloat extends JavaLibraryScriptCore {
 	ln() {
 		/** @type {typeof BigFloat} */
 		const construct = this.constructor;
-		const exPr = construct.config.extraPrecision;
+		const config = construct.config;
+		const maxSteps = config.lnMaxSteps;
+		const exPr = config.extraPrecision;
 
 		const totalPr = this._precision + exPr;
 		const val = this.value * 10n ** exPr;
 
-		const raw = construct._ln(val, totalPr);
+		const raw = construct._ln(val, totalPr, maxSteps);
 		return this._makeResult(raw, this._precision, totalPr);
 	}
 
@@ -2040,13 +2041,14 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * 対数
 	 * @param {BigInt} baseValue
 	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
 	 * @returns {BigInt}
 	 * @throws {Error}
 	 * @static
 	 */
-	static _log(value, baseValue, precision) {
-		const lnX = this._ln(value, precision);
-		const lnB = this._ln(baseValue, precision);
+	static _log(value, baseValue, precision, maxSteps) {
+		const lnX = this._ln(value, precision, maxSteps);
+		const lnB = this._ln(baseValue, precision, maxSteps);
 
 		if (lnB === 0n) throw new Error("log base cannot be 1 or 0");
 
@@ -2067,7 +2069,8 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		/** @type {typeof BigFloat} */
 		const construct = this.constructor;
-		const raw = construct._log(valA, valB, exPrec);
+		const maxSteps = construct.config.lnMaxSteps;
+		const raw = construct._log(valA, valB, exPrec, maxSteps);
 		return this._makeResult(raw, prec, exPrec);
 	}
 }
