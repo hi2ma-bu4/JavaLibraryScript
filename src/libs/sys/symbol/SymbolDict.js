@@ -11,8 +11,12 @@ const prefix = "@@JLS_";
  * @readonly
  */
 const SYMBOL_DICT = {
+	// 公開
 	JavaLibraryScript: Symbol.for(`${prefix}JavaLibraryScript`),
 	instanceofTarget: Symbol.for(`${prefix}instanceofTarget`),
+	// 内部
+	TypeAny: Symbol("Any"),
+	TypeVoid: Symbol("Void"),
 };
 
 module.exports = SYMBOL_DICT;

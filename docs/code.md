@@ -92,7 +92,7 @@ BigFloat の設定
 class BigFloat(value: string | number | BigInt | BigFloat, precision: number): BigFloat
 ```
 
-メモリの限界までの大きな浮動小数点数を扱うクラス
+大きな浮動小数点数を扱えるクラス
 
 ### bigFloat (JavaLibraryScript.math.bigFloat)
 

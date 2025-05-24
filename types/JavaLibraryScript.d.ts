@@ -969,14 +969,43 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      */
     static readonly ROUND_HALF_DOWN: number;
     /**
+     * 円周率の計算アルゴリズム
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly PI_MATH_DEFAULT: number;
+    /**
+     * 円周率[Gregory-Leibniz法] (超高速・超低収束)
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly PI_LEIBNIZ: number;
+    /**
+     * 円周率[ニュートン法] (高速・低収束)
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly PI_NEWTON: number;
+    /**
+     * 円周率[Chudnovsky法] (低速・高収束)
+     * @type {number}
+     * @static
+     * @readonly
+     */
+    static readonly PI_CHUDNOVSKY: number;
+    /**
      * @param {Object | BigFloatConfig} [options]
      * @param {boolean} [options.allowPrecisionMismatch=false] - 精度の不一致を許容する
      * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
      * @param {BigInt} [options.extraPrecision=1n] - 追加の精度
+     * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
      * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
      * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
      */
-    constructor({ allowPrecisionMismatch, roundingMode, extraPrecision, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, }?: any | BigFloatConfig);
+    constructor({ allowPrecisionMismatch, roundingMode, extraPrecision, piAlgorithm, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, }?: any | BigFloatConfig);
     /**
      * 精度の不一致を許容する
      * @type {boolean}
@@ -995,6 +1024,12 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @default 1n
      */
     extraPrecision: bigint;
+    /**
+     * 円周率算出アルゴリズム
+     * @type {number}
+     * @default BigFloatConfig.PI_CHUDNOVSKY
+     */
+    piAlgorithm: number;
     /**
      * 平方根[ニュートン法]の最大ステップ数
      * @type {number}
@@ -1018,12 +1053,12 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
     toggleMismatch(): void;
 }
 /**
- * メモリの限界までの大きな浮動小数点数を扱うクラス
+ * 大きな浮動小数点数を扱えるクラス
  * @class
  */
 declare class BigFloat extends JavaLibraryScriptCore {
     /**
-     * 最大精度 (Number.MAX_SAFE_INTEGERより大きくでも可)
+     * 最大精度 (Stringの限界)
      * @type {BigInt}
      * @static
      */
@@ -1040,11 +1075,71 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static clone(): BigFloat;
+    static _checkMaxPrecision(precision: any): void;
     /**
-     * @param {string | number | BigInt | BigFloat} [value="0"] - 初期値
-     * @param {number} [precision=20] - 精度
+     * 結果を作成する
+     * @param {BigInt} val
+     * @param {BigInt} precision
+     * @param {BigInt} [exPrecision]
+     * @returns {this}
+     * @static
      */
-    constructor(value?: string | number | bigint | BigFloat, precision?: number);
+    static _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): this;
+    /**
+     * 数値を丸める
+     * @param {BigInt} val
+     * @param {BigInt} currentPrec
+     * @param {BigInt} targetPrec
+     * @returns {BigInt}
+     * @static
+     */
+    static _round(val: bigint, currentPrec: bigint, targetPrec: bigint): bigint;
+    /**
+     * 円周率[Gregory-Leibniz法] (超高速・超低収束)
+     * @param {BigInt} [precision=20n] - 精度
+     * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
+     * @returns {this}
+     * @throws {Error}
+     * @static
+     */
+    static piLeibniz(precision?: bigint, mulPrecision?: bigint): this;
+    /**
+     * 円周率[ニュートン法] (高速・低収束)
+     * @param {BigInt} [precision=20n] - 精度
+     * @param {BigInt} [mulPrecision=5n] - 計算精度の倍率 (丸め誤差の配慮)
+     * @returns {this}
+     * @throws {Error}
+     * @static
+     */
+    static piNewton(precision?: bigint, mulPrecision?: bigint): this;
+    /**
+     * BigIntの平方根を計算 (高速ニュートン法)
+     * @param {BigInt} n
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     */
+    static _sqrtBigInt(n: bigint, precision: bigint): bigint;
+    /**
+     * 円周率[Chudnovsky法] (低速・高収束)
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {this}
+     * @throws {Error}
+     * @static
+     */
+    static piChudnovsky(precision?: bigint): this;
+    /**
+     * 円周率
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {this}
+     * @static
+     */
+    static pi(precision?: bigint): this;
+    /**
+     * @param {string | number | BigInt | BigFloat} value - 初期値
+     * @param {number} [precision=20] - 精度
+     * @throws {Error}
+     */
+    constructor(value: string | number | bigint | BigFloat, precision?: number);
     value: any;
     /** @type {BigInt} */
     _precision: bigint;
@@ -1086,13 +1181,10 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): this;
     /**
-     * 数値を丸める
-     * @param {BigInt} val
-     * @param {BigInt} currentPrec
-     * @param {BigInt} targetPrec
-     * @returns {BigInt}
+     * precisionを最小限まで縮める
+     * @returns {this}
      */
-    _round(val: bigint, currentPrec: bigint, targetPrec: bigint): bigint;
+    scale(): this;
     /**
      * 加算 (非破壊)
      * @param {BigFloat} other
@@ -1635,13 +1727,13 @@ type InterfaceTypeDataList = {
     [x: string]: InterfaceTypeData;
 };
 
-declare let base: {
+declare const base: {
     Interface: typeof Interface;
     _EnumItem: typeof _EnumItem;
     _EnumCore: typeof _EnumCore;
     Enum: typeof Enum;
 };
-declare let libs: {
+declare const libs: {
     IndexProxy: typeof IndexProxy;
     ProxyManager: typeof ProxyManager;
     TypeChecker: typeof TypeChecker;
@@ -1650,15 +1742,17 @@ declare let libs: {
         symbol: {
             JavaLibraryScript: symbol;
             instanceofTarget: symbol;
+            TypeAny: symbol;
+            TypeVoid: symbol;
         };
     };
 };
-declare let math: {
+declare const math: {
     BigFloatConfig: typeof BigFloatConfig;
     BigFloat: typeof BigFloat;
     bigFloat: typeof bigFloat;
 };
-declare let util: {
+declare const util: {
     HashMap: typeof HashMap;
     HashSet: typeof HashSet;
     ListInterface: typeof ListInterface;

@@ -28,20 +28,17 @@ function main() {
 	);
 
 	const set = new JavaLibraryScript.util.HashSet(Number);
+	const al = JavaLibraryScript.util.arrayList(Number);
 	for (let i = 0; i < 10; i++) {
 		set.add(i);
-	}
-	console.log(set.stream().toHashSet().toString());
-
-	const al = new JavaLibraryScript.util.ArrayList(Number);
-	for (let i = 0; i < 10; i++) {
 		al.add(i);
 	}
-	console.log(al[0]);
+	console.log(set.stream().toHashSet().toString());
+	console.log(al.toString());
 
 	JavaLibraryScript.math.BigFloat.config.allowPrecisionMismatch = true;
 	//JavaLibraryScript.math.BigFloat.config.roundingMode = JavaLibraryScript.math.BigFloatConfig.ROUND_HALF_UP;
 
-	const bf = new JavaLibraryScript.math.BigFloat("1.5", 2);
-	console.log(bf.pow(3).toString());
+	const bf = JavaLibraryScript.math.bigFloat(3);
+	console.log(bf.sqrt().toString());
 }

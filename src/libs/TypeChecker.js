@@ -1,3 +1,4 @@
+const SymbolDict = require("../libs/sys/symbol/SymbolDict");
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const { _EnumCore, _EnumItem } = require("../base/Enum");
 
@@ -43,14 +44,14 @@ class TypeChecker extends JavaLibraryScriptCore {
 	 * @static
 	 * @readonly
 	 */
-	static Any = Symbol("any");
+	static Any = SymbolDict.TypeAny;
 	/**
 	 * 返り値を返さない関数の型
 	 * @type {Symbol}
 	 * @static
 	 * @readonly
 	 */
-	static Void = Symbol("void");
+	static Void = SymbolDict.TypeVoid;
 	/**
 	 * 返り値を返さない関数の型
 	 * @type {Symbol}

@@ -30,6 +30,14 @@ function fixDtsOutputFlexible(filePath, log = false) {
 			},
 		],
 		[
+			`(declare\\s+)let(\\s+[A-Za-z][A-Za-z0-9]*:\\s+)`,
+			(a, b, c) => {
+				ol(`$let -> const : ${CL.cyan("変更")}`);
+				cou++;
+				return `${b}const${c}`;
+			},
+		],
+		[
 			`([A-Za-z][A-Za-z0-9]*)_forceRep`,
 			(a, b) => {
 				ol(`${b} : ${CL.cyan("強制変更")}`);
