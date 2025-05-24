@@ -41,4 +41,5 @@ function main() {
 
 	const bf = JavaLibraryScript.math.bigFloat(3);
 	console.log(bf.sqrt().toString());
+	console.log(JavaLibraryScript.math.BigFloat.pi(20).toString());
 }

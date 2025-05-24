@@ -999,19 +999,27 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
     /**
      * @param {Object | BigFloatConfig} [options]
      * @param {boolean} [options.allowPrecisionMismatch=false] - 精度の不一致を許容する
+     * @param {boolean} [options.mutateResult=false] - 破壊的な計算(自身の上書き)をする (falseは新インスタンスを作成)
      * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
      * @param {BigInt} [options.extraPrecision=1n] - 追加の精度
      * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
      * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
      * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
+     * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
      */
-    constructor({ allowPrecisionMismatch, roundingMode, extraPrecision, piAlgorithm, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, }?: any | BigFloatConfig);
+    constructor({ allowPrecisionMismatch, mutateResult, roundingMode, extraPrecision, piAlgorithm, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, lnMaxSteps, }?: any | BigFloatConfig);
     /**
      * 精度の不一致を許容する
      * @type {boolean}
      * @default false
      */
     allowPrecisionMismatch: boolean;
+    /**
+     * 破壊的な計算(自身の上書き)をする (falseは新インスタンスを作成)
+     * @type {boolean}
+     * @default false
+     */
+    mutateResult: boolean;
     /**
      * 丸めモード
      * @type {number}
@@ -1043,6 +1051,12 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      */
     sqrtMaxChebyshevSteps: number;
     /**
+     * 自然対数の最大ステップ数
+     * @type {BigInt}
+     * @default 10000n
+     */
+    lnMaxSteps: bigint;
+    /**
      * 設定オブジェクトを複製する
      * @returns {BigFloatConfig}
      */
@@ -1051,6 +1065,10 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * 精度の不一致を許容するかどうかを切り替える
      */
     toggleMismatch(): void;
+    /**
+     * 破壊的な計算(自身の上書き)をするかどうかを切り替える
+     */
+    toggleMutation(): void;
 }
 /**
  * 大きな浮動小数点数を扱えるクラス
@@ -1131,9 +1149,51 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * 円周率
      * @param {BigInt} [precision=20n] - 精度
      * @returns {this}
+     * @throws {Error}
      * @static
      */
     static pi(precision?: bigint): this;
+    /**
+     * 指数関数のTaylor展開
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _expTaylor(x: bigint, precision: bigint): bigint;
+    /**
+     * ネイピア数
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {this}
+     * @throws {Error}
+     * @static
+     */
+    static e(precision?: bigint): this;
+    /**
+     * 自然対数[Atanh法]
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _ln(value: bigint, precision: bigint): bigint;
+    /**
+     * 自然対数 ln(10) (簡易計算用)
+     * @param {BigInt} precision - 精度
+     * @param {BigInt} [maxSteps=10000n] - 最大反復回数
+     * @returns {BigInt}
+     */
+    static _ln10(precision: bigint, maxSteps?: bigint): bigint;
+    /**
+     * 対数
+     * @param {BigInt} baseValue
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _log(value: any, baseValue: bigint, precision: bigint): bigint;
     /**
      * @param {string | number | BigInt | BigFloat} value - 初期値
      * @param {number} [precision=20] - 精度
@@ -1143,6 +1203,11 @@ declare class BigFloat extends JavaLibraryScriptCore {
     value: any;
     /** @type {BigInt} */
     _precision: bigint;
+    /**
+     * インスタンスを複製する
+     * @returns {BigFloat}
+     */
+    clone(): BigFloat;
     /**
      * 数値に変換する
      * @returns {number}
@@ -1177,66 +1242,85 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @param {BigInt} val
      * @param {BigInt} precision
      * @param {BigInt} [exPrecision]
+     * @param {boolean} [okMutate=true] - 破壊的変更を許容
      * @returns {this}
      */
-    _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): this;
+    _makeResult(val: bigint, precision: bigint, exPrecision?: bigint, okMutate?: boolean): this;
+    /**
+     * 指数関数
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {this}
+     * @throws {Error}
+     */
+    exp(): this;
     /**
      * precisionを最小限まで縮める
      * @returns {this}
      */
     scale(): this;
     /**
-     * 加算 (非破壊)
+     * 加算
      * @param {BigFloat} other
      * @returns {this}
      * @throws {Error}
      */
     add(other: BigFloat): this;
     /**
-     * 減算 (非破壊)
+     * 減算
      * @param {BigFloat} other
      * @returns {this}
      * @throws {Error}
      */
     sub(other: BigFloat): this;
     /**
-     * 乗算 (非破壊)
+     * 乗算
      * @param {BigFloat} other
      * @returns {this}
      * @throws {Error}
      */
     mul(other: BigFloat): this;
     /**
-     * 除算 (非破壊)
+     * 除算
      * @param {BigFloat} other
      * @returns {this}
      * @throws {Error}
      */
     div(other: BigFloat): this;
     /**
-     * 剰余 (非破壊)
+     * 剰余
      * @param {BigFloat} other
      * @returns {this}
      * @throws {Error}
      */
     mod(other: BigFloat): this;
     /**
-     * べき乗 (非破壊)
+     * べき乗
      * @param {number | BigInt} exponent - 指数（整数のみ対応）
      * @returns {this}
      * @throws {Error}
      */
     pow(exponent: number | bigint): this;
     /**
-     * 平方根[ニュートン法] (非破壊)
+     * 平方根[ニュートン法]
      * @returns {this}
      */
     sqrt(): this;
     /**
-     * 平方根[チェビシェフ法] (非破壊)
+     * 平方根[チェビシェフ法]
      * @returns {this}
      */
     sqrtChebyshev(): this;
+    /**
+     * 自然対数 ln(x)
+     * @returns {BigFloat}
+     */
+    ln(): BigFloat;
+    /**
+     * 対数
+     * @param {BigFloat} base
+     * @returns {BigFloat}
+     */
+    log(base: BigFloat): BigFloat;
 }
 /**
  * BigFloat を作成する
