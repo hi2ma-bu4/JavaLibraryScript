@@ -89,7 +89,7 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 	 * @param {boolean} [options.allowPrecisionMismatch=false] - 精度の不一致を許容する
 	 * @param {boolean} [options.mutateResult=false] - 破壊的な計算(自身の上書き)をする (falseは新インスタンスを作成)
 	 * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
-	 * @param {BigInt} [options.extraPrecision=1n] - 追加の精度
+	 * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
 	 * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
 	 * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
 	 * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
@@ -100,7 +100,7 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		allowPrecisionMismatch = false,
 		mutateResult = false,
 		roundingMode = BigFloatConfig.ROUND_TRUNCATE,
-		extraPrecision = 1n,
+		extraPrecision = 2n,
 		piAlgorithm = BigFloatConfig.PI_CHUDNOVSKY,
 		sqrtMaxNewtonSteps = 50,
 		sqrtMaxChebyshevSteps = 30,
@@ -128,7 +128,7 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		/**
 		 * 追加の精度
 		 * @type {BigInt}
-		 * @default 1n
+		 * @default 2n
 		 */
 		this.extraPrecision = extraPrecision;
 		/**
