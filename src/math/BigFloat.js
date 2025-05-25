@@ -911,6 +911,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	/**
 	 * 正弦[Maclaurin展開]
 	 * @returns {this}
+	 * @throws {Error}
 	 */
 	sin() {
 		/** @type {typeof BigFloat} */
@@ -1018,7 +1019,6 @@ class BigFloat extends JavaLibraryScriptCore {
 	 */
 	static _trigFuncsNewton(f, df, initial, precision, maxSteps = 50) {
 		const scale = 10n ** precision;
-		const EPSILON = 10n ** (precision / 2n);
 		let x = initial;
 
 		for (let i = 0; i < maxSteps; i++) {
@@ -1029,10 +1029,10 @@ class BigFloat extends JavaLibraryScriptCore {
 
 			// dx = fx / dfx （整数で割り算）
 			// dx は分母あるから SCALEかけて割る
-			const dx = fx / dfx;
+			const dx = (fx * scale) / dfx;
 			x = x - dx;
 
-			if ((dx < 0n ? -dx : dx) < EPSILON) break; // 収束判定
+			if (dx === 0n) break; // 収束判定
 		}
 
 		return x;
@@ -1157,7 +1157,8 @@ class BigFloat extends JavaLibraryScriptCore {
 			const df = (theta) => {
 				const cosTheta = this._cos(theta, precision, maxSteps);
 				if (cosTheta === 0n) throw new Error("Derivative undefined");
-				return (scale * scale) / (cosTheta * cosTheta);
+
+				return (scale * scale * scale) / (cosTheta * cosTheta);
 			};
 			return this._trigFuncsNewton(f, df, x, precision, BigInt(maxSteps));
 		}
@@ -1193,30 +1194,37 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (x === 0n) {
 			if (y > 0n) return this._pi(precision) / 2n;
 			if (y < 0n) return -this._pi(precision) / 2n;
-			throw new Error("atan2(0, 0) is undefined");
+			return 0n;
 		}
 
-		// y == 0
-		if (y === 0n) {
-			if (x > 0n) return 0n;
-			if (x < 0n) return this._pi(precision);
-		}
 		const scale = 10n ** precision;
+		const angle = this._atan((y * scale) / x, precision, maxSteps);
 
-		const ratio = (y * scale) / x;
+		if (x > 0n) return angle;
+		if (y >= 0n) return angle + this._pi(precision);
+		return angle - this._pi(precision);
 
-		const angle = this._atan(ratio, precision, maxSteps);
+		// // y == 0
+		// if (y === 0n) {
+		// 	if (x > 0n) return 0n;
+		// 	if (x < 0n) return this._pi(precision);
+		// }
+		// const scale = 10n ** precision;
 
-		if (x > 0n) {
-			// 第1,4象限: そのまま
-			return angle;
-		}
-		const pi = this._pi(precision);
-		// 第2,3象限: πを足す
-		if (y >= 0n) {
-			return angle + pi;
-		}
-		return angle - pi;
+		// const ratio = (y * scale) / x;
+
+		// const angle = this._atan(ratio, precision, maxSteps);
+
+		// if (x > 0n) {
+		// 	// 第1,4象限: そのまま
+		// 	return angle;
+		// }
+		// const pi = this._pi(precision);
+		// // 第2,3象限: πを足す
+		// if (y >= 0n) {
+		// 	return angle + pi;
+		// }
+		// return angle - pi;
 	}
 
 	/**

@@ -1408,6 +1408,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
     /**
      * 正弦[Maclaurin展開]
      * @returns {this}
+     * @throws {Error}
      */
     sin(): this;
     /**
