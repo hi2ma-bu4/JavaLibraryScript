@@ -1003,12 +1003,11 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
      * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
      * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
-     * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
      * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
      * @param {BigInt} [options.trigFuncsMaxSteps=100n] - 三角関数の最大ステップ数
      * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
      */
-    constructor({ allowPrecisionMismatch, mutateResult, roundingMode, extraPrecision, piAlgorithm, sqrtMaxNewtonSteps, sqrtMaxChebyshevSteps, trigFuncsMaxSteps, lnMaxSteps, }?: any | BigFloatConfig);
+    constructor({ allowPrecisionMismatch, mutateResult, roundingMode, extraPrecision, piAlgorithm, sqrtMaxChebyshevSteps, trigFuncsMaxSteps, lnMaxSteps, }?: any | BigFloatConfig);
     /**
      * 精度の不一致を許容する
      * @type {boolean}
@@ -1039,12 +1038,6 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @default BigFloatConfig.PI_CHUDNOVSKY
      */
     piAlgorithm: number;
-    /**
-     * 平方根[ニュートン法]の最大ステップ数
-     * @type {number}
-     * @default 50
-     */
-    sqrtMaxNewtonSteps: number;
     /**
      * 平方根[チェビシェフ法]の最大ステップ数
      * @type {number}
@@ -1100,7 +1093,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static clone(): BigFloat;
-    static _checkMaxPrecision(precision: any): void;
+    static _checkPrecision(precision: any): void;
     /**
      * 結果を作成する
      * @param {BigInt} val
@@ -1123,35 +1116,31 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * 円周率[Gregory-Leibniz法] (超高速・超低収束)
      * @param {BigInt} [precision=20n] - 精度
      * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
-     * @returns {BigFloat}
-     * @throws {Error}
+     * @returns {BigInt}
      * @static
      */
-    static piLeibniz(precision?: bigint, mulPrecision?: bigint): BigFloat;
+    static _piLeibniz(precision?: bigint, mulPrecision?: bigint): bigint;
     /**
      * 円周率[ニュートン法] (高速・低収束)
      * @param {BigInt} [precision=20n] - 精度
-     * @param {BigInt} [mulPrecision=5n] - 計算精度の倍率 (丸め誤差の配慮)
-     * @returns {BigFloat}
-     * @throws {Error}
+     * @returns {BigInt}
      * @static
      */
-    static piNewton(precision?: bigint, mulPrecision?: bigint): BigFloat;
-    /**
-     * BigIntの平方根を計算 (高速ニュートン法)
-     * @param {BigInt} n
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     */
-    static _sqrtBigInt(n: bigint, precision: bigint): bigint;
+    static _piNewton(precision?: bigint): bigint;
     /**
      * 円周率[Chudnovsky法] (低速・高収束)
      * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigFloat}
-     * @throws {Error}
+     * @returns {BigInt}
      * @static
      */
-    static piChudnovsky(precision?: bigint): BigFloat;
+    static _piChudnovsky(precision?: bigint): bigint;
+    /**
+     * 円周率
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigInt}
+     * @static
+     */
+    static _pi(precision?: bigint): bigint;
     /**
      * 円周率
      * @param {BigInt} [precision=20n] - 精度
@@ -1177,7 +1166,24 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static e(precision?: bigint): BigFloat;
     /**
-     * 正弦
+     * 剰余
+     * @param {BigInt} x
+     * @param {BigInt} m
+     * @returns {BigInt}
+     * @static
+     */
+    static _mod(x: bigint, m: bigint): bigint;
+    /**
+     * 平方根[ニュートン法]
+     * @param {BigInt} n
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _sqrt(n: bigint, precision: bigint): bigint;
+    /**
+     * 正弦[Maclaurin展開]
      * @param {BigInt} x
      * @param {BigInt} precision
      * @param {BigInt} maxSteps
@@ -1237,6 +1243,14 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _acos(x: bigint, precision: bigint, maxSteps: bigint): bigint;
     /**
+     * 逆正接[Machine's formula]
+     * @param {BigInt} invX
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _atanMachine(invX: bigint, precision: bigint): bigint;
+    /**
      * 逆正接
      * @param {BigInt} x
      * @param {BigInt} precision
@@ -1246,7 +1260,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _atan(x: bigint, precision: bigint, maxSteps: bigint): bigint;
-    static _atan2(y: any, x: any, precision: any, maxSteps: any): any;
+    static _atan2(y: any, x: any, precision: any, maxSteps: any): bigint;
     /**
      * 自然対数[Atanh法]
      * @param {BigInt} value
@@ -1383,6 +1397,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
     /**
      * 平方根[ニュートン法]
      * @returns {this}
+     * @throws {Error}
      */
     sqrt(): this;
     /**
@@ -1391,7 +1406,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     sqrtChebyshev(): this;
     /**
-     * 正弦
+     * 正弦[Maclaurin展開]
      * @returns {this}
      */
     sin(): this;
@@ -1451,6 +1466,203 @@ declare class BigFloat extends JavaLibraryScriptCore {
  * @throws {Error}
  */
 declare function bigFloat(value: string | number | bigint | BigFloat, precision?: number): BigFloat;
+
+/**
+ * ログ出力管理クラス
+ * @class
+ */
+declare class Logger extends JavaLibraryScriptCore {
+    /**
+     * コンソールスタイルを有効にする
+     * @type {boolean}
+     * @default true
+     * @static
+     */
+    static ENABLE_CONSOLE_STYLE: boolean;
+    /**
+     * 折りたたみなしのログを有効にする
+     * @type {boolean}
+     * @default true
+     * @static
+     */
+    static ENABLE_SIMPLE_LOG: boolean;
+    /**
+     * スタックトレースを有効にする
+     * @type {boolean}
+     * @default true
+     * @static
+     */
+    static ENABLE_STACK_TRACE: boolean;
+    /**
+     * ログレベル
+     * @enum {number}
+     * @readonly
+     * @static
+     */
+    static readonly LOG_LEVEL: {
+        DEBUG: number;
+        TIME: number;
+        LOG: number;
+        WARN: number;
+        ERROR: number;
+        INFO: number;
+        IGNORE: number;
+    };
+    /**
+     * コンソールスタイル
+     * @enum {string}
+     * @readonly
+     * @static
+     */
+    static readonly CONSOLE_STYLE: {
+        DEBUG_TITLE: string;
+        DEBUG: string;
+        LOG_TITLE: string;
+        LOG: string;
+        WARN_TITLE: string;
+        WARN: string;
+        ERROR_TITLE: string;
+        ERROR: string;
+        INFO_TITLE: string;
+        INFO: string;
+        STACK_TRACE: string;
+    };
+    /**
+     * スタックトレースを取得する正規表現
+     * @type {RegExp}
+     * @readonly
+     * @static
+     */
+    static readonly STACK_TRACE_GET_REG: RegExp;
+    /**
+     * カスタムコンソールが使用可能か判定する
+     * @returns {boolean}
+     * @static
+     */
+    static _isEnableCustomConsole(): boolean;
+    /**
+     * @param {String} [prefix=""]
+     * @param {number} [visibleLevel=Logger.LOG_LEVEL.WARN]
+     */
+    constructor(prefix?: string, visibleLevel?: number);
+    /**
+     * ログの先頭の文字列
+     * @type {String}
+     */
+    _prefix: string;
+    /**
+     * 表示するログレベル
+     * @type {number}
+     */
+    _visibleLevel: number;
+    /**
+     * ログの先頭の文字列を変更する
+     * @param {String} prefix
+     */
+    setPrefix(prefix: string): void;
+    /**
+     * ログの先頭の文字列を取得する
+     * @returns {String}
+     */
+    getPrefix(): string;
+    /**
+     * 表示するログレベルを変更する
+     * @param {number} level
+     */
+    setVisibleLevel(level: number): void;
+    /**
+     * 表示するログレベルを取得する
+     * @returns {number}
+     */
+    getVisibleLevel(): number;
+    /**
+     * 表示可能なログレベルか判定する
+     * @param {number} level
+     * @returns {boolean}
+     */
+    _isVisible(level: number): boolean;
+    /**
+     * ログの先頭の文字列を生成する
+     * @returns {String}
+     */
+    _generatePrefix(): string;
+    /**
+     * ログレベルを文字列に変換する
+     * @param {number} level
+     * @returns {String | false}
+     */
+    _getLevelToString(level: number): string | false;
+    /**
+     * 呼び出し元のスタックトレースを取得する
+     * @returns {String}
+     */
+    _getTopStackTrace(): string;
+    /**
+     * ログを出力する
+     * @param {number} level
+     * @param {any[]} args
+     * @returns {boolean}
+     */
+    _levelToPrint(level: number, args: any[]): boolean;
+    /**
+     * 開発用ログ
+     * @param {...any} args
+     */
+    debug(...args: any[]): void;
+    /**
+     * 通常ログ
+     * @param {...any} args
+     */
+    log(...args: any[]): void;
+    /**
+     * 警告ログ
+     * @param {...any} args
+     */
+    warning(...args: any[]): void;
+    /**
+     * 警告ログ
+     * @param {...any} args
+     */
+    warn(...args: any[]): void;
+    /**
+     * エラーログ
+     * @param {...any} args
+     */
+    error(...args: any[]): void;
+    /**
+     * エラーログ
+     * @param {...any} args
+     */
+    err(...args: any[]): void;
+    /**
+     * 情報ログ
+     * @param {...any} args
+     */
+    information(...args: any[]): void;
+    /**
+     * 情報ログ
+     * @param {...any} args
+     */
+    info(...args: any[]): void;
+    /**
+     * タイムログ (開始)
+     * @param {String} label
+     * @returns {String}
+     */
+    time(label: string): string;
+    /**
+     * タイムログ (終了)
+     * @param {String} label
+     */
+    timeEnd(label: string): void;
+    /**
+     * クラスのインスタンスをラップする
+     * @template {Object} T
+     * @param {T} instance
+     * @returns {T}
+     */
+    wrapInstanceIO<T extends unknown>(instance: T): T;
+}
 
 /**
  * 型チェッカー
@@ -1802,7 +2014,7 @@ declare class Interface extends JavaLibraryScriptCore {
      * @type {boolean}
      * @static
      */
-    static _isDebugMode: boolean;
+    static isDebugMode: boolean;
     /**
      * エラーモード
      * @type {ErrorModeItem}
@@ -1943,13 +2155,17 @@ declare const libs: {
     ProxyManager: typeof ProxyManager;
     TypeChecker: typeof TypeChecker;
     sys: {
-        JavaLibraryScriptCore: typeof JavaLibraryScriptCore;
         symbol: {
+            LIBRARY_NAME: string;
             JavaLibraryScript: symbol;
             instanceofTarget: symbol;
+            LoggerWrapped: symbol;
             TypeAny: symbol;
             TypeVoid: symbol;
         };
+        Logger: typeof Logger;
+        logging: Logger;
+        JavaLibraryScriptCore: typeof JavaLibraryScriptCore;
     };
 };
 declare const math: {

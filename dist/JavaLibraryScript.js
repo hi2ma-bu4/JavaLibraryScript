@@ -294,6 +294,7 @@ module.exports = {
 
 },{"../libs/sys/JavaLibraryScriptCore":9}],2:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const { logging } = require("../libs/sys/Logger");
 const TypeChecker = require("../libs/TypeChecker");
 const { _EnumItem, Enum } = require("./Enum");
 
@@ -323,7 +324,7 @@ class Interface extends JavaLibraryScriptCore {
 	 * @type {boolean}
 	 * @static
 	 */
-	static _isDebugMode = false;
+	static isDebugMode = false;
 
 	/**
 	 * エラーモード
@@ -364,7 +365,7 @@ class Interface extends JavaLibraryScriptCore {
 			case ErrorMode.throw:
 				throw new error(message);
 			case ErrorMode.log:
-				console.warn("[Interface Warning]", message);
+				logging.warn("[Interface Warning]", message);
 				break;
 			case ErrorMode.ignore:
 				break;
@@ -431,7 +432,7 @@ class Interface extends JavaLibraryScriptCore {
 				}
 				super(...args);
 
-				if (!Interface._isDebugMode) return;
+				if (!Interface.isDebugMode) return;
 
 				const proto = Object.getPrototypeOf(this);
 				const defs = proto.__interfaceTypes || {};
@@ -579,7 +580,7 @@ class Interface extends JavaLibraryScriptCore {
 
 module.exports = Interface;
 
-},{"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9,"./Enum":1}],3:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/Logger":10,"./Enum":1}],3:[function(require,module,exports){
 module.exports = {
     ...require("./Enum.js"),
     Interface: require("./Interface.js")
@@ -593,7 +594,7 @@ module.exports = {
     util: require("./util/index.js")
 };
 
-},{"./base/index.js":3,"./libs/index.js":8,"./math/index.js":15,"./util/index.js":22}],5:[function(require,module,exports){
+},{"./base/index.js":3,"./libs/index.js":8,"./math/index.js":16,"./util/index.js":23}],5:[function(require,module,exports){
 const SymbolDict = require("./sys/symbol/SymbolDict");
 const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
 const ProxyManager = require("./ProxyManager");
@@ -737,7 +738,7 @@ class IndexProxy extends JavaLibraryScriptCore {
 
 module.exports = IndexProxy;
 
-},{"./ProxyManager":6,"./TypeChecker":7,"./sys/JavaLibraryScriptCore":9,"./sys/symbol/SymbolDict":11}],6:[function(require,module,exports){
+},{"./ProxyManager":6,"./TypeChecker":7,"./sys/JavaLibraryScriptCore":9,"./sys/symbol/SymbolDict":12}],6:[function(require,module,exports){
 const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
 
 /**
@@ -1019,7 +1020,7 @@ class TypeChecker extends JavaLibraryScriptCore {
 
 module.exports = TypeChecker;
 
-},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/symbol/SymbolDict":11}],8:[function(require,module,exports){
+},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/symbol/SymbolDict":12}],8:[function(require,module,exports){
 module.exports = {
     IndexProxy: require("./IndexProxy.js"),
     ProxyManager: require("./ProxyManager.js"),
@@ -1027,7 +1028,7 @@ module.exports = {
     sys: require("./sys/index.js")
 };
 
-},{"./IndexProxy.js":5,"./ProxyManager.js":6,"./TypeChecker.js":7,"./sys/index.js":10}],9:[function(require,module,exports){
+},{"./IndexProxy.js":5,"./ProxyManager.js":6,"./TypeChecker.js":7,"./sys/index.js":11}],9:[function(require,module,exports){
 const SymbolDict = require("./symbol/SymbolDict");
 
 /**
@@ -1041,13 +1042,472 @@ class JavaLibraryScriptCore {
 
 module.exports = JavaLibraryScriptCore;
 
-},{"./symbol/SymbolDict":11}],10:[function(require,module,exports){
+},{"./symbol/SymbolDict":12}],10:[function(require,module,exports){
+const SymbolDict = require("./symbol/SymbolDict");
+const JavaLibraryScriptCore = require("./JavaLibraryScriptCore");
+
+/**
+ * ログ出力管理クラス
+ * @class
+ */
+class Logger extends JavaLibraryScriptCore {
+	/**
+	 * コンソールスタイルを有効にする
+	 * @type {boolean}
+	 * @default true
+	 * @static
+	 */
+	static ENABLE_CONSOLE_STYLE = this._isEnableCustomConsole();
+	/**
+	 * 折りたたみなしのログを有効にする
+	 * @type {boolean}
+	 * @default true
+	 * @static
+	 */
+	static ENABLE_SIMPLE_LOG = true;
+	/**
+	 * スタックトレースを有効にする
+	 * @type {boolean}
+	 * @default true
+	 * @static
+	 */
+	static ENABLE_STACK_TRACE = true;
+
+	/**
+	 * ログレベル
+	 * @enum {number}
+	 * @readonly
+	 * @static
+	 */
+	static LOG_LEVEL = {
+		DEBUG: 0,
+		TIME: 1,
+		LOG: 3,
+		WARN: 5,
+		ERROR: 7,
+		INFO: 9,
+		IGNORE: 11,
+	};
+	/**
+	 * コンソールスタイル
+	 * @enum {string}
+	 * @readonly
+	 * @static
+	 */
+	static CONSOLE_STYLE = {
+		DEBUG_TITLE: "color: gray;font-weight: normal;",
+		DEBUG: "color: gray;",
+		LOG_TITLE: "color: teal;font-weight: normal;",
+		LOG: "color: teal;",
+		WARN_TITLE: "background-color: #fef6d5;font-weight: normal;",
+		WARN: "",
+		ERROR_TITLE: "background-color: #fcebeb;font-weight: normal;",
+		ERROR: "",
+		INFO_TITLE: "color: blue;font-weight: normal;",
+		INFO: "font-family: serif;",
+		STACK_TRACE: "font-size: 0.8em;color: darkblue;",
+	};
+	/**
+	 * スタックトレースを取得する正規表現
+	 * @type {RegExp}
+	 * @readonly
+	 * @static
+	 */
+	static STACK_TRACE_GET_REG = /at (?:.+? )?\(?(.+):(\d+):(?:\d+)\)?/;
+
+	/**
+	 * @param {String} [prefix=""]
+	 * @param {number} [visibleLevel=Logger.LOG_LEVEL.WARN]
+	 */
+	constructor(prefix = "", visibleLevel = Logger.LOG_LEVEL.WARN) {
+		super();
+
+		/**
+		 * ログの先頭の文字列
+		 * @type {String}
+		 */
+		this._prefix = prefix;
+		/**
+		 * 表示するログレベル
+		 * @type {number}
+		 */
+		this._visibleLevel = visibleLevel;
+	}
+
+	/**
+	 * ログの先頭の文字列を変更する
+	 * @param {String} prefix
+	 */
+	setPrefix(prefix) {
+		this._prefix = prefix;
+	}
+	/**
+	 * ログの先頭の文字列を取得する
+	 * @returns {String}
+	 */
+	getPrefix() {
+		return this._prefix;
+	}
+
+	/**
+	 * 表示するログレベルを変更する
+	 * @param {number} level
+	 */
+	setVisibleLevel(level) {
+		this._visibleLevel = level;
+	}
+	/**
+	 * 表示するログレベルを取得する
+	 * @returns {number}
+	 */
+	getVisibleLevel() {
+		return this._visibleLevel;
+	}
+
+	/**
+	 * カスタムコンソールが使用可能か判定する
+	 * @returns {boolean}
+	 * @static
+	 */
+	static _isEnableCustomConsole() {
+		const t = navigator?.userAgent?.toLowerCase();
+		if (!t) return false;
+		return /(chrome|firefox|safari)/.test(t);
+	}
+
+	/**
+	 * 表示可能なログレベルか判定する
+	 * @param {number} level
+	 * @returns {boolean}
+	 */
+	_isVisible(level) {
+		return level >= this._visibleLevel;
+	}
+
+	/**
+	 * ログの先頭の文字列を生成する
+	 * @returns {String}
+	 */
+	_generatePrefix() {
+		if (!this._prefix) return "";
+		return `[${this._prefix}] `;
+	}
+
+	/**
+	 * ログレベルを文字列に変換する
+	 * @param {number} level
+	 * @returns {String | false}
+	 */
+	_getLevelToString(level) {
+		/** @type {typeof Logger.LOG_LEVEL} */
+		const LOG_LEVEL = this.constructor.LOG_LEVEL;
+		switch (level) {
+			case LOG_LEVEL.DEBUG:
+				return "DEBUG";
+			case LOG_LEVEL.LOG:
+				return "LOG";
+			case LOG_LEVEL.WARN:
+				return "WARN";
+			case LOG_LEVEL.ERROR:
+				return "ERROR";
+			case LOG_LEVEL.INFO:
+				return "INFO";
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * 呼び出し元のスタックトレースを取得する
+	 * @returns {String}
+	 */
+	_getTopStackTrace() {
+		const stackLines = new Error().stack.split("\n");
+		/** @type {typeof Logger} */
+		const construct = this.constructor;
+		const className = construct.name;
+		const LibName = SymbolDict.LIBRARY_NAME;
+
+		const reg = new RegExp(`(?:^|\\W)(?:${className}|${LibName})\\.`);
+
+		// Logger.* 系のフレームを飛ばす
+		let callerLine = "";
+		for (let i = 1; i < stackLines.length; i++) {
+			const line = stackLines[i];
+			if (!reg.test(line)) {
+				callerLine = line.trim();
+				break;
+			}
+		}
+		const match = callerLine.match(construct.STACK_TRACE_GET_REG);
+		let location = "";
+		if (match) {
+			const filePath = match[1];
+			const lineNumber = match[2];
+
+			const parts = filePath.split(/[\\/]/);
+			const shortPath = parts.slice(-1).join("/");
+			location = `${shortPath}:${lineNumber}`;
+		}
+
+		return location;
+	}
+
+	/**
+	 * ログを出力する
+	 * @param {number} level
+	 * @param {any[]} args
+	 * @returns {boolean}
+	 */
+	_levelToPrint(level, args) {
+		if (!this._isVisible(level)) return true;
+
+		const levelStr = this._getLevelToString(level);
+		if (!levelStr) return false;
+
+		/** @type {typeof Logger} */
+		const construct = this.constructor;
+
+		let logFunc,
+			title_prefix = "";
+		/** @type {typeof Logger.LOG_LEVEL} */
+		const LOG_LEVEL = construct.LOG_LEVEL;
+		switch (level) {
+			case LOG_LEVEL.DEBUG:
+			case LOG_LEVEL.LOG:
+				logFunc = console.log.bind(console);
+				break;
+			case LOG_LEVEL.WARN:
+				logFunc = console.warn.bind(console);
+				title_prefix = "⚠️";
+				break;
+			case LOG_LEVEL.ERROR:
+				logFunc = console.error.bind(console);
+				title_prefix = "🛑";
+				break;
+			case LOG_LEVEL.INFO:
+				logFunc = console.info.bind(console);
+				title_prefix = "ℹ️";
+				break;
+			default:
+				logFunc = console.log.bind(console);
+		}
+
+		const format = args.map((a) => (typeof a === "string" ? "%s" : "%o")).join(" ");
+		/** @type {typeof Logger.CONSOLE_STYLE} */
+		const console_style = construct.CONSOLE_STYLE;
+
+		let stackTrace = "";
+		if (construct.ENABLE_STACK_TRACE) {
+			stackTrace = this._getTopStackTrace();
+		}
+
+		if (construct.ENABLE_SIMPLE_LOG) {
+			let stackName = "";
+			if (stackTrace) {
+				stackName = `[${stackTrace}]\n`;
+			}
+			if (construct.ENABLE_CONSOLE_STYLE) {
+				logFunc(
+					// 通常表示
+					`%c%s%c${this._generatePrefix()}${format}`,
+					console_style.STACK_TRACE,
+					stackName,
+					console_style[levelStr],
+					...args
+				);
+			} else {
+				logFunc(
+					// 通常表示
+					`%s${format}`,
+					stackName,
+					...args
+				);
+			}
+			return true;
+		}
+
+		if (construct.ENABLE_CONSOLE_STYLE) {
+			console.groupCollapsed(
+				// タイトル表示
+				`%c${this._generatePrefix()}${title_prefix}${format}`,
+				console_style[`${levelStr}_TITLE`],
+				...args
+			);
+		} else {
+			console.groupCollapsed(
+				// タイトル表示
+				`${this._generatePrefix()}${title_prefix}${format}`,
+				...args
+			);
+		}
+
+		if (stackTrace) {
+			if (construct.ENABLE_CONSOLE_STYLE) {
+				console.log(`%c[%s]`, console_style.STACK_TRACE, stackTrace);
+			} else {
+				console.log(`[%s]`, stackTrace);
+			}
+		}
+		if (construct.ENABLE_CONSOLE_STYLE) {
+			logFunc(
+				// 内部表示
+				`%c${format}`,
+				console_style[levelStr],
+				...args
+			);
+		} else {
+			logFunc(
+				// 内部表示
+				`${format}`,
+				...args
+			);
+		}
+		console.groupEnd();
+
+		return true;
+	}
+
+	/**
+	 * 開発用ログ
+	 * @param {...any} args
+	 */
+	debug(...args) {
+		const level = this.constructor.LOG_LEVEL.DEBUG;
+		this._levelToPrint(level, args);
+	}
+	/**
+	 * 通常ログ
+	 * @param {...any} args
+	 */
+	log(...args) {
+		const level = this.constructor.LOG_LEVEL.LOG;
+		this._levelToPrint(level, args);
+	}
+	/**
+	 * 警告ログ
+	 * @param {...any} args
+	 */
+	warning(...args) {
+		const level = this.constructor.LOG_LEVEL.WARN;
+		this._levelToPrint(level, args);
+	}
+	/**
+	 * 警告ログ
+	 * @param {...any} args
+	 */
+	warn(...args) {
+		this.warning(...args);
+	}
+	/**
+	 * エラーログ
+	 * @param {...any} args
+	 */
+	error(...args) {
+		const level = this.constructor.LOG_LEVEL.ERROR;
+		this._levelToPrint(level, args);
+	}
+	/**
+	 * エラーログ
+	 * @param {...any} args
+	 */
+	err(...args) {
+		this.error(...args);
+	}
+	/**
+	 * 情報ログ
+	 * @param {...any} args
+	 */
+	information(...args) {
+		const level = this.constructor.LOG_LEVEL.INFO;
+		this._levelToPrint(level, args);
+	}
+	/**
+	 * 情報ログ
+	 * @param {...any} args
+	 */
+	info(...args) {
+		this.information(...args);
+	}
+	/**
+	 * タイムログ (開始)
+	 * @param {String} label
+	 * @returns {String}
+	 */
+	time(label) {
+		const level = this.constructor.LOG_LEVEL.TIME;
+		if (this._isVisible(level)) {
+			const str = `${this._generatePrefix()}${label}`;
+			console.log(`${str}: Start`);
+			console.time(str);
+		}
+		return label;
+	}
+	/**
+	 * タイムログ (終了)
+	 * @param {String} label
+	 */
+	timeEnd(label) {
+		const level = this.constructor.LOG_LEVEL.TIME;
+		if (this._isVisible(level)) {
+			console.timeEnd(`${this._generatePrefix()}${label}`);
+		}
+	}
+
+	/**
+	 * クラスのインスタンスをラップする
+	 * @template {Object} T
+	 * @param {T} instance
+	 * @returns {T}
+	 */
+	wrapInstanceIO(instance) {
+		// すでにラップ済みならそのまま返す
+		if (instance[SymbolDict.LoggerWrapped]) return instance;
+
+		const Log = this;
+		const classRef = instance.constructor;
+		const className = classRef.name;
+		const proxy = new Proxy(instance, {
+			get(target, prop, receiver) {
+				const value = target[prop];
+				if (typeof value === "function") {
+					return (...args) => {
+						Log.debug(`call ${className}.${prop}:`, args);
+						const result = value.apply(target, args);
+
+						// 戻り値が同じクラスのインスタンスなら再ラップ
+						if (result instanceof classRef) {
+							return Log.wrapInstanceIO(result, classRef);
+						}
+
+						return result;
+					};
+				}
+				return value;
+			},
+		});
+
+		proxy[SymbolDict.LoggerWrapped] = true;
+		return proxy;
+	}
+}
+
+/**
+ * 内容ログ出力用のインスタンス
+ * @type {Logger}
+ */
+const logging = new Logger("JLS", Logger.LOG_LEVEL.LOG);
+
+module.exports = { Logger, logging };
+
+},{"./JavaLibraryScriptCore":9,"./symbol/SymbolDict":12}],11:[function(require,module,exports){
 module.exports = {
     JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js"),
+    ...require("./Logger.js"),
     symbol: require("./symbol/index.js")
 };
 
-},{"./JavaLibraryScriptCore.js":9,"./symbol/index.js":12}],11:[function(require,module,exports){
+},{"./JavaLibraryScriptCore.js":9,"./Logger.js":10,"./symbol/index.js":13}],12:[function(require,module,exports){
 /**
  * Symbolの共通プレフィックス
  * @type {string}
@@ -1055,15 +1515,21 @@ module.exports = {
  */
 const prefix = "@@JLS_";
 
+const LIBRARY_NAME = "JavaLibraryScript";
+
 /**
  * 内部利用Symbolの辞書
  * @enum {Symbol}
  * @readonly
  */
 const SYMBOL_DICT = {
+	// 定数
+	/** @type {string} */
+	LIBRARY_NAME,
 	// 公開
-	JavaLibraryScript: Symbol.for(`${prefix}JavaLibraryScript`),
+	JavaLibraryScript: Symbol.for(`${prefix}${LIBRARY_NAME}`),
 	instanceofTarget: Symbol.for(`${prefix}instanceofTarget`),
+	LoggerWrapped: Symbol.for(`${prefix}LoggerWrapped`),
 	// 内部
 	TypeAny: Symbol("Any"),
 	TypeVoid: Symbol("Void"),
@@ -1071,12 +1537,12 @@ const SYMBOL_DICT = {
 
 module.exports = SYMBOL_DICT;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 module.exports = {
     ...require("./SymbolDict.js")
 };
 
-},{"./SymbolDict.js":11}],13:[function(require,module,exports){
+},{"./SymbolDict.js":12}],14:[function(require,module,exports){
 const JavaLibraryScript = require("./index");
 
 if (typeof window !== "undefined") {
@@ -1085,8 +1551,9 @@ if (typeof window !== "undefined") {
 
 module.exports = JavaLibraryScript;
 
-},{"./index":4}],14:[function(require,module,exports){
+},{"./index":4}],15:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const { logging } = require("../libs/sys/Logger");
 
 /**
  * BigFloat の設定
@@ -1179,7 +1646,6 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 	 * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
 	 * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
 	 * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
-	 * @param {number} [options.sqrtMaxNewtonSteps=50] - 平方根[ニュートン法]の最大ステップ数
 	 * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
 	 * @param {BigInt} [options.trigFuncsMaxSteps=100n] - 三角関数の最大ステップ数
 	 * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
@@ -1191,7 +1657,6 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		roundingMode = BigFloatConfig.ROUND_TRUNCATE,
 		extraPrecision = 2n,
 		piAlgorithm = BigFloatConfig.PI_CHUDNOVSKY,
-		sqrtMaxNewtonSteps = 50,
 		sqrtMaxChebyshevSteps = 30,
 		trigFuncsMaxSteps = 100n,
 		lnMaxSteps = 10000n,
@@ -1227,12 +1692,6 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		 * @default BigFloatConfig.PI_CHUDNOVSKY
 		 */
 		this.piAlgorithm = piAlgorithm;
-		/**
-		 * 平方根[ニュートン法]の最大ステップ数
-		 * @type {number}
-		 * @default 50
-		 */
-		this.sqrtMaxNewtonSteps = sqrtMaxNewtonSteps;
 		/**
 		 * 平方根[チェビシェフ法]の最大ステップ数
 		 * @type {number}
@@ -1313,7 +1772,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		this._precision = BigInt(precision);
 		/** @type {typeof BigFloat} */
 		const construct = this.constructor;
-		construct._checkMaxPrecision(this._precision);
+		construct._checkPrecision(this._precision);
 
 		if (!value) {
 			this.value = 0n;
@@ -1369,7 +1828,10 @@ class BigFloat extends JavaLibraryScriptCore {
 		return Number(this.toString());
 	}
 
-	static _checkMaxPrecision(precision) {
+	static _checkPrecision(precision) {
+		if (precision < 0n) {
+			throw new RangeError(`Precision must be greater than 0`);
+		}
 		if (precision > this.MAX_PRECISION) {
 			throw new RangeError(`Precision exceeds ${this.name}.MAX_PRECISION`);
 		}
@@ -1532,20 +1994,12 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * 円周率[Gregory-Leibniz法] (超高速・超低収束)
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
-	 * @returns {BigFloat}
-	 * @throws {Error}
+	 * @returns {BigInt}
 	 * @static
 	 */
-	static piLeibniz(precision = 20n, mulPrecision = 100n) {
-		precision = BigInt(precision);
-		this._checkMaxPrecision(precision);
-		mulPrecision = BigInt(mulPrecision);
-
-		const exPr = this.config.extraPrecision;
-		const totalPr = precision + exPr;
-
-		const scale = 10n ** totalPr;
-		const iterations = totalPr * mulPrecision;
+	static _piLeibniz(precision = 20n, mulPrecision = 100n) {
+		const scale = 10n ** precision;
+		const iterations = precision * mulPrecision;
 		let sum = 0n;
 
 		const scale_4 = scale * 4n;
@@ -1561,99 +2015,39 @@ class BigFloat extends JavaLibraryScriptCore {
 			sum += i % TWO === ZERO ? term : -term;
 		}
 
-		return this._makeResult(sum, precision, totalPr);
+		return sum;
 	}
 
 	/**
 	 * 円周率[ニュートン法] (高速・低収束)
 	 * @param {BigInt} [precision=20n] - 精度
-	 * @param {BigInt} [mulPrecision=5n] - 計算精度の倍率 (丸め誤差の配慮)
-	 * @returns {BigFloat}
-	 * @throws {Error}
+	 * @returns {BigInt}
 	 * @static
 	 */
-	static piNewton(precision = 20n, mulPrecision = 5n) {
-		precision = BigInt(precision);
-		this._checkMaxPrecision(precision);
-		mulPrecision = BigInt(mulPrecision);
+	static _piNewton(precision = 20n) {
+		const EXTRA = 10n;
+		const prec = precision + EXTRA;
 
-		const exPr = this.config.extraPrecision * mulPrecision;
-		const totalPr = precision + exPr;
-
-		const scale = 10n ** totalPr;
-
-		function arcTan(invX) {
-			const x = scale / invX;
-			const x2 = (x * x) / scale;
-			let term = x;
-			let sum = term;
-			let sign = -1n;
-			let n = 3n;
-
-			let lastTerm = 0n;
-			while (true) {
-				term = (term * x2) / scale;
-				if (term === lastTerm) break;
-				lastTerm = term;
-				sum += (sign * term) / n;
-				sign = -sign;
-				n += 2n;
-			}
-
-			return sum;
-		}
-
-		const atan1_5 = arcTan(5n);
-		const atan1_239 = arcTan(239n);
+		const atan1_5 = this._atanMachine(5n, prec);
+		const atan1_239 = this._atanMachine(239n, prec);
 
 		const value = 16n * atan1_5 - 4n * atan1_239;
 
-		return this._makeResult(value, precision, totalPr);
-	}
-
-	/**
-	 * BigIntの平方根を計算 (高速ニュートン法)
-	 * @param {BigInt} n
-	 * @param {BigInt} precision
-	 * @returns {BigInt}
-	 */
-	static _sqrtBigInt(n, precision) {
-		const TWO = 2n;
-		const TEN = 10n;
-
-		const scale = TEN ** precision;
-		const nScaled = n * scale;
-		let x = nScaled;
-
-		let last;
-		while (true) {
-			last = x;
-			x = (x + nScaled / x) / TWO;
-			if (x === last || (x > last ? x - last : last - x) <= 1n) break;
-		}
-
-		return x;
+		return value / 10n ** EXTRA;
 	}
 
 	/**
 	 * 円周率[Chudnovsky法] (低速・高収束)
 	 * @param {BigInt} [precision=20n] - 精度
-	 * @returns {BigFloat}
-	 * @throws {Error}
+	 * @returns {BigInt}
 	 * @static
 	 */
-	static piChudnovsky(precision = 20n) {
-		precision = BigInt(precision);
-		this._checkMaxPrecision(precision);
-
-		const exPr = this.config.extraPrecision;
-		const totalPr = precision + exPr;
-
-		const scale = 10n ** totalPr;
+	static _piChudnovsky(precision = 20n) {
+		const scale = 10n ** precision;
 		const digitsPerTerm = 14n;
-		const terms = totalPr / digitsPerTerm + 1n;
+		const terms = precision / digitsPerTerm + 1n;
 
-		const C = 426880n * this._sqrtBigInt(10005n * scale, totalPr);
+		const C = 426880n * this._sqrt(10005n * scale, precision);
 		let sum = 0n;
 
 		function factorial(n) {
@@ -1676,12 +2070,55 @@ class BigFloat extends JavaLibraryScriptCore {
 		}
 
 		if (sum === 0n) {
-			console.error("Chudnovsky法の計算に失敗しました");
-			return this._makeResult(0n, precision);
+			logging.error("Chudnovsky法の計算に失敗しました");
+			return 0n;
 		}
 
 		const piInv = (C * scale) / sum; // C / sum = π⁻¹ → π = 1/π⁻¹
-		return this._makeResult(piInv, precision, totalPr);
+		return piInv;
+	}
+
+	/**
+	 * 円周率
+	 * @param {BigInt} [precision=20n] - 精度
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _pi(precision) {
+		const piAlgorithm = this.config.piAlgorithm;
+		const cachedPi = this._cachedPi;
+		if (cachedPi && cachedPi.piAlgorithm === piAlgorithm && cachedPi.precision >= precision) {
+			return this._round(cachedPi.value, cachedPi.precision, precision);
+		}
+
+		let piRet;
+		switch (piAlgorithm) {
+			case BigFloatConfig.PI_CHUDNOVSKY:
+				piRet = this._piChudnovsky(precision);
+				break;
+			case BigFloatConfig.PI_NEWTON:
+				piRet = this._piNewton(precision);
+				break;
+			case BigFloatConfig.PI_LEIBNIZ:
+				piRet = this._piLeibniz(precision);
+				break;
+			case BigFloatConfig.PI_MATH_DEFAULT:
+			default:
+				this._checkPrecision(precision);
+				return new this(`${Math.PI}`, precision).value;
+		}
+
+		/**
+		 * キャッシュ
+		 * @type {{precision: BigInt, value: BigInt, piAlgorithm: number}}
+		 */
+		this._cachedPi = {
+			precision: precision,
+			value: piRet,
+			piAlgorithm: piAlgorithm,
+		};
+
+		return piRet;
 	}
 
 	/**
@@ -1692,16 +2129,13 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static pi(precision = 20n) {
-		switch (this.config.piAlgorithm) {
-			case BigFloatConfig.PI_CHUDNOVSKY:
-				return this.piChudnovsky(precision);
-			case BigFloatConfig.PI_NEWTON:
-				return this.piNewton(precision);
-			case BigFloatConfig.PI_LEIBNIZ:
-				return this.piLeibniz(precision);
-		}
-		// BigFloatConfig.PI_MATH_DEFAULT
-		return new this(`${Math.PI}`, precision);
+		precision = BigInt(precision);
+		this._checkPrecision(precision);
+
+		const piRet = new this();
+		piRet.value = this._pi(precision);
+		piRet._precision = precision;
+		return piRet;
 	}
 
 	/**
@@ -1735,7 +2169,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 */
 	static e(precision = 20n) {
 		precision = BigInt(precision);
-		this._checkMaxPrecision(precision);
+		this._checkPrecision(precision);
 
 		const exPr = this.config.extraPrecision;
 		const totalPr = precision + exPr;
@@ -1829,13 +2263,25 @@ class BigFloat extends JavaLibraryScriptCore {
 
 	/**
 	 * 剰余
+	 * @param {BigInt} x
+	 * @param {BigInt} m
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _mod(x, m) {
+		const r = x % m;
+		return r < 0n ? r + m : r;
+	}
+
+	/**
+	 * 剰余
 	 * @param {BigFloat} other
 	 * @returns {this}
 	 * @throws {Error}
 	 */
 	mod(other) {
 		const [valA, valB, prec] = this._rescaleToMatch(other);
-		const result = valA % valB;
+		const result = this.constructor._mod(valA, valB);
 		return this._makeResult(result, prec);
 	}
 
@@ -1880,35 +2326,46 @@ class BigFloat extends JavaLibraryScriptCore {
 
 	/**
 	 * 平方根[ニュートン法]
+	 * @param {BigInt} n
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _sqrt(n, precision) {
+		if (n < 0n) throw new Error("Cannot compute square root of negative number");
+		if (n === 0n) return 0n;
+
+		const scale = 10n ** precision;
+		const nScaled = n * scale;
+		const TWO = 2n;
+
+		let x = nScaled;
+
+		let last;
+		while (true) {
+			last = x;
+			x = (x + nScaled / x) / TWO;
+			if (x === last || (x > last ? x - last : last - x) <= 1n) break;
+		}
+
+		return x;
+	}
+
+	/**
+	 * 平方根[ニュートン法]
 	 * @returns {this}
+	 * @throws {Error}
 	 */
 	sqrt() {
-		let val = this.value;
-		if (val < 0n) throw new Error("Cannot compute square root of negative number");
-
-		/** @type {BigFloatConfig} */
-		const config = this.constructor.config;
-		const maxSteps = config.sqrtMaxNewtonSteps;
-		const exPr = config.extraPrecision;
-
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const exPr = construct.config.extraPrecision;
 		const prec = this._precision;
 		const totalPr = prec + exPr;
-		const scale = 10n ** totalPr;
-		val *= 10n ** exPr;
-		const TWO = 2n;
-		const VAL_SCALE = val * scale;
+		const val = this.value * 10n ** exPr;
 
-		// 初期近似 x = A / 2
-		let x = val / TWO;
-		if (x === 0n) x = 1n; // 小さい数のための補正
-
-		let lastX = 0n;
-
-		// ニュートン法反復
-		for (let i = 0; i < maxSteps && x !== lastX; i++) {
-			lastX = x;
-			x = (x + VAL_SCALE / x) / TWO;
-		}
+		const x = construct._sqrt(val, totalPr);
 
 		return this._makeResult(x, prec, totalPr);
 	}
@@ -1958,7 +2415,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
-	 * 正弦
+	 * 正弦[Maclaurin展開]
 	 * @param {BigInt} x
 	 * @param {BigInt} precision
 	 * @param {BigInt} maxSteps
@@ -1968,10 +2425,28 @@ class BigFloat extends JavaLibraryScriptCore {
 	static _sin(x, precision, maxSteps) {
 		const scale = 10n ** precision;
 
+		const pi = this._pi(precision);
+		const twoPi = 2n * pi;
+		const halfPi = pi / 2n;
+
+		// xを[0, 2π)に
+		x = this._mod(x, twoPi);
+		// xを[-π, π]に
+		if (x > pi) x -= twoPi;
+		// xを[-π/2, π/2]に
+		let sign = 1n;
+		if (x > halfPi) {
+			x = pi - x;
+			sign = 1n;
+		} else if (x < -halfPi) {
+			x = -pi - x;
+			sign = -1n;
+		}
+
 		let term = x; // x^1 / 1!
 		let result = term;
 		let x2 = (x * x) / scale;
-		let sign = -1n;
+		let sgn = -1n;
 
 		for (let n = 1n; n <= maxSteps; n++) {
 			const denom = 2n * n;
@@ -1981,14 +2456,14 @@ class BigFloat extends JavaLibraryScriptCore {
 
 			if (term === 0n) break;
 
-			result += sign * term;
-			sign *= -1n;
+			result += sgn * term;
+			sgn *= -1n;
 		}
-		return result;
+		return result * sign;
 	}
 
 	/**
-	 * 正弦
+	 * 正弦[Maclaurin展開]
 	 * @returns {this}
 	 */
 	sin() {
@@ -2130,7 +2605,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		const scale = 10n ** precision;
 		if (x > scale || x < -scale) throw new Error("asin input out of range [-1,1]");
 
-		const halfPi = this.pi(precision).value / 2n;
+		const halfPi = this._pi(precision) / 2n;
 		// 初期値を x * π/2 にして必ず [-π/2, π/2] に収める
 		const initial = (x * halfPi) / scale;
 
@@ -2167,7 +2642,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static _acos(x, precision, maxSteps) {
-		const halfPi = this.pi(precision).value / 2n;
+		const halfPi = this._pi(precision) / 2n;
 		const asinX = this._asin(x, precision, maxSteps);
 		return halfPi - asinX;
 	}
@@ -2188,6 +2663,33 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		const result = construct._acos(val, totalPr, maxSteps);
 		return this._makeResult(result, this._precision, totalPr);
+	}
+
+	/**
+	 * 逆正接[Machine's formula]
+	 * @param {BigInt} invX
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _atanMachine(invX, precision) {
+		const scale = 10n ** precision;
+
+		const x = scale / invX;
+		const x2 = (x * x) / scale;
+		let term = x;
+		let sum = term;
+		let sign = -1n;
+
+		let lastTerm = 0n;
+		for (let n = 3n; term !== lastTerm; n += 2n) {
+			term = (term * x2) / scale;
+			lastTerm = term;
+			sum += (sign * term) / n;
+			sign *= -1n;
+		}
+
+		return sum;
 	}
 
 	/**
@@ -2216,7 +2718,7 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		// |x| > 1 → atan(x) = sign * (π/2 - atan(1 / |x|))
 		const sign = x < 0n ? -1n : 1n;
-		const halfPi = this.pi(precision).value / 2n;
+		const halfPi = this._pi(precision) / 2n;
 		const invX = (scale * scale) / absX;
 		const innerAtan = this._atan(invX, precision, maxSteps);
 		return sign * (halfPi - innerAtan);
@@ -2243,15 +2745,15 @@ class BigFloat extends JavaLibraryScriptCore {
 	static _atan2(y, x, precision, maxSteps) {
 		// x == 0
 		if (x === 0n) {
-			if (y > 0n) return this.pi(precision).value / 2n;
-			if (y < 0n) return -this.pi(precision).value / 2n;
+			if (y > 0n) return this._pi(precision) / 2n;
+			if (y < 0n) return -this._pi(precision) / 2n;
 			throw new Error("atan2(0, 0) is undefined");
 		}
 
 		// y == 0
 		if (y === 0n) {
 			if (x > 0n) return 0n;
-			if (x < 0n) return this.pi(precision).value;
+			if (x < 0n) return this._pi(precision);
 		}
 		const scale = 10n ** precision;
 
@@ -2263,7 +2765,7 @@ class BigFloat extends JavaLibraryScriptCore {
 			// 第1,4象限: そのまま
 			return angle;
 		}
-		const pi = this.pi(precision).value;
+		const pi = this._pi(precision);
 		// 第2,3象限: πを足す
 		if (y >= 0n) {
 			return angle + pi;
@@ -2429,12 +2931,12 @@ module.exports = {
 	bigFloat,
 };
 
-},{"../libs/sys/JavaLibraryScriptCore":9}],15:[function(require,module,exports){
+},{"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/Logger":10}],16:[function(require,module,exports){
 module.exports = {
     ...require("./BigFloat.js")
 };
 
-},{"./BigFloat.js":14}],16:[function(require,module,exports){
+},{"./BigFloat.js":15}],17:[function(require,module,exports){
 const IndexProxy = require("../libs/IndexProxy");
 const ListInterface = require("./ListInterface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -2674,7 +3176,7 @@ function arrayList(ValueType, collection) {
 
 module.exports = { ArrayList, arrayList };
 
-},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":19,"./stream/Stream":26,"./stream/StreamChecker":27}],17:[function(require,module,exports){
+},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":20,"./stream/Stream":27,"./stream/StreamChecker":28}],18:[function(require,module,exports){
 const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
 const EntryStream = require("./stream/EntryStream");
@@ -2874,7 +3376,7 @@ class HashMap extends MapInterface {
 
 module.exports = HashMap;
 
-},{"../libs":8,"./MapInterface":20,"./stream/EntryStream":24}],18:[function(require,module,exports){
+},{"../libs":8,"./MapInterface":21,"./stream/EntryStream":25}],19:[function(require,module,exports){
 const SetInterface = require("./SetInterface");
 const TypeChecker = require("../libs/TypeChecker");
 const StreamChecker = require("./stream/StreamChecker");
@@ -3078,7 +3580,7 @@ class HashSet extends SetInterface {
 
 module.exports = HashSet;
 
-},{"../libs/TypeChecker":7,"./SetInterface":21,"./stream/Stream":26,"./stream/StreamChecker":27}],19:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"./SetInterface":22,"./stream/Stream":27,"./stream/StreamChecker":28}],20:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -3139,7 +3641,7 @@ ListInterface = Interface.convert(ListInterface, {
 
 module.exports = ListInterface;
 
-},{"../base/Interface":2,"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9}],20:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9}],21:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -3215,7 +3717,7 @@ MapInterface = Interface.convert(MapInterface, {
 
 module.exports = MapInterface;
 
-},{"../base/Interface":2,"../libs/TypeChecker":7}],21:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":7}],22:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -3275,7 +3777,7 @@ SetInterface = Interface.convert(SetInterface, {
 
 module.exports = SetInterface;
 
-},{"../base/Interface":2,"../libs/TypeChecker":7}],22:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":7}],23:[function(require,module,exports){
 module.exports = {
     ...require("./ArrayList.js"),
     HashMap: require("./HashMap.js"),
@@ -3286,7 +3788,7 @@ module.exports = {
     stream: require("./stream/index.js")
 };
 
-},{"./ArrayList.js":16,"./HashMap.js":17,"./HashSet.js":18,"./ListInterface.js":19,"./MapInterface.js":20,"./SetInterface.js":21,"./stream/index.js":30}],23:[function(require,module,exports){
+},{"./ArrayList.js":17,"./HashMap.js":18,"./HashSet.js":19,"./ListInterface.js":20,"./MapInterface.js":21,"./SetInterface.js":22,"./stream/index.js":31}],24:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const Stream = require("./Stream");
 
@@ -3633,7 +4135,7 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"./Stream":26,"./StreamInterface":28}],24:[function(require,module,exports){
+},{"./Stream":27,"./StreamInterface":29}],25:[function(require,module,exports){
 const Stream = require("./Stream");
 const StreamChecker = require("./StreamChecker");
 const TypeChecker = require("../../libs/TypeChecker");
@@ -3745,7 +4247,7 @@ class EntryStream extends Stream {
 
 module.exports = EntryStream;
 
-},{"../../libs/TypeChecker":7,"../HashMap":17,"./Stream":26,"./StreamChecker":27}],25:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashMap":18,"./Stream":27,"./StreamChecker":28}],26:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
@@ -3817,7 +4319,7 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"./Stream":26}],26:[function(require,module,exports){
+},{"./Stream":27}],27:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
 
@@ -4308,7 +4810,7 @@ class Stream extends StreamInterface {
 
 module.exports = Stream;
 
-},{"../../libs/TypeChecker":7,"../HashSet":18,"./AsyncStream":23,"./EntryStream":24,"./NumberStream":25,"./StreamInterface":28,"./StringStream":29}],27:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashSet":19,"./AsyncStream":24,"./EntryStream":25,"./NumberStream":26,"./StreamInterface":29,"./StringStream":30}],28:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const TypeChecker = require("../../libs/TypeChecker");
 const StreamInterface = require("./StreamInterface");
@@ -4365,7 +4867,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":9,"./AsyncStream":23,"./EntryStream":24,"./NumberStream":25,"./Stream":26,"./StreamInterface":28,"./StringStream":29}],28:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":9,"./AsyncStream":24,"./EntryStream":25,"./NumberStream":26,"./Stream":27,"./StreamInterface":29,"./StringStream":30}],29:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../../base/Interface");
 
@@ -4403,7 +4905,7 @@ StreamInterface = Interface.convert(StreamInterface, {
 
 module.exports = StreamInterface;
 
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":9}],29:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":9}],30:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
@@ -4466,7 +4968,7 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"./Stream":26}],30:[function(require,module,exports){
+},{"./Stream":27}],31:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
@@ -4477,5 +4979,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":23,"./EntryStream.js":24,"./NumberStream.js":25,"./Stream.js":26,"./StreamChecker.js":27,"./StreamInterface.js":28,"./StringStream.js":29}]},{},[13])
+},{"./AsyncStream.js":24,"./EntryStream.js":25,"./NumberStream.js":26,"./Stream.js":27,"./StreamChecker.js":28,"./StreamInterface.js":29,"./StringStream.js":30}]},{},[14])
 //# sourceMappingURL=JavaLibraryScript.js.map

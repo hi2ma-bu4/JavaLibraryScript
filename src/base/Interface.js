@@ -1,4 +1,5 @@
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
+const { logging } = require("../libs/sys/Logger");
 const TypeChecker = require("../libs/TypeChecker");
 const { _EnumItem, Enum } = require("./Enum");
 
@@ -28,7 +29,7 @@ class Interface extends JavaLibraryScriptCore {
 	 * @type {boolean}
 	 * @static
 	 */
-	static _isDebugMode = false;
+	static isDebugMode = false;
 
 	/**
 	 * エラーモード
@@ -69,7 +70,7 @@ class Interface extends JavaLibraryScriptCore {
 			case ErrorMode.throw:
 				throw new error(message);
 			case ErrorMode.log:
-				console.warn("[Interface Warning]", message);
+				logging.warn("[Interface Warning]", message);
 				break;
 			case ErrorMode.ignore:
 				break;
@@ -136,7 +137,7 @@ class Interface extends JavaLibraryScriptCore {
 				}
 				super(...args);
 
-				if (!Interface._isDebugMode) return;
+				if (!Interface.isDebugMode) return;
 
 				const proto = Object.getPrototypeOf(this);
 				const defs = proto.__interfaceTypes || {};

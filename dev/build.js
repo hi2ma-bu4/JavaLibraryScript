@@ -92,7 +92,7 @@ async function minifyCode(code) {
 			drop_console: true,
 			dead_code: true,
 			passes: 4,
-			pure_funcs: ["console.info", "console.debug"],
+			pure_funcs: [],
 		},
 		mangle: {
 			toplevel: true,
@@ -187,7 +187,7 @@ async function buildRollup() {
 		GenerateJsdocMd.isDebug = logView;
 		GenerateJsdocMd.endPointName = script_name;
 		GenerateJsdocMd.generate(entryDir, mdCodeDocsPath);
-		console.log(`┃┗✅ ${CL.brightWhite("mdのコンテンツ生成完了")}: ${mdCodeDocsPath}`);
+		console.log(`┃┗✅ ${CL.brightWhite("mdのコンテンツ生成完了")}: ${getRelativePath(mdCodeDocsPath)}`);
 
 		const end = performance.now() - start;
 		console.log(`┣🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);

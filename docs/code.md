@@ -76,6 +76,16 @@ class JavaLibraryScriptCore(): JavaLibraryScriptCore
 
 JavaLibraryScriptの共通継承元
 
+## libs\sys\Logger.js
+
+### Logger (JavaLibraryScript.libs.sys.Logger)
+
+```ts
+class Logger(prefix: String, visibleLevel: number): Logger
+```
+
+ログ出力管理クラス
+
 ## math\BigFloat.js
 
 ### BigFloatConfig (JavaLibraryScript.math.BigFloatConfig)

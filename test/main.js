@@ -4,22 +4,23 @@ try {
 } catch (e) {}
 
 jasc.on("DOMContentLoaded", () => {
-	console.log("JavaLibraryScript");
-	console.log(JavaLibraryScript);
+	const log = new JavaLibraryScript.libs.sys.Logger("", JavaLibraryScript.libs.sys.Logger.LOG_LEVEL.TIME);
+	window.log = log;
 
-	JavaLibraryScript.base.Interface._isDebugMode = true;
+	log.info("JavaLibraryScript");
+	log.info(JavaLibraryScript);
 
-	main();
-});
+	JavaLibraryScript.base.Interface.isDebugMode = true;
+	JavaLibraryScript.math.BigFloat.config.allowPrecisionMismatch = true;
+	//JavaLibraryScript.math.BigFloat.config.roundingMode = JavaLibraryScript.math.BigFloatConfig.ROUND_HALF_UP;
 
-function main() {
 	const map = new JavaLibraryScript.util.HashMap(String, Number);
 
 	let sss = "abcdefghijklmnopqrstuvwxyz";
 	for (let i = 0; i < sss.length; i++) {
 		map.put(sss[i], i);
 	}
-	console.log(
+	log.log(
 		map
 			.stream()
 			.mapValues((v) => v * 2)
@@ -33,13 +34,10 @@ function main() {
 		set.add(i);
 		al.add(i);
 	}
-	console.log(set.stream().toHashSet().toString());
-	console.log(al.toString());
-
-	JavaLibraryScript.math.BigFloat.config.allowPrecisionMismatch = true;
-	//JavaLibraryScript.math.BigFloat.config.roundingMode = JavaLibraryScript.math.BigFloatConfig.ROUND_HALF_UP;
+	log.log(set.stream().toHashSet().toString());
+	log.log(al.toString());
 
 	const bf = JavaLibraryScript.math.bigFloat(3);
-	console.log(bf.sqrt().toString());
-	console.log(JavaLibraryScript.math.BigFloat.pi(20).toString());
-}
+	log.log(bf.sqrt().toString());
+	log.log(JavaLibraryScript.math.BigFloat.pi(20).toString());
+});
