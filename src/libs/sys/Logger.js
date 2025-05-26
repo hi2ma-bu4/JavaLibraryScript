@@ -27,6 +27,13 @@ class Logger extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static ENABLE_STACK_TRACE = true;
+	/**
+	 * 区切り線の長さの初期値
+	 * @type {number}
+	 * @default 50
+	 * @static
+	 */
+	static DEFAULT_HR_SIZE = 40;
 
 	/**
 	 * ログレベル
@@ -406,6 +413,18 @@ class Logger extends JavaLibraryScriptCore {
 		const level = this.constructor.LOG_LEVEL.TIME;
 		if (this._isVisible(level)) {
 			console.timeEnd(`${this._generatePrefix()}${label}`);
+		}
+	}
+	/**
+	 * 区切り線を出力する
+	 * @param {Number} [size]
+	 */
+	hr(size) {
+		const hr_size = size || this.constructor.DEFAULT_HR_SIZE;
+
+		let hr = "".padEnd(hr_size, "-");
+		if (this._isVisible(this.constructor.LOG_LEVEL.LOG)) {
+			console.log(hr);
 		}
 	}
 

@@ -93,7 +93,7 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 	 * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
 	 * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
 	 * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
-	 * @param {BigInt} [options.trigFuncsMaxSteps=100n] - 三角関数の最大ステップ数
+	 * @param {BigInt} [options.trigFuncsMaxSteps=5000n] - 三角関数の最大ステップ数
 	 * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
 	 */
 	constructor({
@@ -104,7 +104,7 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		extraPrecision = 2n,
 		piAlgorithm = BigFloatConfig.PI_CHUDNOVSKY,
 		sqrtMaxChebyshevSteps = 30,
-		trigFuncsMaxSteps = 100n,
+		trigFuncsMaxSteps = 5000n,
 		lnMaxSteps = 10000n,
 	} = {}) {
 		super();
@@ -147,13 +147,13 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		/**
 		 * 三角関数の最大ステップ数
 		 * @type {BigInt}
-		 * @default 100n
+		 * @default 1000n
 		 */
 		this.trigFuncsMaxSteps = trigFuncsMaxSteps;
 		/**
 		 * 自然対数の最大ステップ数
 		 * @type {BigInt}
-		 * @default 10000n
+		 * @default 50000n
 		 */
 		this.lnMaxSteps = lnMaxSteps;
 	}
@@ -274,6 +274,161 @@ class BigFloat extends JavaLibraryScriptCore {
 		return Number(this.toString());
 	}
 
+	/**
+	 * 等しいかどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	compare(other) {
+		const [valA, valB] = this._rescaleToMatch(other);
+		if (valA < valB) return -1;
+		if (valA > valB) return 1;
+		return 0;
+	}
+	/**
+	 * 等しいかどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	eq(other) {
+		return this.compare(other) === 0;
+	}
+	/**
+	 * 等しいかどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	equals(other) {
+		return this.compare(other) === 0;
+	}
+	/**
+	 * 等しくないかどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	ne(other) {
+		return this.compare(other) !== 0;
+	}
+	/**
+	 * this < other かどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	lt(other) {
+		return this.compare(other) === -1;
+	}
+	/**
+	 * this <= other かどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	lte(other) {
+		return this.compare(other) <= 0;
+	}
+	/**
+	 * this > other かどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	gt(other) {
+		return this.compare(other) === 1;
+	}
+	/**
+	 * this >= other かどうかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {boolean}
+	 * @throws {Error}
+	 */
+	gte(other) {
+		return this.compare(other) >= 0;
+	}
+
+	/**
+	 * どこまで精度が一致しているかを判定する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {number}
+	 * @throws {Error}
+	 */
+	matchingPrecision(other) {
+		const [valA, valB, prec] = this._rescaleToMatch(other);
+		let diff = valA - valB;
+		if (diff === 0n) return prec;
+		diff = diff < 0n ? -diff : diff;
+
+		let factor = 10n ** prec;
+		let matched = 0n;
+
+		while (matched < prec) {
+			factor /= 10n;
+			if (diff < factor) {
+				matched += 1n;
+			} else {
+				break;
+			}
+		}
+		return matched;
+	}
+
+	/**
+	 * 相対差を計算する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 */
+	relativeDiff(other) {
+		const [valA, valB, prec] = this._rescaleToMatch(other);
+
+		const absA = valA < 0n ? -valA : valA;
+		const absB = valB < 0n ? -valB : valB;
+		const diff = valA > valB ? valA - valB : valB - valA;
+
+		const denominator = absA > absB ? absA : absB;
+		if (denominator === 0n) return 0n;
+
+		const scale = 10n ** prec;
+		return this._makeResult((diff * scale) / denominator, prec);
+	}
+	/**
+	 * 絶対差を計算する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	absoluteDiff(other) {
+		const [valA, valB, prec] = this._rescaleToMatch(other);
+		return this._makeResult(valA > valB ? valA - valB : valB - valA, prec);
+	}
+	/**
+	 * 差分の非一致度を計算する
+	 * @param {BigFloat | number | string | BigInt} other - 比較する値
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 */
+	percentDiff(other) {
+		const [valA, valB, prec] = this._rescaleToMatch(other);
+
+		const absB = valB < 0n ? -valB : valB;
+		const diff = valA > valB ? valA - valB : valB - valA;
+
+		if (absB === 0n) return 0n;
+
+		const scale = 10n ** prec;
+		return this._makeResult((diff * scale * 100n) / absB, prec);
+	}
+
+	/**
+	 * 精度をチェックする
+	 * @param {BigInt} precision
+	 * @throws {Error}
+	 * @static
+	 */
 	static _checkPrecision(precision) {
 		if (precision < 0n) {
 			throw new RangeError(`Precision must be greater than 0`);
@@ -442,6 +597,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
 	 * @returns {BigInt}
 	 * @static
+	 * @deprecated
 	 */
 	static _piLeibniz(precision = 20n, mulPrecision = 100n) {
 		const scale = 10n ** precision;

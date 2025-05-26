@@ -1004,7 +1004,7 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
      * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
      * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
      * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
-     * @param {BigInt} [options.trigFuncsMaxSteps=100n] - 三角関数の最大ステップ数
+     * @param {BigInt} [options.trigFuncsMaxSteps=5000n] - 三角関数の最大ステップ数
      * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
      */
     constructor({ allowPrecisionMismatch, mutateResult, roundingMode, extraPrecision, piAlgorithm, sqrtMaxChebyshevSteps, trigFuncsMaxSteps, lnMaxSteps, }?: any | BigFloatConfig);
@@ -1047,13 +1047,13 @@ declare class BigFloatConfig extends JavaLibraryScriptCore {
     /**
      * 三角関数の最大ステップ数
      * @type {BigInt}
-     * @default 100n
+     * @default 1000n
      */
     trigFuncsMaxSteps: bigint;
     /**
      * 自然対数の最大ステップ数
      * @type {BigInt}
-     * @default 10000n
+     * @default 50000n
      */
     lnMaxSteps: bigint;
     /**
@@ -1093,7 +1093,13 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static clone(): BigFloat;
-    static _checkPrecision(precision: any): void;
+    /**
+     * 精度をチェックする
+     * @param {BigInt} precision
+     * @throws {Error}
+     * @static
+     */
+    static _checkPrecision(precision: bigint): void;
     /**
      * 結果を作成する
      * @param {BigInt} val
@@ -1118,6 +1124,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
      * @returns {BigInt}
      * @static
+     * @deprecated
      */
     static _piLeibniz(precision?: bigint, mulPrecision?: bigint): bigint;
     /**
@@ -1308,6 +1315,90 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     toNumber(): number;
     /**
+     * 等しいかどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    compare(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * 等しいかどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    eq(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * 等しいかどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    equals(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * 等しくないかどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    ne(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * this < other かどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    lt(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * this <= other かどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    lte(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * this > other かどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    gt(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * this >= other かどうかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {boolean}
+     * @throws {Error}
+     */
+    gte(other: BigFloat | number | string | bigint): boolean;
+    /**
+     * どこまで精度が一致しているかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {number}
+     * @throws {Error}
+     */
+    matchingPrecision(other: BigFloat | number | string | bigint): number;
+    /**
+     * 相対差を計算する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {BigInt}
+     * @throws {Error}
+     */
+    relativeDiff(other: BigFloat | number | string | bigint): bigint;
+    /**
+     * 絶対差を計算する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    absoluteDiff(other: BigFloat | number | string | bigint): BigFloat;
+    /**
+     * 差分の非一致度を計算する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
+     * @returns {BigInt}
+     * @throws {Error}
+     */
+    percentDiff(other: BigFloat | number | string | bigint): bigint;
+    /**
      * 文字列を解析して数値を取得
      * @param {string} str - 文字列
      * @returns {{intPart: string, fracPart: string, sign: number}}
@@ -1495,6 +1586,13 @@ declare class Logger extends JavaLibraryScriptCore {
      */
     static ENABLE_STACK_TRACE: boolean;
     /**
+     * 区切り線の長さの初期値
+     * @type {number}
+     * @default 50
+     * @static
+     */
+    static DEFAULT_HR_SIZE: number;
+    /**
      * ログレベル
      * @enum {number}
      * @readonly
@@ -1656,6 +1754,11 @@ declare class Logger extends JavaLibraryScriptCore {
      * @param {String} label
      */
     timeEnd(label: string): void;
+    /**
+     * 区切り線を出力する
+     * @param {Number} [size]
+     */
+    hr(size?: number): void;
     /**
      * クラスのインスタンスをラップする
      * @template {Object} T
