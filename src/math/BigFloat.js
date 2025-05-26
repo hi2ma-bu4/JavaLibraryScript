@@ -259,11 +259,12 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
-	 * 文字列に変換する
-	 * @returns {string}
+	 * 精度を変更する
+	 * @param {number} precision
 	 */
-	toString() {
-		return this._normalize(this.value);
+	changePrecision(precision) {
+		this._precision = BigInt(precision);
+		this.value = this.constructor._round(this.value, precision, this._precision);
 	}
 
 	/**
@@ -275,13 +276,129 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
+	 * 文字列に変換する
+	 * @param {number} base - 基数
+	 * @param {number} precision - 精度
+	 * @returns {string}
+	 */
+	toString(base = 10, precision = this._precision) {
+		if (base < 2 || base > 36) throw new RangeError("Base must be between 2 and 36");
+		if (base === 10) return this._normalize(this.value);
+		const val = this.value;
+		const scale = 10n ** this._precision;
+
+		const digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+		const sign = val < 0n ? "-" : "";
+		const absVal = val < 0n ? -val : val;
+
+		const intPart = absVal / scale;
+		const fracPart = absVal % scale;
+
+		const bigBase = BigInt(base);
+
+		// 整数部
+		let intStr = "";
+		let intCopy = intPart;
+		if (intCopy === 0n) {
+			intStr = "0";
+		} else {
+			while (intCopy > 0n) {
+				const digit = intCopy % bigBase;
+				intStr = digits[digit] + intStr;
+				intCopy /= bigBase;
+			}
+		}
+		if (this._precision === 0n) return `${sign}${intStr}`;
+		precision = BigInt(precision);
+
+		// 小数部
+		let fracStr = "";
+		let frac = fracPart;
+		for (let i = 0n; i < precision; i++) {
+			frac *= bigBase;
+			const digit = frac / scale;
+			fracStr += digits[digit];
+			frac %= scale;
+			if (frac === 0n) break;
+		}
+
+		return fracStr.length > 0 ? `${sign}${intStr}.${fracStr}` : `${sign}${intStr}`;
+	}
+
+	/**
+	 * 文字列を数値に変換する
+	 * @param {string} str - 変換する文字列
+	 * @param {BigInt} precision - 小数点以下の桁数
+	 * @param {number} base - 基数
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static parseFloat(str, precision = 20n, base = 10) {
+		if (str instanceof BigFloat) return str.clone();
+		if (typeof str !== "string") str = String(str);
+		if (base < 2 || base > 36) throw new RangeError("Base must be between 2 and 36");
+		if (base === 10) return new this(str, precision);
+
+		const [rawInt, rawFrac = ""] = str.toLowerCase().replace(/^\+/, "").split(".");
+		const sign = str.trim().startsWith("-") ? -1n : 1n;
+		const digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+		const toDigit = (ch) => {
+			const d = digits.indexOf(ch);
+			if (d < 0 || d >= base) throw new Error(`Invalid digit '${ch}' for base ${base}`);
+			return BigInt(d);
+		};
+
+		const bigBase = BigInt(base);
+
+		// 整数部分
+		let intVal = 0n;
+		for (const ch of rawInt.replace(/^[-+]/, "")) {
+			intVal = intVal * bigBase + toDigit(ch);
+		}
+
+		// 小数部分
+		let fracVal = 0n;
+		let scale = 1n;
+		let basePow = 1n;
+
+		for (let i = 0; i < rawFrac.length && i < precision; i++) {
+			basePow *= bigBase;
+			fracVal = fracVal * bigBase + toDigit(rawFrac[i]);
+			scale = basePow;
+		}
+
+		precision = BigInt(precision);
+
+		const scale10 = 10n ** precision;
+		const fracScaled = scale === 0n ? 0n : (fracVal * scale10) / scale;
+		const total = (intVal * scale10 + fracScaled) * sign;
+
+		return this._makeResult(total, precision);
+	}
+	/**
+	 * 小数点以下の桁数を指定して数値を丸める
+	 * @param {number} digits - 小数点以下の桁数
+	 * @returns {string}
+	 */
+	toFixed(digits) {
+		const str = this._normalize(this.value);
+		const [intPart, fracPart = ""] = str.split(".");
+		const d = Math.max(0, Number(digits));
+		if (d === 0) return intPart;
+		const fracFixed = fracPart.padEnd(d, "0").slice(0, d);
+		return `${intPart}.${fracFixed}`;
+	}
+
+	/**
 	 * 等しいかどうかを判定する
 	 * @param {BigFloat | number | string | BigInt} other - 比較する値
 	 * @returns {boolean}
 	 * @throws {Error}
 	 */
 	compare(other) {
-		const [valA, valB] = this._rescaleToMatch(other);
+		const [valA, valB] = this._bothRescale(other);
 		if (valA < valB) return -1;
 		if (valA > valB) return 1;
 		return 0;
@@ -349,6 +466,92 @@ class BigFloat extends JavaLibraryScriptCore {
 	gte(other) {
 		return this.compare(other) >= 0;
 	}
+	/**
+	 * 0かどうかを判定する
+	 * @returns {boolean}
+	 */
+	isZero() {
+		return this.value === 0n;
+	}
+	/**
+	 * 正かどうかを判定する
+	 * @returns {boolean}
+	 */
+	isPositive() {
+		return this.value > 0n;
+	}
+	/**
+	 * 負かどうかを判定する
+	 * @returns {boolean}
+	 */
+	isNegative() {
+		return this.value < 0n;
+	}
+
+	/**
+	 * 小数点以下を切り捨て
+	 * @returns {BigFloat}
+	 */
+	floor() {
+		const scale = 10n ** this._precision;
+		const scaled = this.value / scale;
+		const floored = this.value < 0n && this.value % scale !== 0n ? scaled - 1n : scaled;
+		return this._makeResult(floored * scale, this._precision);
+	}
+	/**
+	 * 小数点以下を切り上げ
+	 * @returns {BigFloat}
+	 */
+	ceil() {
+		const scale = 10n ** this._precision;
+		const scaled = this.value / scale;
+		const ceiled = this.value > 0n && this.value % scale !== 0n ? scaled + 1n : scaled;
+		return this._makeResult(ceiled * scale, this._precision);
+	}
+	/**
+	 * 四捨五入
+	 * @returns {BigFloat}
+	 */
+	round() {
+		const scale = 10n ** this._precision;
+		const scaled = this.value / scale;
+		const remainder = this.value % scale;
+		const half = scale / 2n;
+
+		let rounded;
+		if (this.value >= 0n) {
+			rounded = remainder >= half ? scaled + 1n : scaled;
+		} else {
+			rounded = -remainder >= half ? scaled - 1n : scaled;
+		}
+
+		return this._makeResult(rounded * scale, this._precision);
+	}
+	/**
+	 * 整数部分だけを取得
+	 * @returns {BigFloat}
+	 */
+	trunc() {
+		const scale = 10n ** this._precision;
+		const truncated = this.value / scale;
+		return this._makeResult(truncated * scale, this._precision);
+	}
+	/**
+	 * 逆数を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	reciprocal() {
+		if (this.value === 0n) throw new Error("Division by zero");
+		const exPr = this.constructor.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const scale = 10n ** totalPr;
+		// 1をスケール倍して割る
+		const result = (scale * scale) / val;
+		return this._makeResult(result, this._precision, totalPr);
+	}
 
 	/**
 	 * どこまで精度が一致しているかを判定する
@@ -357,7 +560,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	matchingPrecision(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 		let diff = valA - valB;
 		if (diff === 0n) return prec;
 		diff = diff < 0n ? -diff : diff;
@@ -383,7 +586,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	relativeDiff(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 
 		const absA = valA < 0n ? -valA : valA;
 		const absB = valB < 0n ? -valB : valB;
@@ -402,7 +605,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	absoluteDiff(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 		return this._makeResult(valA > valB ? valA - valB : valB - valA, prec);
 	}
 	/**
@@ -412,7 +615,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	percentDiff(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 
 		const absB = valB < 0n ? -valB : valB;
 		const diff = valA > valB ? valA - valB : valB - valA;
@@ -421,6 +624,176 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		const scale = 10n ** prec;
 		return this._makeResult((diff * scale * 100n) / absB, prec);
+	}
+
+	/**
+	 * 最大値を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static max(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) throw new Error("No arguments provided");
+
+		const [scaled, prec] = this._batchRescale(arr);
+
+		let max = scaled[0];
+		for (let i = 1; i < scaled.length; i++) {
+			if (scaled[i] > max) max = scaled[i];
+		}
+
+		return this._makeResult(max, prec);
+	}
+	/**
+	 * 最小値を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static min(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) throw new Error("No arguments provided");
+
+		const [scaled, prec] = this._batchRescale(arr);
+
+		let min = scaled[0];
+		for (let i = 1; i < scaled.length; i++) {
+			if (scaled[i] < min) min = scaled[i];
+		}
+
+		return this._makeResult(min, prec);
+	}
+
+	/**
+	 * 合計値を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static sum(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) return new this();
+
+		const [scaled, prec] = this._batchRescale(arr);
+		const totalVal = scaled.reduce((acc, cur) => acc + cur, 0n);
+		return this._makeResult(totalVal, prec);
+	}
+	/**
+	 * 平均値を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static average(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) return new this();
+
+		const total = this.sum(arr);
+		return total.div(new this(arr.length));
+	}
+
+	/**
+	 * 中央値を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static median(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) throw new Error("No arguments provided");
+
+		const [scaled, prec] = this._batchRescale(arr);
+		// valでソート
+		const sorted = scaled.sort();
+		const mid = Math.floor(sorted.length / 2);
+
+		if (sorted.length % 2 === 1) {
+			return this._makeResult(sorted[mid], prec);
+		} else {
+			// 偶数の場合は中間2つの平均
+			const a = new this();
+			a.value = sorted[mid - 1];
+			a._precision = prec;
+			const b = new this();
+			b.value = sorted[mid];
+			b._precision = prec;
+			return a.add(b).div(2);
+		}
+	}
+	/**
+	 * 積を返す (丸め誤差に注意)
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static product(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) return new this("1");
+
+		const [scaled, exPrec, prec] = this._batchRescale(arr, true);
+		// 積をBigIntで計算
+		let prod = new this(1, exPrec);
+		for (const item of scaled) {
+			const a = new this();
+			a.value = item;
+			a._precision = exPrec;
+			prod = prod.mul(a);
+		}
+		return this._makeResult(prod.value, prec, exPrec);
+	}
+	/**
+	 * 分散を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static variance(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) throw new Error("No arguments provided");
+		if (arr.length === 1) return new this("0");
+
+		const [scaled, exPrec, prec] = this._batchRescale(arr, true);
+		const n = new this(arr.length, exPrec);
+
+		// 平均値計算
+		const total = this.sum(arr);
+		const meanVal = total.div(n).changePrecision(exPrec);
+
+		// 分散 = Σ(x_i - mean)^2 / n
+		let sumSquares = 0n;
+		for (const item of scaled) {
+			const a = new this();
+			a.value = item;
+			a._precision = exPrec;
+			const diff = a.sub(meanVal);
+			sumSquares += diff.mul(diff).value;
+		}
+
+		const sumS = new this();
+		sumS.value = sumSquares;
+		sumS._precision = exPrec;
+
+		// 分散は元の精度に合わせて返す
+		return this._makeResult(sumS.div(n).value, prec, exPrec);
+	}
+	/**
+	 * 標準偏差を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static stddev(...args) {
+		const variance = this.variance(args);
+		return variance.sqrt();
 	}
 
 	/**
@@ -475,7 +848,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @returns {[BigInt, BigInt, BigInt, BigInt]}
 	 * @throws {Error}
 	 */
-	_rescaleToMatch(other, useExPrecision = false) {
+	_bothRescale(other, useExPrecision = false) {
 		const precisionA = this._precision;
 		if (!(other instanceof BigFloat)) {
 			other = new this.constructor(other);
@@ -502,6 +875,62 @@ class BigFloat extends JavaLibraryScriptCore {
 		const valA = this.value * 10n ** scaleDiffA;
 		const valB = other.value * 10n ** scaleDiffB;
 		return [valA, valB, maxExPrecision, maxPrecision];
+	}
+
+	/**
+	 * 引数を正規化する
+	 * @param {any[]} args
+	 * @returns {any[]}
+	 */
+	static _normalizeArgs(args) {
+		// 配列か複数引数か判別して配列にまとめる
+		if (args.length === 1 && Array.isArray(args[0])) {
+			return args[0];
+		}
+		return args;
+	}
+
+	/**
+	 * 複数の精度を合わせる
+	 * @param {BigFloat[]} arr
+	 * @param {boolean} [useExPrecision=false]
+	 * @returns {[BigFloat[], BigInt, BigInt]}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _batchRescale(arr, useExPrecision = false) {
+		/** @type {BigFloatConfig} */
+		const config = this.config;
+		const exPr = config.extraPrecision;
+		if (arr.length === 0) {
+			if (useExPrecision) {
+				return [[], exPr, 0n];
+			}
+			return [[], 0n, 0n];
+		}
+		arr = arr.slice();
+
+		const allowMismatch = config.allowPrecisionMismatch;
+		// 最大精度を探す
+		let maxPrecision = 0n;
+		for (let i = 0; i < arr.length; i++) {
+			let bf = arr[i];
+			if (!(bf instanceof this)) {
+				bf = arr[i] = new this(bf);
+			}
+			if (!allowMismatch && bf._precision !== maxPrecision) {
+				throw new Error("Precision mismatch and allowPrecisionMismatch = false");
+			}
+			if (bf._precision > maxPrecision) maxPrecision = bf._precision;
+		}
+
+		let maxExPrecision = maxPrecision + (useExPrecision ? exPr : 0n);
+		// スケール計算とBigInt変換
+		const retArr = arr.map((bf) => {
+			const diff = maxExPrecision - bf._precision;
+			return bf.value * 10n ** diff;
+		});
+		return [retArr, maxExPrecision, maxPrecision];
 	}
 
 	/**
@@ -591,13 +1020,43 @@ class BigFloat extends JavaLibraryScriptCore {
 		return (base + offset) / scale;
 	}
 
+	static _randomBigInt(precision) {
+		const maxSteps = this.config.lnMaxSteps;
+		const scale = 10n ** precision;
+		// 0 <= r < scale になる乱数BigIntを作る
+		// JSのMath.randomは53bitまでなので複数回繰り返し足し合わせる
+		let result = 0n;
+		const maxBits = this._log2(scale * scale, precision, maxSteps);
+		const rawBits = (maxBits + scale - 1n) / scale; // ← ceil相当
+		const rounds = Number((rawBits + 52n) / 53n);
+
+		for (let i = 0; i < rounds; i++) {
+			// 53bit乱数取得
+			const r = BigInt(Math.floor(Math.random() * Number(2 ** 53)));
+			result = (result << 53n) + r;
+		}
+		return result % scale;
+	}
+	/**
+	 * 乱数を生成する
+	 * @param {BigInt} [precision=20n] - 精度
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static random(precision = 20n) {
+		precision = BigInt(precision);
+		this._checkPrecision(precision);
+		let randBigInt = this._randomBigInt(precision);
+		return this._makeResult(randBigInt, precision);
+	}
+
 	/**
 	 * 円周率[Gregory-Leibniz法] (超高速・超低収束)
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
 	 * @returns {BigInt}
 	 * @static
-	 * @deprecated
 	 */
 	static _piLeibniz(precision = 20n, mulPrecision = 100n) {
 		const scale = 10n ** precision;
@@ -747,7 +1206,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @returns {BigInt}
 	 * @static
 	 */
-	static _expTaylor(x, precision) {
+	static _exp(x, precision) {
 		const scale = 10n ** precision;
 		let sum = scale;
 		let term = scale;
@@ -777,7 +1236,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		const totalPr = precision + exPr;
 
 		const scale = 10n ** totalPr;
-		const eInt = this._expTaylor(scale, totalPr);
+		const eInt = this._exp(scale, totalPr);
 		return this._makeResult(eInt, precision, totalPr);
 	}
 
@@ -788,12 +1247,56 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	exp() {
-		const exPr = this.config.extraPrecision;
-		const totalPr = precision + exPr;
-
+		const construct = this.constructor;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
 		const val = this.value * 10n ** exPr;
-		const expInt = this.constructor._expTaylor(val, totalPr);
-		return this._makeResult(expInt, precision, totalPr);
+		const expInt = construct._exp(val, totalPr);
+		return this._makeResult(expInt, this._precision, totalPr);
+	}
+	/**
+	 * 指数関数 exp(x) - 1
+	 * @param {BigInt} value
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _expm1(value, precision) {
+		const scale = 10n ** precision;
+
+		// |x| が小さい場合はテイラー級数で近似
+		const absValue = value < 0n ? -value : value;
+		const threshold = scale / 10n; // 適当な小さい値の閾値
+
+		if (absValue < threshold) {
+			// テイラー展開で計算 (x + x^2/2 + x^3/6 + ... 最大 maxSteps 項)
+			let term = value; // 初項 x
+			let result = term;
+			let factorial = 1n;
+			let addend = 1n;
+			for (let n = 2n; addend !== 0n; n++) {
+				factorial *= n;
+				term = (term * value) / scale; // x^n
+				addend = term / factorial;
+				result += addend;
+			}
+			return result;
+		} else {
+			// 大きい値は exp(x) - 1 = exp(x) - 1 を計算（_expは別途実装想定）
+			return this._exp(value, precision) - scale;
+		}
+	}
+	/**
+	 * 指数関数 exp(x) - 1
+	 * @returns {this}
+	 */
+	expm1() {
+		const construct = this.constructor;
+		const exPr = construct.config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+		const expInt = construct._expm1(val, totalPr);
+		return this._makeResult(expInt, this._precision, totalPr);
 	}
 
 	/**
@@ -821,7 +1324,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	add(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 		return this._makeResult(valA + valB, prec);
 	}
 
@@ -832,7 +1335,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	sub(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 		return this._makeResult(valA - valB, prec);
 	}
 
@@ -843,7 +1346,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	mul(other) {
-		const [valA, valB, exPrec, prec] = this._rescaleToMatch(other, true);
+		const [valA, valB, exPrec, prec] = this._bothRescale(other, true);
 		const scale = 10n ** exPrec;
 		const result = (valA * valB) / scale;
 		return this._makeResult(result, prec, exPrec);
@@ -856,7 +1359,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	div(other) {
-		const [valA, valB, exPrec, prec] = this._rescaleToMatch(other, true);
+		const [valA, valB, exPrec, prec] = this._bothRescale(other, true);
 		const scale = 10n ** exPrec;
 		if (valB === 0n) throw new Error("Division by zero");
 		const result = (valA * scale) / valB;
@@ -882,9 +1385,27 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	mod(other) {
-		const [valA, valB, prec] = this._rescaleToMatch(other);
+		const [valA, valB, prec] = this._bothRescale(other);
 		const result = this.constructor._mod(valA, valB);
 		return this._makeResult(result, prec);
+	}
+
+	/**
+	 * 符号反転
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	neg() {
+		return this._makeResult(-this.value, this._precision);
+	}
+	/**
+	 * 絶対値
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	abs() {
+		const val = this.value;
+		return this._makeResult(val < 0n ? -val : val, this._precision);
 	}
 
 	/**
@@ -1012,6 +1533,65 @@ class BigFloat extends JavaLibraryScriptCore {
 
 			x = x - fx_div_f1x - correction;
 		}
+
+		return this._makeResult(x, prec, totalPr);
+	}
+	/**
+	 * n乗根[ニュートン法]
+	 * @param {BigInt} v
+	 * @param {BigInt} n
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _nthRoot(v, n, precision) {
+		if (n <= 0n) {
+			throw new Error("n must be a positive integer");
+		}
+		if (v < 0n && n % 2n === 0n) {
+			throw new Error("Even root of negative number is not real");
+		}
+		const scale = 10n ** precision;
+
+		// 初期値 x = 1.0 (scaled)
+		let x = scale;
+
+		while (true) {
+			// x_{k+1} = ((n - 1) * x_k + target / x_k^{n-1}) / n
+			// BigIntでべき乗計算
+			let xPow = x;
+			if (n === 1n) {
+				xPow = scale; // n=1は例外処理
+			} else {
+				for (let j = 1n; j < n - 1n; j++) {
+					xPow = (xPow * x) / scale;
+				}
+			}
+
+			const numerator = (n - 1n) * x + (v * scale) / xPow;
+			const xNext = numerator / n;
+
+			if (xNext === x) break; // 収束判定
+			x = xNext;
+		}
+		return x;
+	}
+	/**
+	 * n乗根[ニュートン法]
+	 * @param {BigInt} n
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	nthRoot(n) {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const exPr = construct.config.extraPrecision;
+		const prec = this._precision;
+		const totalPr = prec + exPr;
+		const val = this.value * 10n ** exPr;
+
+		const x = construct._nthRoot(val, BigInt(n), totalPr);
 
 		return this._makeResult(x, prec, totalPr);
 	}
@@ -1390,7 +1970,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @throws {Error}
 	 */
 	atan2(x) {
-		const [valA, valB, exPrec, prec] = this._rescaleToMatch(x, true);
+		const [valA, valB, exPrec, prec] = this._bothRescale(x, true);
 		/** @type {typeof BigFloat} */
 		const construct = this.constructor;
 		const config = construct.config;
@@ -1497,6 +2077,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static _log(value, baseValue, precision, maxSteps) {
+		if (value === 1n) return 0n;
 		const lnB = this._ln(baseValue, precision, maxSteps);
 		if (lnB === 0n) throw new Error("log base cannot be 1 or 0");
 		const lnX = this._ln(value, precision, maxSteps);
@@ -1514,13 +2095,91 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @returns {BigFloat}
 	 */
 	log(base) {
-		const [valA, valB, exPrec, prec] = this._rescaleToMatch(base, true);
+		const [valA, valB, exPrec, prec] = this._bothRescale(base, true);
 
 		/** @type {typeof BigFloat} */
 		const construct = this.constructor;
 		const maxSteps = construct.config.lnMaxSteps;
 		const raw = construct._log(valA, valB, exPrec, maxSteps);
 		return this._makeResult(raw, prec, exPrec);
+	}
+	/**
+	 * 底2の対数
+	 * @param {BigInt} value
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _log2(value, precision, maxSteps) {
+		const scale = 10n ** precision;
+		const baseValue = 2n * scale;
+		return this._log(value, baseValue, precision, maxSteps);
+	}
+	/**
+	 * 底2の対数
+	 * @returns {BigFloat}
+	 */
+	log2() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const maxSteps = construct.config.lnMaxSteps;
+		const exPrec = construct.config.extraPrecision;
+		const totalPr = this._precision + exPrec;
+		const val = this.value * 10n ** exPrec;
+		const raw = construct._log2(val, totalPr, maxSteps);
+		return this._makeResult(raw, this._precision, totalPr);
+	}
+	/**
+	 * 底10の対数
+	 * @param {BigInt} value
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _log10(value, precision, maxSteps) {
+		const baseValue = 10n * 10n ** precision;
+		return this._log(value, baseValue, precision, maxSteps);
+	}
+	/**
+	 * 底10の対数
+	 * @returns {BigFloat}
+	 */
+	log10() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const maxSteps = construct.config.lnMaxSteps;
+		const exPrec = construct.config.extraPrecision;
+		const totalPr = this._precision + exPrec;
+		const val = this.value * 10n ** exPrec;
+		const raw = construct._log10(val, totalPr, maxSteps);
+		return this._makeResult(raw, this._precision, totalPr);
+	}
+	/**
+	 * 対数 log(1 + x)
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static _log1p(value, precision, maxSteps) {
+		// 1 + x を計算
+		const scale = 10n ** precision;
+		const onePlusX = scale + value;
+
+		// _logを利用して log(1+x) を計算
+		return this._log(onePlusX, scale, precision, maxSteps);
+	}
+	/**
+	 * 対数 log(1 + x)
+	 * @returns {BigFloat}
+	 */
+	log1p() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const maxSteps = construct.config.lnMaxSteps;
+		const exPrec = construct.config.extraPrecision;
+		const totalPr = this._precision + exPrec;
+		const val = this.value * 10n ** exPrec;
+		const raw = construct._log1p(val, totalPr, maxSteps);
+		return this._makeResult(raw, this._precision, totalPr);
 	}
 }
 

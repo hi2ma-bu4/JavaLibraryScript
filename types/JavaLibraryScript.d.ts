@@ -1094,12 +1094,85 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static clone(): BigFloat;
     /**
+     * 文字列を数値に変換する
+     * @param {string} str - 変換する文字列
+     * @param {BigInt} precision - 小数点以下の桁数
+     * @param {number} base - 基数
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static parseFloat(str: string, precision?: bigint, base?: number): BigFloat;
+    /**
+     * 最大値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static max(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 最小値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static min(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 合計値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static sum(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 平均値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static average(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 中央値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static median(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 積を返す (丸め誤差に注意)
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static product(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
      * 精度をチェックする
      * @param {BigInt} precision
      * @throws {Error}
      * @static
      */
     static _checkPrecision(precision: bigint): void;
+    /**
+     * 引数を正規化する
+     * @param {any[]} args
+     * @returns {any[]}
+     */
+    static _normalizeArgs(args: any[]): any[];
+    /**
+     * 複数の精度を合わせる
+     * @param {BigFloat[]} arr
+     * @param {boolean} [useExPrecision=false]
+     * @returns {[BigFloat[], BigInt, BigInt]}
+     * @throws {Error}
+     * @static
+     */
+    static _batchRescale(arr: BigFloat[], useExPrecision?: boolean): [BigFloat[], bigint, bigint];
     /**
      * 結果を作成する
      * @param {BigInt} val
@@ -1118,6 +1191,15 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _round(val: bigint, currentPrec: bigint, targetPrec: bigint): bigint;
+    static _randomBigInt(precision: any): bigint;
+    /**
+     * 乱数を生成する
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static random(precision?: bigint): BigFloat;
     /**
      * 円周率[Gregory-Leibniz法] (超高速・超低収束)
      * @param {BigInt} [precision=20n] - 精度
@@ -1163,7 +1245,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {BigInt}
      * @static
      */
-    static _expTaylor(x: bigint, precision: bigint): bigint;
+    static _exp(x: bigint, precision: bigint): bigint;
     /**
      * ネイピア数
      * @param {BigInt} [precision=20n] - 精度
@@ -1172,6 +1254,14 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static e(precision?: bigint): BigFloat;
+    /**
+     * 指数関数 exp(x) - 1
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _expm1(value: bigint, precision: bigint): bigint;
     /**
      * 剰余
      * @param {BigInt} x
@@ -1189,6 +1279,16 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _sqrt(n: bigint, precision: bigint): bigint;
+    /**
+     * n乗根[ニュートン法]
+     * @param {BigInt} v
+     * @param {BigInt} n
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _nthRoot(v: bigint, n: bigint, precision: bigint): bigint;
     /**
      * 正弦[Maclaurin展開]
      * @param {BigInt} x
@@ -1296,6 +1396,28 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _log(value: any, baseValue: bigint, precision: bigint, maxSteps: bigint): bigint;
     /**
+     * 底2の対数
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @static
+     */
+    static _log2(value: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * 底10の対数
+     * @param {BigInt} value
+     * @returns {BigInt}
+     * @static
+     */
+    static _log10(value: bigint, precision: any, maxSteps: any): bigint;
+    /**
+     * 対数 log(1 + x)
+     * @returns {BigFloat}
+     * @static
+     */
+    static _log1p(value: any, precision: any, maxSteps: any): BigFloat;
+    /**
      * @param {string | number | BigInt | BigFloat} value - 初期値
      * @param {number} [precision=20] - 精度
      * @throws {Error}
@@ -1314,6 +1436,14 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {number}
      */
     toNumber(): number;
+    /**
+     * 文字列に変換する
+     * @param {number} base - 基数
+     * @param {number} precision - 精度
+     * @returns {string}
+     */
+    toString(base?: number, precision?: number): string;
+    toFixed(digits: any): string;
     /**
      * 等しいかどうかを判定する
      * @param {BigFloat | number | string | BigInt} other - 比較する値
@@ -1371,6 +1501,47 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     gte(other: BigFloat | number | string | bigint): boolean;
     /**
+     * 0かどうかを判定する
+     * @returns {boolean}
+     */
+    isZero(): boolean;
+    /**
+     * 正かどうかを判定する
+     * @returns {boolean}
+     */
+    isPositive(): boolean;
+    /**
+     * 負かどうかを判定する
+     * @returns {boolean}
+     */
+    isNegative(): boolean;
+    /**
+     * 小数点以下を切り捨て
+     * @returns {BigFloat}
+     */
+    floor(): BigFloat;
+    /**
+     * 小数点以下を切り上げ
+     * @returns {BigFloat}
+     */
+    ceil(): BigFloat;
+    /**
+     * 四捨五入
+     * @returns {BigFloat}
+     */
+    round(): BigFloat;
+    /**
+     * 整数部分だけを取得
+     * @returns {BigFloat}
+     */
+    trunc(): BigFloat;
+    /**
+     * 逆数を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    reciprocal(): BigFloat;
+    /**
      * どこまで精度が一致しているかを判定する
      * @param {BigFloat | number | string | BigInt} other - 比較する値
      * @returns {number}
@@ -1421,7 +1592,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {[BigInt, BigInt, BigInt, BigInt]}
      * @throws {Error}
      */
-    _rescaleToMatch(other: BigFloat, useExPrecision?: boolean): [bigint, bigint, bigint, bigint];
+    _bothRescale(other: BigFloat, useExPrecision?: boolean): [bigint, bigint, bigint, bigint];
     /**
      * 結果を作成する
      * @param {BigInt} val
@@ -1438,6 +1609,11 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @throws {Error}
      */
     exp(): this;
+    /**
+     * 指数関数 exp(x) - 1
+     * @returns {this}
+     */
+    expm1(): this;
     /**
      * precisionを最小限まで縮める
      * @returns {this}
@@ -1479,6 +1655,18 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     mod(other: BigFloat): this;
     /**
+     * 符号反転
+     * @returns {this}
+     * @throws {Error}
+     */
+    neg(): this;
+    /**
+     * 絶対値
+     * @returns {this}
+     * @throws {Error}
+     */
+    abs(): this;
+    /**
      * べき乗
      * @param {number | BigInt} exponent - 指数（整数のみ対応）
      * @returns {this}
@@ -1496,6 +1684,13 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {this}
      */
     sqrtChebyshev(): this;
+    /**
+     * n乗根[ニュートン法]
+     * @param {BigInt} n
+     * @returns {this}
+     * @throws {Error}
+     */
+    nthRoot(n: bigint): this;
     /**
      * 正弦[Maclaurin展開]
      * @returns {this}
@@ -1549,6 +1744,21 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {BigFloat}
      */
     log(base: BigFloat): BigFloat;
+    /**
+     * 底2の対数
+     * @returns {BigFloat}
+     */
+    log2(): BigFloat;
+    /**
+     * 底10の対数
+     * @returns {BigFloat}
+     */
+    log10(): BigFloat;
+    /**
+     * 対数 log(1 + x)
+     * @returns {BigFloat}
+     */
+    log1p(): BigFloat;
 }
 /**
  * BigFloat を作成する
