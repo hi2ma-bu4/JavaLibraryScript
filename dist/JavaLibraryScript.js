@@ -292,7 +292,7 @@ module.exports = {
 	Enum,
 };
 
-},{"../libs/sys/JavaLibraryScriptCore":9}],2:[function(require,module,exports){
+},{"../libs/sys/JavaLibraryScriptCore":11}],2:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const { logging } = require("../libs/sys/Logger");
 const TypeChecker = require("../libs/TypeChecker");
@@ -580,7 +580,7 @@ class Interface extends JavaLibraryScriptCore {
 
 module.exports = Interface;
 
-},{"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/Logger":10,"./Enum":1}],3:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":11,"../libs/sys/Logger":12,"./Enum":1}],3:[function(require,module,exports){
 module.exports = {
     ...require("./Enum.js"),
     Interface: require("./Interface.js")
@@ -594,7 +594,7 @@ module.exports = {
     util: require("./util/index.js")
 };
 
-},{"./base/index.js":3,"./libs/index.js":8,"./math/index.js":16,"./util/index.js":23}],5:[function(require,module,exports){
+},{"./base/index.js":3,"./libs/index.js":10,"./math/index.js":18,"./util/index.js":25}],5:[function(require,module,exports){
 const SymbolDict = require("./sys/symbol/SymbolDict");
 const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
 const ProxyManager = require("./ProxyManager");
@@ -738,7 +738,7 @@ class IndexProxy extends JavaLibraryScriptCore {
 
 module.exports = IndexProxy;
 
-},{"./ProxyManager":6,"./TypeChecker":7,"./sys/JavaLibraryScriptCore":9,"./sys/symbol/SymbolDict":12}],6:[function(require,module,exports){
+},{"./ProxyManager":6,"./TypeChecker":7,"./sys/JavaLibraryScriptCore":11,"./sys/symbol/SymbolDict":14}],6:[function(require,module,exports){
 const JavaLibraryScriptCore = require("./sys/JavaLibraryScriptCore");
 
 /**
@@ -764,7 +764,7 @@ class ProxyManager extends JavaLibraryScriptCore {
 
 module.exports = ProxyManager;
 
-},{"./sys/JavaLibraryScriptCore":9}],7:[function(require,module,exports){
+},{"./sys/JavaLibraryScriptCore":11}],7:[function(require,module,exports){
 const SymbolDict = require("../libs/sys/symbol/SymbolDict");
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const { _EnumCore, _EnumItem } = require("../base/Enum");
@@ -1020,15 +1020,462 @@ class TypeChecker extends JavaLibraryScriptCore {
 
 module.exports = TypeChecker;
 
-},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/symbol/SymbolDict":12}],8:[function(require,module,exports){
+},{"../base/Enum":1,"../libs/sys/JavaLibraryScriptCore":11,"../libs/sys/symbol/SymbolDict":14}],8:[function(require,module,exports){
+const JavaLibraryScriptCore = require("../sys/JavaLibraryScriptCore");
+const Interface = require("../../base/Interface");
+const TypeChecker = require("../TypeChecker");
+
+/**
+ * キャッシュのオプション
+ * @typedef {{ whitelist: string[] | null, blacklist: string[], maxSize: number, policy: CacheMapInterface }} CacheWrapperOptions
+ */
+
+/**
+ * キャッシュ用のマップ
+ * @class
+ * @abstract
+ * @interface
+ */
+class CacheMapInterface extends JavaLibraryScriptCore {
+	/**
+	 * @param {number} limit
+	 */
+	constructor(limit) {
+		super();
+		this._limit = limit;
+		this._cache = new Map();
+	}
+}
+
+const Any = TypeChecker.Any;
+const NoReturn = TypeChecker.NoReturn;
+
+CacheMapInterface = Interface.convert(CacheMapInterface, {
+	get: { args: [String], returns: Any },
+	set: { args: [String, Any], returns: NoReturn },
+	has: { args: [String], returns: Boolean },
+	clear: { returns: NoReturn },
+});
+
+/**
+ * FIFOキャッシュ
+ * @class
+ */
+class FIFOCache extends CacheMapInterface {
+	constructor(limit) {
+		super(limit);
+	}
+	/**
+	 * キーに対応する値を返却する
+	 * @param {string} key
+	 * @returns {any}
+	 */
+	get(key) {
+		return this._cache.get(key);
+	}
+	/**
+	 * キーに対応する値を設定する
+	 * @param {string} key
+	 * @param {any} value
+	 */
+	set(key, value) {
+		const c = this._cache;
+		if (!c.has(key) && c.size >= this._limit) {
+			const firstKey = c.keys().next().value;
+			c.delete(firstKey);
+		}
+		c.set(key, value);
+	}
+	/**
+	 * キーの存在を確認する
+	 * @param {string} key
+	 * @returns {boolean}
+	 */
+	has(key) {
+		return this._cache.has(key);
+	}
+	/**
+	 * キャッシュをクリアする
+	 */
+	clear() {
+		this._cache.clear();
+	}
+}
+
+/**
+ * LFUキャッシュ
+ * @class
+ */
+class LFUCache extends CacheMapInterface {
+	/**
+	 * @param {number} limit
+	 */
+	constructor(limit) {
+		super(limit);
+		this._freq = new Map(); // 使用回数追跡
+	}
+	/**
+	 * キーに対応する値を返却する
+	 * @param {string} key
+	 * @returns {any}
+	 */
+	get(key) {
+		const c = this._cache;
+		if (!c.has(key)) return undefined;
+		const freq = this.freq;
+		freq.set(key, (freq.get(key) || 0) + 1);
+		return c.get(key);
+	}
+	/**
+	 * キーに対応する値を設定する
+	 * @param {string} key
+	 * @param {any} value
+	 */
+	set(key, value) {
+		const c = this._cache;
+		const freq = this._freq;
+		if (!c.has(key) && c.size >= this._limit) {
+			let leastUsedKey = null;
+			let minFreq = Infinity;
+			for (const k of c.keys()) {
+				const f = freq.get(k) || 0;
+				if (f < minFreq) {
+					minFreq = f;
+					leastUsedKey = k;
+				}
+			}
+			if (leastUsedKey !== null) {
+				c.delete(leastUsedKey);
+				freq.delete(leastUsedKey);
+			}
+		}
+
+		c.set(key, value);
+		freq.set(key, (freq.get(key) || 0) + 1);
+	}
+	/**
+	 * キーの存在を確認する
+	 * @param {string} key
+	 * @returns {boolean}
+	 */
+	has(key) {
+		return this._cache.has(key);
+	}
+	/**
+	 * キャッシュをクリアする
+	 */
+	clear() {
+		this._cache.clear();
+		this._freq.clear();
+	}
+}
+
+/**
+ * LRUキャッシュ
+ * @class
+ */
+class LRUCache extends CacheMapInterface {
+	/**
+	 * @param {number} limit
+	 */
+	constructor(limit) {
+		super(limit);
+	}
+	/**
+	 * キーに対応する値を返却する
+	 * @param {string} key
+	 * @returns {any}
+	 */
+	get(key) {
+		const c = this._cache;
+		if (!c.has(key)) return undefined;
+		const val = c.get(key);
+		c.delete(key);
+		c.set(key, val);
+		return val;
+	}
+	/**
+	 * キーに対応する値を設定する
+	 * @param {string} key
+	 * @param {any} val
+	 */
+	set(key, val) {
+		const c = this._cache;
+		if (c.has(key)) c.delete(key);
+		else if (c.size === this._limit) {
+			const oldestKey = c.keys().next().value;
+			c.delete(oldestKey);
+		}
+		c.set(key, val);
+	}
+	/**
+	 * キーの存在を確認する
+	 * @param {string} key
+	 * @returns {boolean}
+	 */
+	has(key) {
+		return this._cache.has(key);
+	}
+	/**
+	 * キャッシュをクリアする
+	 */
+	clear() {
+		this._cache.clear();
+	}
+}
+
+/**
+ * クラスのstaticメゾットをキャッシュするクラス
+ * @template T
+ * @class
+ */
+class CacheWrapper extends JavaLibraryScriptCore {
+	/**
+	 * 先入れ先出し
+	 * @type {FIFOCache}
+	 * @static
+	 * @readonly
+	 */
+	static POLICY_FIFO = FIFOCache;
+	/**
+	 * 最頻出順
+	 * @type {LFUCache}
+	 * @static
+	 * @readonly
+	 */
+	static POLICY_LFU = LFUCache;
+	/**
+	 * 最近使った順
+	 * @type {LRUCache}
+	 * @static
+	 * @readonly
+	 */
+	static POLICY_LRU = LRUCache;
+
+	/**
+	 * @type {WeakMap<object, number>}
+	 * @static
+	 * @readonly
+	 */
+	static _objectIdMap = new WeakMap();
+	/**
+	 * @type {number}
+	 * @static
+	 */
+	static _objectIdCounter = 1;
+
+	/**
+	 * MurmurHash3 32bit ハッシュ関数 (36進数)
+	 * @see https://github.com/garycourt/murmurhash-js/blob/master/murmurhash3_gc.js
+	 * @param {string} key
+	 * @param {number} [seed=0]
+	 * @returns {string}
+	 * @static
+	 */
+	static _murmurhash3_32_gc(key, seed = 0) {
+		const key_len = key.length;
+		let remainder = key_len & 3;
+		let bytes = key_len - remainder;
+		let h1 = seed;
+		let c1 = 0xcc9e2d51;
+		let c2 = 0x1b873593;
+		let i = 0;
+
+		while (i < bytes) {
+			let k1 = (key.charCodeAt(i) & 0xff) | ((key.charCodeAt(i + 1) & 0xff) << 8) | ((key.charCodeAt(i + 2) & 0xff) << 16) | ((key.charCodeAt(i + 3) & 0xff) << 24);
+			i += 4;
+
+			k1 = ((k1 & 0xffff) * c1 + ((((k1 >>> 16) * c1) & 0xffff) << 16)) & 0xffffffff;
+			k1 = (k1 << 15) | (k1 >>> 17);
+			k1 = ((k1 & 0xffff) * c2 + ((((k1 >>> 16) * c2) & 0xffff) << 16)) & 0xffffffff;
+
+			h1 ^= k1;
+			h1 = (h1 << 13) | (h1 >>> 19);
+			const h1b = ((h1 & 0xffff) * 5 + ((((h1 >>> 16) * 5) & 0xffff) << 16)) & 0xffffffff;
+			h1 = (h1b & 0xffff) + 0x6b64 + ((((h1b >>> 16) + 0xe654) & 0xffff) << 16);
+		}
+
+		let k1 = 0;
+		switch (remainder) {
+			case 3:
+				k1 ^= (key.charCodeAt(i + 2) & 0xff) << 16;
+			case 2:
+				k1 ^= (key.charCodeAt(i + 1) & 0xff) << 8;
+			case 1:
+				k1 ^= key.charCodeAt(i) & 0xff;
+				k1 = ((k1 & 0xffff) * c1 + ((((k1 >>> 16) * c1) & 0xffff) << 16)) & 0xffffffff;
+				k1 = (k1 << 15) | (k1 >>> 17);
+				k1 = ((k1 & 0xffff) * c2 + ((((k1 >>> 16) * c2) & 0xffff) << 16)) & 0xffffffff;
+				h1 ^= k1;
+		}
+
+		h1 ^= key_len;
+
+		// fmix(h1)
+		h1 ^= h1 >>> 16;
+		h1 = ((h1 & 0xffff) * 0x85ebca6b + ((((h1 >>> 16) * 0x85ebca6b) & 0xffff) << 16)) & 0xffffffff;
+		h1 ^= h1 >>> 13;
+		h1 = ((h1 & 0xffff) * 0xc2b2ae35 + ((((h1 >>> 16) * 0xc2b2ae35) & 0xffff) << 16)) & 0xffffffff;
+		h1 ^= h1 >>> 16;
+
+		return (h1 >>> 0).toString(36);
+	}
+
+	/**
+	 * オブジェクトのIDを返す
+	 * @param {Object} obj
+	 * @returns {number}
+	 * @static
+	 */
+	static _getObjectId(obj) {
+		const oim = this._objectIdMap;
+		if (!oim.has(obj)) {
+			oim.set(obj, this._objectIdCounter++);
+		}
+		return oim.get(obj);
+	}
+	/**
+	 * オブジェクトを文字列(key)に変換する
+	 * @param {Object} obj
+	 * @returns {string}
+	 * @static
+	 */
+	static _toStringObject(obj) {
+		if (obj === null) return "null";
+		const type = typeof obj;
+		if (type === "object" || type === "function") {
+			return `#id:${this._getObjectId(obj)}`;
+		}
+		if (type === "bigint") {
+			return `#bigint:${obj.toString()}`;
+		}
+		return `${type}:${String(obj)}`;
+	}
+	/**
+	 * オブジェクト配列を文字列(key)に変換する
+	 * @param {Object[]} args
+	 * @returns {string}
+	 * @static
+	 */
+	static _identityHash(args) {
+		const key = args.map(this._toStringObject.bind(this)).join("|");
+		return this._murmurhash3_32_gc(key);
+	}
+
+	static isGeneratorObject(obj) {
+		if (!obj || !obj.constructor) return false;
+		return obj.constructor.name === "Generator" || obj.constructor.name === "GeneratorFunction" || obj.constructor.name === "AsyncGenerator";
+	}
+
+	/**
+	 * クラスを変換する
+	 * @template T
+	 * @param {new (...args: any[]) => T} BaseClass - 変換するクラス
+	 * @param {CacheWrapperOptions} options
+	 * @static
+	 */
+	static convert(BaseClass, { whitelist = null, blacklist = [], maxSize = 100, policy = LRUCache } = {}) {
+		/** @type {Set<string> | null} */
+		whitelist = whitelist && new Set(whitelist);
+		/** @type {Set<string>} */
+		blacklist = new Set(blacklist);
+
+		if (!policy || !(policy.prototype instanceof CacheMapInterface)) throw new TypeError("policy must be instance of CacheMapInterface");
+
+		// キャッシュを有効化するかどうか
+		function _isCacheEnabled(methodName) {
+			if (whitelist) return whitelist.has(methodName);
+			return !blacklist.has(methodName);
+		}
+
+		const methodCaches = new Map();
+
+		/** @type {typeof CacheWrapper} */
+		const thisClass = this;
+
+		const Wrapped = class extends BaseClass {
+			static __clearCache(methodName) {
+				if (methodName) {
+					methodCaches.get(methodName)?.clear();
+				} else {
+					methodCaches.forEach((c) => c.clear());
+				}
+			}
+			static __getCache(methodName) {
+				return methodCaches.get(methodName);
+			}
+			static __getCacheDict() {
+				return Object.fromEntries(methodCaches);
+			}
+			static __getCacheSize() {
+				let sum = 0;
+				for (const cache of methodCaches.values()) {
+					sum += cache._cache.size;
+				}
+				return sum;
+			}
+		};
+
+		const staticProps = Object.getOwnPropertyNames(BaseClass).filter((name) => {
+			const fn = BaseClass[name];
+			const isFunc = typeof fn === "function";
+			const isGen = fn?.constructor?.name === "GeneratorFunction" || fn?.constructor?.name === "AsyncGeneratorFunction";
+			return isFunc && !isGen && _isCacheEnabled(name);
+		});
+
+		for (const name of staticProps) {
+			const original = BaseClass[name];
+			const cache = new policy(maxSize);
+			methodCaches.set(name, cache);
+
+			Wrapped[name] = function (...args) {
+				if (args.some(thisClass.isGeneratorObject)) {
+					return original.apply(this, args);
+				}
+
+				const key = thisClass._identityHash(args);
+				if (cache.has(key)) return cache.get(key);
+				const result = original.apply(this, args);
+
+				if (thisClass.isGeneratorObject(result)) {
+					caches.delete(name);
+					Wrapped[name] = original;
+					return result;
+				}
+				cache.set(key, result);
+				return result;
+			};
+		}
+
+		Object.defineProperty(Wrapped, "name", { value: BaseClass.name });
+
+		return Wrapped;
+	}
+}
+
+module.exports = {
+	CacheMapInterface,
+	LRUCache,
+	FIFOCache,
+	LFUCache,
+	CacheWrapper,
+};
+
+},{"../../base/Interface":2,"../TypeChecker":7,"../sys/JavaLibraryScriptCore":11}],9:[function(require,module,exports){
+module.exports = {
+    ...require("./CacheWrapper.js")
+};
+
+},{"./CacheWrapper.js":8}],10:[function(require,module,exports){
 module.exports = {
     IndexProxy: require("./IndexProxy.js"),
     ProxyManager: require("./ProxyManager.js"),
     TypeChecker: require("./TypeChecker.js"),
+    cache: require("./cache/index.js"),
     sys: require("./sys/index.js")
 };
 
-},{"./IndexProxy.js":5,"./ProxyManager.js":6,"./TypeChecker.js":7,"./sys/index.js":11}],9:[function(require,module,exports){
+},{"./IndexProxy.js":5,"./ProxyManager.js":6,"./TypeChecker.js":7,"./cache/index.js":9,"./sys/index.js":13}],11:[function(require,module,exports){
 const SymbolDict = require("./symbol/SymbolDict");
 
 /**
@@ -1042,7 +1489,7 @@ class JavaLibraryScriptCore {
 
 module.exports = JavaLibraryScriptCore;
 
-},{"./symbol/SymbolDict":12}],10:[function(require,module,exports){
+},{"./symbol/SymbolDict":14}],12:[function(require,module,exports){
 const SymbolDict = require("./symbol/SymbolDict");
 const JavaLibraryScriptCore = require("./JavaLibraryScriptCore");
 
@@ -1519,14 +1966,14 @@ const logging = new Logger("JLS", Logger.LOG_LEVEL.LOG);
 
 module.exports = { Logger, logging };
 
-},{"./JavaLibraryScriptCore":9,"./symbol/SymbolDict":12}],11:[function(require,module,exports){
+},{"./JavaLibraryScriptCore":11,"./symbol/SymbolDict":14}],13:[function(require,module,exports){
 module.exports = {
     JavaLibraryScriptCore: require("./JavaLibraryScriptCore.js"),
     ...require("./Logger.js"),
     symbol: require("./symbol/index.js")
 };
 
-},{"./JavaLibraryScriptCore.js":9,"./Logger.js":10,"./symbol/index.js":13}],12:[function(require,module,exports){
+},{"./JavaLibraryScriptCore.js":11,"./Logger.js":12,"./symbol/index.js":15}],14:[function(require,module,exports){
 /**
  * Symbolの共通プレフィックス
  * @type {string}
@@ -1556,12 +2003,12 @@ const SYMBOL_DICT = {
 
 module.exports = SYMBOL_DICT;
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 module.exports = {
     ...require("./SymbolDict.js")
 };
 
-},{"./SymbolDict.js":12}],14:[function(require,module,exports){
+},{"./SymbolDict.js":14}],16:[function(require,module,exports){
 const JavaLibraryScript = require("./index");
 
 if (typeof window !== "undefined") {
@@ -1570,9 +2017,10 @@ if (typeof window !== "undefined") {
 
 module.exports = JavaLibraryScript;
 
-},{"./index":4}],15:[function(require,module,exports){
+},{"./index":4}],17:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const { logging } = require("../libs/sys/Logger");
+const { CacheWrapper } = require("../libs/cache/CacheWrapper");
 
 /**
  * BigFloat の設定
@@ -1767,6 +2215,14 @@ class BigFloat extends JavaLibraryScriptCore {
 	static config = new BigFloatConfig();
 
 	/**
+	 * キャッシュ
+	 * @type {Record<string, {value: BigInt, precision: BigInt, priority: number}>}
+	 * @static
+	 * @readonly
+	 */
+	static _cached = {};
+
+	/**
 	 * @param {string | number | BigInt | BigFloat} value - 初期値
 	 * @param {number} [precision=20] - 精度
 	 * @throws {Error}
@@ -1797,6 +2253,51 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		/** @type {BigInt} */
 		this.value = construct._round(rawValue, exPrec, this._precision);
+	}
+
+	/**
+	 * BigFloatのstaticメゾット実行結果をキャッシュ化するクラスを生成する (同じ計算を繰り返さない限り使用した方が遅い)
+	 * @param {number} [maxSize=10000] - キャッシュサイズ
+	 * @param {string[]} [addBlacklist=[]] - 追加ブラックリスト
+	 * @returns {typeof BigFloat}
+	 */
+	static generateCachedClass(maxSize = 10000, addBlacklist = []) {
+		return CacheWrapper.convert(this, {
+			blacklist: [
+				// オブジェクトを返却するため
+				"generateCachedClass",
+				"clone",
+				"max",
+				"min",
+				"sum",
+				"average",
+				"median",
+				"product",
+				"variance",
+				"stddev",
+				"_normalizeArgs",
+				"_batchRescale",
+				"_makeResult",
+				"pi",
+				"e",
+				// 何も返却しないため
+				"_checkPrecision",
+				// 毎回ランダムなため
+				"_randomBigInt",
+				"random",
+				// 同業者
+				"_getCheckCache",
+				"_getCache",
+				"_updateCache",
+				// 定数
+				"minusOne",
+				"zero",
+				"one",
+				// 追加
+				...addBlacklist,
+			],
+			maxSize,
+		});
 	}
 
 	/**
@@ -1888,6 +2389,18 @@ class BigFloat extends JavaLibraryScriptCore {
 		}
 
 		return fracStr.length > 0 ? `${sign}${intStr}.${fracStr}` : `${sign}${intStr}`;
+	}
+
+	/**
+	 * JSONに変換する
+	 * @returns {string}
+	 */
+	toJSON() {
+		/** @type {BigFloatConfig} */
+		const config = this.constructor.config;
+		let bf = this;
+		if (config.mutateResult) bf = bf.clone();
+		return bf.scale().toString();
 	}
 
 	/**
@@ -2786,6 +3299,49 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
+	 * キャッシュを取得すべきか判定
+	 * @param {String} key
+	 * @param {BigInt} precision
+	 * @param {Number} [priority=0]
+	 * @returns {Boolean}
+	 * @static
+	 */
+	static _getCheckCache(key, precision, priority = 0) {
+		const cachedData = this._cached[key];
+		return cachedData && cachedData.precision >= precision && cachedData.priority >= priority;
+	}
+	/**
+	 * キャッシュを取得する
+	 * @param {String} name
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _getCache(key, precision) {
+		const cachedData = this._cached[key];
+		if (cachedData) {
+			return this._round(cachedData.value, cachedData.precision, precision);
+		}
+		throw new Error(`use _getCheckCache first`);
+	}
+	/**
+	 * キャッシュを更新する
+	 * @param {String} key
+	 * @param {BigInt} value
+	 * @param {BigInt} precision
+	 * @param {Number} [priority=0]
+	 * @static
+	 */
+	static _updateCache(key, value, precision, priority = 0) {
+		const cachedData = this._cached[key];
+		if (cachedData && cachedData.precision >= precision && cachedData.priority >= priority) {
+			return;
+		}
+		this._cached[key] = { value, precision, priority };
+	}
+
+	/**
 	 * 円周率
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @returns {BigInt}
@@ -2793,37 +3349,29 @@ class BigFloat extends JavaLibraryScriptCore {
 	 */
 	static _pi(precision) {
 		const piAlgorithm = this.config.piAlgorithm;
-		const cachedPi = this._cachedPi;
-		if (cachedPi && cachedPi.piAlgorithm === piAlgorithm && cachedPi.precision >= precision) {
-			return this._round(cachedPi.value, cachedPi.precision, precision);
+		if (this._getCheckCache("pi", precision, piAlgorithm)) {
+			return this._getCache("pi", precision);
 		}
 
 		let piRet;
 		switch (piAlgorithm) {
-			case BigFloatConfig.PI_CHUDNOVSKY:
+			case BigFloatConfig.PI_CHUDNOVSKY: // 3
 				piRet = this._piChudnovsky(precision);
 				break;
-			case BigFloatConfig.PI_NEWTON:
+			case BigFloatConfig.PI_NEWTON: // 2
 				piRet = this._piNewton(precision);
 				break;
-			case BigFloatConfig.PI_LEIBNIZ:
+			case BigFloatConfig.PI_LEIBNIZ: // 1
 				piRet = this._piLeibniz(precision);
 				break;
-			case BigFloatConfig.PI_MATH_DEFAULT:
+			case BigFloatConfig.PI_MATH_DEFAULT: // 0
 			default:
 				this._checkPrecision(precision);
 				return new this(`${Math.PI}`, precision).value;
 		}
 
-		/**
-		 * キャッシュ
-		 * @type {{precision: BigInt, value: BigInt, piAlgorithm: number}}
-		 */
-		this._cachedPi = {
-			precision: precision,
-			value: piRet,
-			piAlgorithm: piAlgorithm,
-		};
+		// キャッシュ
+		this._updateCache("pi", piRet, precision, piAlgorithm);
 
 		return piRet;
 	}
@@ -2869,6 +3417,24 @@ class BigFloat extends JavaLibraryScriptCore {
 
 	/**
 	 * ネイピア数
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _e(precision) {
+		if (this._getCheckCache("e", precision)) {
+			return this._getCache("e", precision);
+		}
+
+		const scale = 10n ** precision;
+		const eInt = this._exp(scale, precision);
+
+		this._updateCache("e", eInt, precision);
+		return eInt;
+	}
+
+	/**
+	 * ネイピア数
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @returns {BigFloat}
 	 * @throws {Error}
@@ -2881,8 +3447,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		const exPr = this.config.extraPrecision;
 		const totalPr = precision + exPr;
 
-		const scale = 10n ** totalPr;
-		const eInt = this._exp(scale, totalPr);
+		const eInt = this._e(totalPr);
 		return this._makeResult(eInt, precision, totalPr);
 	}
 
@@ -3959,6 +4524,38 @@ class BigFloat extends JavaLibraryScriptCore {
 		const raw = construct._gammaIntegral(val, totalPr);
 		return this._makeResult(raw, this._precision, totalPr);
 	}
+
+	// ==================================================
+	// 定数(初期値)
+	// ==================================================
+
+	/**
+	 * -1のBigFloat
+	 * @param {BigInt} [precision=20n] 精度
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static minusOne(precision = 20n) {
+		return new this(-1n, precision);
+	}
+	/**
+	 * 0のBigFloat
+	 * @param {BigInt} [precision=20n] 精度
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static zero(precision = 20n) {
+		return new this(0n, precision);
+	}
+	/**
+	 * 1のBigFloat
+	 * @param {BigInt} [precision=20n] 精度
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static one(precision = 20n) {
+		return new this(1n, precision);
+	}
 }
 
 /**
@@ -3978,12 +4575,12 @@ module.exports = {
 	bigFloat,
 };
 
-},{"../libs/sys/JavaLibraryScriptCore":9,"../libs/sys/Logger":10}],16:[function(require,module,exports){
+},{"../libs/cache/CacheWrapper":8,"../libs/sys/JavaLibraryScriptCore":11,"../libs/sys/Logger":12}],18:[function(require,module,exports){
 module.exports = {
     ...require("./BigFloat.js")
 };
 
-},{"./BigFloat.js":15}],17:[function(require,module,exports){
+},{"./BigFloat.js":17}],19:[function(require,module,exports){
 const IndexProxy = require("../libs/IndexProxy");
 const ListInterface = require("./ListInterface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -4223,7 +4820,7 @@ function arrayList(ValueType, collection) {
 
 module.exports = { ArrayList, arrayList };
 
-},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":20,"./stream/Stream":27,"./stream/StreamChecker":28}],18:[function(require,module,exports){
+},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":22,"./stream/Stream":29,"./stream/StreamChecker":30}],20:[function(require,module,exports){
 const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
 const EntryStream = require("./stream/EntryStream");
@@ -4423,7 +5020,7 @@ class HashMap extends MapInterface {
 
 module.exports = HashMap;
 
-},{"../libs":8,"./MapInterface":21,"./stream/EntryStream":25}],19:[function(require,module,exports){
+},{"../libs":10,"./MapInterface":23,"./stream/EntryStream":27}],21:[function(require,module,exports){
 const SetInterface = require("./SetInterface");
 const TypeChecker = require("../libs/TypeChecker");
 const StreamChecker = require("./stream/StreamChecker");
@@ -4627,7 +5224,7 @@ class HashSet extends SetInterface {
 
 module.exports = HashSet;
 
-},{"../libs/TypeChecker":7,"./SetInterface":22,"./stream/Stream":27,"./stream/StreamChecker":28}],20:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"./SetInterface":24,"./stream/Stream":29,"./stream/StreamChecker":30}],22:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -4688,7 +5285,7 @@ ListInterface = Interface.convert(ListInterface, {
 
 module.exports = ListInterface;
 
-},{"../base/Interface":2,"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":9}],21:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":7,"../libs/sys/JavaLibraryScriptCore":11}],23:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -4764,7 +5361,7 @@ MapInterface = Interface.convert(MapInterface, {
 
 module.exports = MapInterface;
 
-},{"../base/Interface":2,"../libs/TypeChecker":7}],22:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":7}],24:[function(require,module,exports){
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
 
@@ -4824,7 +5421,7 @@ SetInterface = Interface.convert(SetInterface, {
 
 module.exports = SetInterface;
 
-},{"../base/Interface":2,"../libs/TypeChecker":7}],23:[function(require,module,exports){
+},{"../base/Interface":2,"../libs/TypeChecker":7}],25:[function(require,module,exports){
 module.exports = {
     ...require("./ArrayList.js"),
     HashMap: require("./HashMap.js"),
@@ -4835,7 +5432,7 @@ module.exports = {
     stream: require("./stream/index.js")
 };
 
-},{"./ArrayList.js":17,"./HashMap.js":18,"./HashSet.js":19,"./ListInterface.js":20,"./MapInterface.js":21,"./SetInterface.js":22,"./stream/index.js":31}],24:[function(require,module,exports){
+},{"./ArrayList.js":19,"./HashMap.js":20,"./HashSet.js":21,"./ListInterface.js":22,"./MapInterface.js":23,"./SetInterface.js":24,"./stream/index.js":33}],26:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const Stream = require("./Stream");
 
@@ -5182,7 +5779,7 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"./Stream":27,"./StreamInterface":29}],25:[function(require,module,exports){
+},{"./Stream":29,"./StreamInterface":31}],27:[function(require,module,exports){
 const Stream = require("./Stream");
 const StreamChecker = require("./StreamChecker");
 const TypeChecker = require("../../libs/TypeChecker");
@@ -5294,7 +5891,7 @@ class EntryStream extends Stream {
 
 module.exports = EntryStream;
 
-},{"../../libs/TypeChecker":7,"../HashMap":18,"./Stream":27,"./StreamChecker":28}],26:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashMap":20,"./Stream":29,"./StreamChecker":30}],28:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
@@ -5366,7 +5963,7 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"./Stream":27}],27:[function(require,module,exports){
+},{"./Stream":29}],29:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
 
@@ -5857,7 +6454,7 @@ class Stream extends StreamInterface {
 
 module.exports = Stream;
 
-},{"../../libs/TypeChecker":7,"../HashSet":19,"./AsyncStream":24,"./EntryStream":25,"./NumberStream":26,"./StreamInterface":29,"./StringStream":30}],28:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashSet":21,"./AsyncStream":26,"./EntryStream":27,"./NumberStream":28,"./StreamInterface":31,"./StringStream":32}],30:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const TypeChecker = require("../../libs/TypeChecker");
 const StreamInterface = require("./StreamInterface");
@@ -5914,7 +6511,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":9,"./AsyncStream":24,"./EntryStream":25,"./NumberStream":26,"./Stream":27,"./StreamInterface":29,"./StringStream":30}],29:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":11,"./AsyncStream":26,"./EntryStream":27,"./NumberStream":28,"./Stream":29,"./StreamInterface":31,"./StringStream":32}],31:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../../base/Interface");
 
@@ -5952,7 +6549,7 @@ StreamInterface = Interface.convert(StreamInterface, {
 
 module.exports = StreamInterface;
 
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":9}],30:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":11}],32:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
@@ -6015,7 +6612,7 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"./Stream":27}],31:[function(require,module,exports){
+},{"./Stream":29}],33:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
     EntryStream: require("./EntryStream.js"),
@@ -6026,5 +6623,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":24,"./EntryStream.js":25,"./NumberStream.js":26,"./Stream.js":27,"./StreamChecker.js":28,"./StreamInterface.js":29,"./StringStream.js":30}]},{},[14])
+},{"./AsyncStream.js":26,"./EntryStream.js":27,"./NumberStream.js":28,"./Stream.js":29,"./StreamChecker.js":30,"./StreamInterface.js":31,"./StringStream.js":32}]},{},[16])
 //# sourceMappingURL=JavaLibraryScript.js.map

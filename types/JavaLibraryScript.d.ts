@@ -1081,6 +1081,24 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static config: BigFloatConfig;
     /**
+     * キャッシュ
+     * @type {Record<string, {value: BigInt, precision: BigInt, priority: number}>}
+     * @static
+     * @readonly
+     */
+    static readonly _cached: Record<string, {
+        value: bigint;
+        precision: bigint;
+        priority: number;
+    }>;
+    /**
+     * BigFloatのstaticメゾット実行結果をキャッシュ化するクラスを生成する (同じ計算を繰り返さない限り使用した方が遅い)
+     * @param {number} [maxSize=10000] - キャッシュサイズ
+     * @param {string[]} [addBlacklist=[]] - 追加ブラックリスト
+     * @returns {typeof BigFloat}
+     */
+    static generateCachedClass(maxSize?: number, addBlacklist?: string[]): typeof BigFloat;
+    /**
      * クラスを複製する (設定複製用)
      * @returns {BigFloat}
      * @static
@@ -1247,6 +1265,33 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _piChudnovsky(precision?: bigint): bigint;
     /**
+     * キャッシュを取得すべきか判定
+     * @param {String} key
+     * @param {BigInt} precision
+     * @param {Number} [priority=0]
+     * @returns {Boolean}
+     * @static
+     */
+    static _getCheckCache(key: string, precision: bigint, priority?: number): boolean;
+    /**
+     * キャッシュを取得する
+     * @param {String} name
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _getCache(key: any, precision: bigint): bigint;
+    /**
+     * キャッシュを更新する
+     * @param {String} key
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @param {Number} [priority=0]
+     * @static
+     */
+    static _updateCache(key: string, value: bigint, precision: bigint, priority?: number): void;
+    /**
      * 円周率
      * @param {BigInt} [precision=20n] - 精度
      * @returns {BigInt}
@@ -1269,6 +1314,13 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _exp(x: bigint, precision: bigint): bigint;
+    /**
+     * ネイピア数
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _e(precision: bigint): bigint;
     /**
      * ネイピア数
      * @param {BigInt} [precision=20n] - 精度
@@ -1501,6 +1553,27 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _gammaIntegral(z: bigint, precision: bigint): bigint;
     /**
+     * -1のBigFloat
+     * @param {BigInt} [precision=20n] 精度
+     * @returns {BigFloat}
+     * @static
+     */
+    static minusOne(precision?: bigint): BigFloat;
+    /**
+     * 0のBigFloat
+     * @param {BigInt} [precision=20n] 精度
+     * @returns {BigFloat}
+     * @static
+     */
+    static zero(precision?: bigint): BigFloat;
+    /**
+     * 1のBigFloat
+     * @param {BigInt} [precision=20n] 精度
+     * @returns {BigFloat}
+     * @static
+     */
+    static one(precision?: bigint): BigFloat;
+    /**
      * @param {string | number | BigInt | BigFloat} value - 初期値
      * @param {number} [precision=20] - 精度
      * @throws {Error}
@@ -1531,6 +1604,11 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {string}
      */
     toString(base?: number, precision?: number): string;
+    /**
+     * JSONに変換する
+     * @returns {string}
+     */
+    toJSON(): string;
     /**
      * 小数点以下の桁数を指定して数値を丸める
      * @param {number} digits - 小数点以下の桁数
@@ -2090,6 +2168,206 @@ declare class Logger extends JavaLibraryScriptCore {
 }
 
 /**
+ * キャッシュのオプション
+ */
+type CacheWrapperOptions = {
+    whitelist: string[] | null;
+    blacklist: string[];
+    maxSize: number;
+    policy: CacheMapInterface;
+};
+/**
+ * キャッシュのオプション
+ * @typedef {{ whitelist: string[] | null, blacklist: string[], maxSize: number, policy: CacheMapInterface }} CacheWrapperOptions
+ */
+/**
+ * キャッシュ用のマップ
+ * @class
+ * @abstract
+ * @interface
+ */
+declare class CacheMapInterface extends JavaLibraryScriptCore {
+    /**
+     * @param {number} limit
+     */
+    constructor(limit: number);
+    _limit: number;
+    _cache: Map<any, any>;
+}
+/**
+ * LRUキャッシュ
+ * @class
+ */
+declare class LRUCache extends CacheMapInterface {
+    /**
+     * キーに対応する値を返却する
+     * @param {string} key
+     * @returns {any}
+     */
+    get(key: string): any;
+    /**
+     * キーに対応する値を設定する
+     * @param {string} key
+     * @param {any} val
+     */
+    set(key: string, val: any): void;
+    /**
+     * キーの存在を確認する
+     * @param {string} key
+     * @returns {boolean}
+     */
+    has(key: string): boolean;
+    /**
+     * キャッシュをクリアする
+     */
+    clear(): void;
+}
+/**
+ * FIFOキャッシュ
+ * @class
+ */
+declare class FIFOCache extends CacheMapInterface {
+    constructor(limit: any);
+    /**
+     * キーに対応する値を返却する
+     * @param {string} key
+     * @returns {any}
+     */
+    get(key: string): any;
+    /**
+     * キーに対応する値を設定する
+     * @param {string} key
+     * @param {any} value
+     */
+    set(key: string, value: any): void;
+    /**
+     * キーの存在を確認する
+     * @param {string} key
+     * @returns {boolean}
+     */
+    has(key: string): boolean;
+    /**
+     * キャッシュをクリアする
+     */
+    clear(): void;
+}
+/**
+ * LFUキャッシュ
+ * @class
+ */
+declare class LFUCache extends CacheMapInterface {
+    _freq: Map<any, any>;
+    /**
+     * キーに対応する値を返却する
+     * @param {string} key
+     * @returns {any}
+     */
+    get(key: string): any;
+    /**
+     * キーに対応する値を設定する
+     * @param {string} key
+     * @param {any} value
+     */
+    set(key: string, value: any): void;
+    /**
+     * キーの存在を確認する
+     * @param {string} key
+     * @returns {boolean}
+     */
+    has(key: string): boolean;
+    /**
+     * キャッシュをクリアする
+     */
+    clear(): void;
+}
+/**
+ * クラスのstaticメゾットをキャッシュするクラス
+ * @template T
+ * @class
+ */
+declare class CacheWrapper<T> extends JavaLibraryScriptCore {
+    /**
+     * 先入れ先出し
+     * @type {FIFOCache}
+     * @static
+     * @readonly
+     */
+    static readonly POLICY_FIFO: FIFOCache;
+    /**
+     * 最頻出順
+     * @type {LFUCache}
+     * @static
+     * @readonly
+     */
+    static readonly POLICY_LFU: LFUCache;
+    /**
+     * 最近使った順
+     * @type {LRUCache}
+     * @static
+     * @readonly
+     */
+    static readonly POLICY_LRU: LRUCache;
+    /**
+     * @type {WeakMap<object, number>}
+     * @static
+     * @readonly
+     */
+    static readonly _objectIdMap: WeakMap<object, number>;
+    /**
+     * @type {number}
+     * @static
+     */
+    static _objectIdCounter: number;
+    /**
+     * MurmurHash3 32bit ハッシュ関数 (36進数)
+     * @see https://github.com/garycourt/murmurhash-js/blob/master/murmurhash3_gc.js
+     * @param {string} key
+     * @param {number} [seed=0]
+     * @returns {string}
+     * @static
+     */
+    static _murmurhash3_32_gc(key: string, seed?: number): string;
+    /**
+     * オブジェクトのIDを返す
+     * @param {Object} obj
+     * @returns {number}
+     * @static
+     */
+    static _getObjectId(obj: any): number;
+    /**
+     * オブジェクトを文字列(key)に変換する
+     * @param {Object} obj
+     * @returns {string}
+     * @static
+     */
+    static _toStringObject(obj: any): string;
+    /**
+     * オブジェクト配列を文字列(key)に変換する
+     * @param {Object[]} args
+     * @returns {string}
+     * @static
+     */
+    static _identityHash(args: any[]): string;
+    static isGeneratorObject(obj: any): boolean;
+    /**
+     * クラスを変換する
+     * @template T
+     * @param {new (...args: any[]) => T} BaseClass - 変換するクラス
+     * @param {CacheWrapperOptions} options
+     * @static
+     */
+    static convert<T_1>(BaseClass: new (...args: any[]) => T_1, { whitelist, blacklist, maxSize, policy }?: CacheWrapperOptions): {
+        new (...args: any[]): {};
+        __clearCache(methodName: any): void;
+        __getCache(methodName: any): any;
+        __getCacheDict(): any;
+        __getCacheSize(): number;
+        readonly name: string;
+    };
+    constructor();
+}
+
+/**
  * 型チェッカー
  * @extends {JavaLibraryScriptCore}
  * @class
@@ -2579,6 +2857,13 @@ declare const libs: {
     IndexProxy: typeof IndexProxy;
     ProxyManager: typeof ProxyManager;
     TypeChecker: typeof TypeChecker;
+    cache: {
+        CacheMapInterface: typeof CacheMapInterface;
+        LRUCache: typeof LRUCache;
+        FIFOCache: typeof FIFOCache;
+        LFUCache: typeof LFUCache;
+        CacheWrapper: typeof CacheWrapper;
+    };
     sys: {
         symbol: {
             LIBRARY_NAME: string;

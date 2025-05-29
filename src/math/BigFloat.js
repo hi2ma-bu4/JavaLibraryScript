@@ -1,5 +1,6 @@
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const { logging } = require("../libs/sys/Logger");
+const { CacheWrapper } = require("../libs/cache/CacheWrapper");
 
 /**
  * BigFloat の設定
@@ -194,6 +195,14 @@ class BigFloat extends JavaLibraryScriptCore {
 	static config = new BigFloatConfig();
 
 	/**
+	 * キャッシュ
+	 * @type {Record<string, {value: BigInt, precision: BigInt, priority: number}>}
+	 * @static
+	 * @readonly
+	 */
+	static _cached = {};
+
+	/**
 	 * @param {string | number | BigInt | BigFloat} value - 初期値
 	 * @param {number} [precision=20] - 精度
 	 * @throws {Error}
@@ -224,6 +233,51 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		/** @type {BigInt} */
 		this.value = construct._round(rawValue, exPrec, this._precision);
+	}
+
+	/**
+	 * BigFloatのstaticメゾット実行結果をキャッシュ化するクラスを生成する (同じ計算を繰り返さない限り使用した方が遅い)
+	 * @param {number} [maxSize=10000] - キャッシュサイズ
+	 * @param {string[]} [addBlacklist=[]] - 追加ブラックリスト
+	 * @returns {typeof BigFloat}
+	 */
+	static generateCachedClass(maxSize = 10000, addBlacklist = []) {
+		return CacheWrapper.convert(this, {
+			blacklist: [
+				// オブジェクトを返却するため
+				"generateCachedClass",
+				"clone",
+				"max",
+				"min",
+				"sum",
+				"average",
+				"median",
+				"product",
+				"variance",
+				"stddev",
+				"_normalizeArgs",
+				"_batchRescale",
+				"_makeResult",
+				"pi",
+				"e",
+				// 何も返却しないため
+				"_checkPrecision",
+				// 毎回ランダムなため
+				"_randomBigInt",
+				"random",
+				// 同業者
+				"_getCheckCache",
+				"_getCache",
+				"_updateCache",
+				// 定数
+				"minusOne",
+				"zero",
+				"one",
+				// 追加
+				...addBlacklist,
+			],
+			maxSize,
+		});
 	}
 
 	/**
@@ -315,6 +369,18 @@ class BigFloat extends JavaLibraryScriptCore {
 		}
 
 		return fracStr.length > 0 ? `${sign}${intStr}.${fracStr}` : `${sign}${intStr}`;
+	}
+
+	/**
+	 * JSONに変換する
+	 * @returns {string}
+	 */
+	toJSON() {
+		/** @type {BigFloatConfig} */
+		const config = this.constructor.config;
+		let bf = this;
+		if (config.mutateResult) bf = bf.clone();
+		return bf.scale().toString();
 	}
 
 	/**
@@ -1213,6 +1279,49 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
+	 * キャッシュを取得すべきか判定
+	 * @param {String} key
+	 * @param {BigInt} precision
+	 * @param {Number} [priority=0]
+	 * @returns {Boolean}
+	 * @static
+	 */
+	static _getCheckCache(key, precision, priority = 0) {
+		const cachedData = this._cached[key];
+		return cachedData && cachedData.precision >= precision && cachedData.priority >= priority;
+	}
+	/**
+	 * キャッシュを取得する
+	 * @param {String} name
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _getCache(key, precision) {
+		const cachedData = this._cached[key];
+		if (cachedData) {
+			return this._round(cachedData.value, cachedData.precision, precision);
+		}
+		throw new Error(`use _getCheckCache first`);
+	}
+	/**
+	 * キャッシュを更新する
+	 * @param {String} key
+	 * @param {BigInt} value
+	 * @param {BigInt} precision
+	 * @param {Number} [priority=0]
+	 * @static
+	 */
+	static _updateCache(key, value, precision, priority = 0) {
+		const cachedData = this._cached[key];
+		if (cachedData && cachedData.precision >= precision && cachedData.priority >= priority) {
+			return;
+		}
+		this._cached[key] = { value, precision, priority };
+	}
+
+	/**
 	 * 円周率
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @returns {BigInt}
@@ -1220,37 +1329,29 @@ class BigFloat extends JavaLibraryScriptCore {
 	 */
 	static _pi(precision) {
 		const piAlgorithm = this.config.piAlgorithm;
-		const cachedPi = this._cachedPi;
-		if (cachedPi && cachedPi.piAlgorithm === piAlgorithm && cachedPi.precision >= precision) {
-			return this._round(cachedPi.value, cachedPi.precision, precision);
+		if (this._getCheckCache("pi", precision, piAlgorithm)) {
+			return this._getCache("pi", precision);
 		}
 
 		let piRet;
 		switch (piAlgorithm) {
-			case BigFloatConfig.PI_CHUDNOVSKY:
+			case BigFloatConfig.PI_CHUDNOVSKY: // 3
 				piRet = this._piChudnovsky(precision);
 				break;
-			case BigFloatConfig.PI_NEWTON:
+			case BigFloatConfig.PI_NEWTON: // 2
 				piRet = this._piNewton(precision);
 				break;
-			case BigFloatConfig.PI_LEIBNIZ:
+			case BigFloatConfig.PI_LEIBNIZ: // 1
 				piRet = this._piLeibniz(precision);
 				break;
-			case BigFloatConfig.PI_MATH_DEFAULT:
+			case BigFloatConfig.PI_MATH_DEFAULT: // 0
 			default:
 				this._checkPrecision(precision);
 				return new this(`${Math.PI}`, precision).value;
 		}
 
-		/**
-		 * キャッシュ
-		 * @type {{precision: BigInt, value: BigInt, piAlgorithm: number}}
-		 */
-		this._cachedPi = {
-			precision: precision,
-			value: piRet,
-			piAlgorithm: piAlgorithm,
-		};
+		// キャッシュ
+		this._updateCache("pi", piRet, precision, piAlgorithm);
 
 		return piRet;
 	}
@@ -1296,6 +1397,24 @@ class BigFloat extends JavaLibraryScriptCore {
 
 	/**
 	 * ネイピア数
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _e(precision) {
+		if (this._getCheckCache("e", precision)) {
+			return this._getCache("e", precision);
+		}
+
+		const scale = 10n ** precision;
+		const eInt = this._exp(scale, precision);
+
+		this._updateCache("e", eInt, precision);
+		return eInt;
+	}
+
+	/**
+	 * ネイピア数
 	 * @param {BigInt} [precision=20n] - 精度
 	 * @returns {BigFloat}
 	 * @throws {Error}
@@ -1308,8 +1427,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		const exPr = this.config.extraPrecision;
 		const totalPr = precision + exPr;
 
-		const scale = 10n ** totalPr;
-		const eInt = this._exp(scale, totalPr);
+		const eInt = this._e(totalPr);
 		return this._makeResult(eInt, precision, totalPr);
 	}
 
@@ -2385,6 +2503,38 @@ class BigFloat extends JavaLibraryScriptCore {
 		const val = this.value * 10n ** exPrec;
 		const raw = construct._gammaIntegral(val, totalPr);
 		return this._makeResult(raw, this._precision, totalPr);
+	}
+
+	// ==================================================
+	// 定数(初期値)
+	// ==================================================
+
+	/**
+	 * -1のBigFloat
+	 * @param {BigInt} [precision=20n] 精度
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static minusOne(precision = 20n) {
+		return new this(-1n, precision);
+	}
+	/**
+	 * 0のBigFloat
+	 * @param {BigInt} [precision=20n] 精度
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static zero(precision = 20n) {
+		return new this(0n, precision);
+	}
+	/**
+	 * 1のBigFloat
+	 * @param {BigInt} [precision=20n] 精度
+	 * @returns {BigFloat}
+	 * @static
+	 */
+	static one(precision = 20n) {
+		return new this(1n, precision);
 	}
 }
 

@@ -175,6 +175,12 @@ async function buildRollup() {
 			showFileSize(typesPath);
 		}
 
+		console.log(`┣ℹ️ ${CL.brightWhite("mdのコンテンツ生成中...")}`);
+		GenerateJsdocMd.isDebug = logView;
+		GenerateJsdocMd.endPointName = script_name;
+		GenerateJsdocMd.generate(entryDir, mdCodeDocsPath);
+		console.log(`┃┗✅ ${CL.brightWhite("mdのコンテンツ生成完了")}: ${getRelativePath(mdCodeDocsPath)}`);
+
 		console.log(`┣🔍 ${CL.brightWhite("問題性の高い文字列の検査を開始...")}`);
 		const illegalFound = checkIllegalStrings(baseDir);
 		if (illegalFound) {
@@ -182,12 +188,6 @@ async function buildRollup() {
 		} else {
 			console.log(`┃┗✅ ${CL.brightWhite("検査完了")}`);
 		}
-
-		console.log(`┣ℹ️ ${CL.brightWhite("mdのコンテンツ生成中...")}`);
-		GenerateJsdocMd.isDebug = logView;
-		GenerateJsdocMd.endPointName = script_name;
-		GenerateJsdocMd.generate(entryDir, mdCodeDocsPath);
-		console.log(`┃┗✅ ${CL.brightWhite("mdのコンテンツ生成完了")}: ${getRelativePath(mdCodeDocsPath)}`);
 
 		const end = performance.now() - start;
 		console.log(`┣🕒 ${CL.brightWhite("ビルド時間")}: ${CL.brightGreen(end.toFixed(2))} ms`);

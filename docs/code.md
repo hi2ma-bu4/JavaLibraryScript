@@ -66,6 +66,48 @@ class TypeChecker(typeToExclude: Function | Function[]): TypeChecker
 
 型チェッカー
 
+## libs\cache\CacheWrapper.js
+
+### CacheMapInterface (JavaLibraryScript.libs.cache.CacheMapInterface)
+
+```ts
+class CacheMapInterface(limit: number): CacheMapInterface
+```
+
+キャッシュ用のマップ
+
+### FIFOCache (JavaLibraryScript.libs.cache.FIFOCache)
+
+```ts
+class FIFOCache(limit: number): FIFOCache
+```
+
+FIFOキャッシュ
+
+### LFUCache (JavaLibraryScript.libs.cache.LFUCache)
+
+```ts
+class LFUCache(limit: number): LFUCache
+```
+
+LFUキャッシュ
+
+### LRUCache (JavaLibraryScript.libs.cache.LRUCache)
+
+```ts
+class LRUCache(limit: number): LRUCache
+```
+
+LRUキャッシュ
+
+### CacheWrapper (JavaLibraryScript.libs.cache.CacheWrapper)
+
+```ts
+class CacheWrapper<T>(): CacheWrapper<T>
+```
+
+クラスのstaticメゾットをキャッシュするクラス
+
 ## libs\sys\JavaLibraryScriptCore.js
 
 ### JavaLibraryScriptCore (JavaLibraryScript.libs.sys.JavaLibraryScriptCore)
