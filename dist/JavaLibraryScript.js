@@ -1665,7 +1665,6 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 	 * @param {number} [options.roundingMode=BigFloatConfig.ROUND_TRUNCATE] - 丸めモード
 	 * @param {BigInt} [options.extraPrecision=2n] - 追加の精度
 	 * @param {number} [options.piAlgorithm=BigFloatConfig.PI_CHUDNOVSKY] - 円周率算出アルゴリズム
-	 * @param {number} [options.sqrtMaxChebyshevSteps=30] - 平方根[チェビシェフ法]の最大ステップ数
 	 * @param {BigInt} [options.trigFuncsMaxSteps=5000n] - 三角関数の最大ステップ数
 	 * @param {BigInt} [options.lnMaxSteps=10000n] - 自然対数の最大ステップ数
 	 */
@@ -1676,7 +1675,6 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		roundingMode = BigFloatConfig.ROUND_TRUNCATE,
 		extraPrecision = 2n,
 		piAlgorithm = BigFloatConfig.PI_CHUDNOVSKY,
-		sqrtMaxChebyshevSteps = 30,
 		trigFuncsMaxSteps = 5000n,
 		lnMaxSteps = 10000n,
 	} = {}) {
@@ -1711,12 +1709,6 @@ class BigFloatConfig extends JavaLibraryScriptCore {
 		 * @default BigFloatConfig.PI_CHUDNOVSKY
 		 */
 		this.piAlgorithm = piAlgorithm;
-		/**
-		 * 平方根[チェビシェフ法]の最大ステップ数
-		 * @type {number}
-		 * @default 30
-		 */
-		this.sqrtMaxChebyshevSteps = sqrtMaxChebyshevSteps;
 		/**
 		 * 三角関数の最大ステップ数
 		 * @type {BigInt}
@@ -1832,6 +1824,15 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
+	 * 精度を変更する
+	 * @param {number} precision
+	 */
+	changePrecision(precision) {
+		this._precision = BigInt(precision);
+		this.value = this.constructor._round(this.value, precision, this._precision);
+	}
+
+	/**
 	 * 数値に変換する
 	 * @returns {number}
 	 */
@@ -1941,7 +1942,11 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		return this._makeResult(total, precision);
 	}
-
+	/**
+	 * 小数点以下の桁数を指定して数値を丸める
+	 * @param {number} digits - 小数点以下の桁数
+	 * @returns {string}
+	 */
 	toFixed(digits) {
 		const str = this._normalize(this.value);
 		const [intPart, fracPart = ""] = str.split(".");
@@ -1949,6 +1954,41 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (d === 0) return intPart;
 		const fracFixed = fracPart.padEnd(d, "0").slice(0, d);
 		return `${intPart}.${fracFixed}`;
+	}
+	/**
+	 * 指数表記に変換する
+	 * @param {number} digits - 小数点以下の桁数
+	 * @returns {string}
+	 */
+	toExponential(digits = Number(this._precision)) {
+		const prec = Number(this._precision);
+		if (digits <= 0 || digits > prec) throw new RangeError("Invalid digits (must be between 1 and precision)");
+		const isNeg = this.value < 0n;
+		const absVal = isNeg ? -this.value : this.value;
+		const s = absVal.toString().padStart(prec + 1, "0");
+
+		const intPart = s.slice(0, -prec) || "0";
+		const fracPart = s.slice(-prec);
+		const raw = `${intPart}${fracPart}`;
+
+		// 最初の非ゼロ桁探す（有効数字先頭）
+		const firstDigitIndex = raw.search(/[1-9]/);
+		if (firstDigitIndex === -1) return "0e+0";
+
+		const mantissa = raw.slice(firstDigitIndex, firstDigitIndex + digits);
+		let decimal;
+		if (digits === 1) {
+			decimal = raw[firstDigitIndex]; // 有効数字1桁だけ（整数部）
+		} else if (mantissa.length === 1) {
+			decimal = `${mantissa[0]}.0`;
+		} else {
+			decimal = `${mantissa[0]}.${mantissa.slice(1)}`;
+		}
+		const exp = intPart.length - firstDigitIndex - 1;
+
+		const signStr = isNeg ? "-" : "";
+		const expStr = exp >= 0 ? `e+${exp}` : `e${exp}`;
+		return `${signStr}${decimal}${expStr}`;
 	}
 
 	/**
@@ -2308,6 +2348,81 @@ class BigFloat extends JavaLibraryScriptCore {
 		}
 		return this._makeResult(prod.value, prec, exPrec);
 	}
+	/**
+	 * 分散を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static variance(...args) {
+		const arr = this._normalizeArgs(args);
+		if (arr.length === 0) throw new Error("No arguments provided");
+		if (arr.length === 1) return new this("0");
+
+		const [scaled, exPrec, prec] = this._batchRescale(arr, true);
+		const n = new this(arr.length, exPrec);
+
+		// 平均値計算
+		const total = this.sum(arr);
+		const meanVal = total.div(n).changePrecision(exPrec);
+
+		// 分散 = Σ(x_i - mean)^2 / n
+		let sumSquares = 0n;
+		for (const item of scaled) {
+			const a = new this();
+			a.value = item;
+			a._precision = exPrec;
+			const diff = a.sub(meanVal);
+			sumSquares += diff.mul(diff).value;
+		}
+
+		const sumS = new this();
+		sumS.value = sumSquares;
+		sumS._precision = exPrec;
+
+		// 分散は元の精度に合わせて返す
+		return this._makeResult(sumS.div(n).value, prec, exPrec);
+	}
+	/**
+	 * 標準偏差を返す
+	 * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 * @static
+	 */
+	static stddev(...args) {
+		const variance = this.variance(args);
+		return variance.sqrt();
+	}
+
+	/**
+	 * 階乗を計算する
+	 * @param {BigInt} n
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _factorial(n) {
+		let f = 1n;
+		for (let i = 2n; i <= n; i++) f *= i;
+		return f;
+	}
+	/**
+	 * 二項係数を計算する
+	 * @param {BigInt} n
+	 * @param {BigInt} k
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _binomial(n, k) {
+		if (k > n) return 0n;
+		if (k > n - k) k = n - k;
+		let result = 1n;
+		for (let i = 1n; i <= k; i++) {
+			result = (result * (n - i + 1n)) / i;
+		}
+		return result;
+	}
 
 	/**
 	 * 精度をチェックする
@@ -2330,7 +2445,31 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @returns {{intPart: string, fracPart: string, sign: number}}
 	 */
 	_parse(str) {
-		const [intPartRaw, fracPartRaw = ""] = str.toString().split(".");
+		str = str.toString().trim();
+
+		const expMatch = str.match(/^([+-]?[\d.]+)[eE]([+-]?\d+)$/);
+		if (expMatch) {
+			// 指数表記を通常の小数に変換
+			let [_, base, expStr] = expMatch;
+			const exp = parseInt(expStr, 10);
+
+			// 小数点位置をずらす
+			let [intPart, fracPart = ""] = base.split(".");
+			const allDigits = intPart + fracPart;
+
+			let pointIndex = intPart.length + exp;
+			if (pointIndex < 0) {
+				base = "0." + "0".repeat(-pointIndex) + allDigits;
+			} else if (pointIndex >= allDigits.length) {
+				base = allDigits + "0".repeat(pointIndex - allDigits.length);
+			} else {
+				base = allDigits.slice(0, pointIndex) + "." + allDigits.slice(pointIndex);
+			}
+
+			str = base;
+		}
+
+		const [intPartRaw, fracPartRaw = ""] = str.split(".");
 		const sign = intPartRaw.startsWith("-") ? -1 : 1;
 		const intPart = intPartRaw.replace("-", "");
 		return { intPart, fracPart: fracPartRaw, sign };
@@ -2570,7 +2709,6 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
 	 * @returns {BigInt}
 	 * @static
-	 * @deprecated
 	 */
 	static _piLeibniz(precision = 20n, mulPrecision = 100n) {
 		const scale = 10n ** precision;
@@ -2625,12 +2763,6 @@ class BigFloat extends JavaLibraryScriptCore {
 		const C = 426880n * this._sqrt(10005n * scale, precision);
 		let sum = 0n;
 
-		function factorial(n) {
-			let res = 1n;
-			for (let i = 2n; i <= n; i++) res *= i;
-			return res;
-		}
-
 		function bigPower(base, exp) {
 			let res = 1n;
 			for (let i = 0n; i < exp; i++) res *= base;
@@ -2638,8 +2770,8 @@ class BigFloat extends JavaLibraryScriptCore {
 		}
 
 		for (let k = 0n; k < terms; k++) {
-			const numerator = factorial(6n * k) * (545140134n * k + 13591409n) * (k % 2n === 0n ? 1n : -1n);
-			const denominator = factorial(3n * k) * bigPower(factorial(k), 3n) * bigPower(640320n, 3n * k);
+			const numerator = this._factorial(6n * k) * (545140134n * k + 13591409n) * (k % 2n === 0n ? 1n : -1n);
+			const denominator = this._factorial(3n * k) * bigPower(this._factorial(k), 3n) * bigPower(640320n, 3n * k);
 
 			sum += (scale * numerator) / denominator;
 		}
@@ -2768,6 +2900,36 @@ class BigFloat extends JavaLibraryScriptCore {
 		const expInt = construct._exp(val, totalPr);
 		return this._makeResult(expInt, this._precision, totalPr);
 	}
+	/**
+	 * 2の指数関数
+	 * @param {BigInt} value
+	 * @param {BigInt} precision
+	 * @param {number} maxSteps
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _exp2(value, precision, maxSteps) {
+		const LN2 = this._ln2(precision, maxSteps);
+		const scale = 10n ** precision;
+
+		return this._exp((LN2 * value) / scale, precision);
+	}
+	/**
+	 * 2の指数関数
+	 * @returns {this}
+	 */
+	exp2() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const config = construct.config;
+		const maxSteps = config.lnMaxSteps;
+		const exPr = config.extraPrecision;
+		const totalPr = this._precision + exPr;
+		const val = this.value * 10n ** exPr;
+		const exp2Int = construct._exp2(val, totalPr, maxSteps);
+		return this._makeResult(exp2Int, this._precision, totalPr);
+	}
+
 	/**
 	 * 指数関数 exp(x) - 1
 	 * @param {BigInt} value
@@ -2912,57 +3074,80 @@ class BigFloat extends JavaLibraryScriptCore {
 	neg() {
 		return this._makeResult(-this.value, this._precision);
 	}
+
+	/**
+	 * 絶対値
+	 * @param {BigInt} val
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _abs(val) {
+		return val < 0n ? -val : val;
+	}
 	/**
 	 * 絶対値
 	 * @returns {this}
 	 * @throws {Error}
 	 */
 	abs() {
-		const val = this.value;
-		return this._makeResult(val < 0n ? -val : val, this._precision);
+		return this._makeResult(this.constructor._abs(this.value), this._precision);
 	}
 
 	/**
 	 * べき乗
-	 * @param {number | BigInt} exponent - 指数（整数のみ対応）
+	 * @param {BigInt} base - 基数
+	 * @param {BigInt} exponent - 指数
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _pow(base, exponent, precision) {
+		const scale = 10n ** precision;
+		if (exponent === 0n) return scale;
+		if (base === 0n) return 0n;
+		if (exponent < 0n) {
+			// 負の指数は逆数計算を根幹でやるため div を使う
+			const one = this._makeResult(scale, precision);
+			return one.div(this._pow(base, -exponent, precision)).value;
+		}
+		if (exponent % scale === 0n) {
+			// 整数が指数の場合
+			exponent /= scale;
+			let result = scale;
+			while (exponent > 0n) {
+				if (exponent & 1n) {
+					result = (result * base) / scale;
+				}
+				base = (base * base) / scale;
+				exponent >>= 1n;
+			}
+			return result;
+		}
+		// 小数が指数の場合
+		const config = this.config;
+		const maxSteps = config.lnMaxSteps;
+
+		const lnBase = this._ln(base, precision, maxSteps);
+		const mul = (lnBase * exponent) / scale;
+		return this._exp(mul, precision, maxSteps);
+	}
+
+	/**
+	 * べき乗
+	 * @param {BigFloat} exponent - 指数
 	 * @returns {this}
 	 * @throws {Error}
 	 */
 	pow(exponent) {
-		const prec = this._precision;
-		const scale = 10n ** prec;
-		let exp = BigInt(exponent);
-		if (exp === 0n) {
-			return this._makeResult(scale, prec);
-		}
-		if (this.value === 0n) {
-			return this._makeResult(0n, prec);
-		}
-		if (exp < 0n) {
-			// 負の指数は逆数計算を根幹でやるため div を使う
-			const one = this._makeResult(scale, prec);
-			return one.div(this.pow(-exp));
-		}
-
-		const exPr = this.constructor.config.extraPrecision;
-		const exScale = 10n ** (prec + exPr);
-
-		let baseVal = this.value * 10n ** exPr;
-		let resultVal = exScale; // 1.0をスケール付き整数で表現
-
-		while (exp > 0n) {
-			if (exp & 1n) {
-				resultVal = (resultVal * baseVal) / exScale;
-			}
-			baseVal = (baseVal * baseVal) / exScale;
-			exp >>= 1n;
-		}
-
-		return this._makeResult(resultVal, prec, prec + exPr);
+		const [valA, valB, exPrec, prec] = this._bothRescale(exponent, true);
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const result = construct._pow(valA, valB, exPrec);
+		return this._makeResult(result, prec, exPrec);
 	}
 
 	/**
-	 * 平方根[ニュートン法]
+	 * 平方根[ニュートン法] (_nthRootとは高速化のために分離)
 	 * @param {BigInt} n
 	 * @param {BigInt} precision
 	 * @returns {BigInt}
@@ -2983,7 +3168,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		while (true) {
 			last = x;
 			x = (x + nScaled / x) / TWO;
-			if (x === last || (x > last ? x - last : last - x) <= 1n) break;
+			if (x === last) break;
 		}
 
 		return x;
@@ -3006,50 +3191,25 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		return this._makeResult(x, prec, totalPr);
 	}
+
 	/**
-	 * 平方根[チェビシェフ法]
+	 * 立方根[ニュートン法]
 	 * @returns {this}
+	 * @throws {Error}
 	 */
-	sqrtChebyshev() {
-		let val = this.value;
-		if (val < 0n) throw new Error("Cannot compute square root of negative number");
-
-		/** @type {BigFloatConfig} */
-		const config = this.constructor.config;
-		const maxSteps = config.sqrtMaxChebyshevSteps;
-		const exPr = config.extraPrecision;
-
+	cbrt() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const exPr = construct.config.extraPrecision;
 		const prec = this._precision;
 		const totalPr = prec + exPr;
-		const scale = 10n ** totalPr;
-		val *= 10n ** exPr;
-		const TWO = 2n;
+		const val = this.value * 10n ** exPr;
 
-		const scale2 = scale * scale;
-
-		// 初期近似 x = A / 2
-		let x = v / TWO;
-		if (x === 0n) x = 1n; // 小さい数のための補正
-
-		let lastX = 0n;
-
-		// チェビシェフ法の反復
-		// xₙ₊₁ = xₙ * (3 - A / (xₙ²)) / 2
-		for (let i = 0; i < maxSteps && x !== lastX; i++) {
-			lastX = x;
-			const x2 = (x * x) / scale;
-			const fx = x2 - val;
-			const f1x = TWO * x;
-
-			const fx_div_f1x = (fx * scale) / f1x;
-			const fx2 = (fx * fx) / scale;
-			const correction = (fx2 * TWO) / ((f1x * f1x * f1x) / scale2);
-
-			x = x - fx_div_f1x - correction;
-		}
+		const x = construct._nthRoot(val, 3n, totalPr);
 
 		return this._makeResult(x, prec, totalPr);
 	}
+
 	/**
 	 * n乗根[ニュートン法]
 	 * @param {BigInt} v
@@ -3063,8 +3223,11 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (n <= 0n) {
 			throw new Error("n must be a positive integer");
 		}
-		if (v < 0n && n % 2n === 0n) {
-			throw new Error("Even root of negative number is not real");
+		if (v < 0n) {
+			if (n % 2n === 0n) {
+				throw new Error("Even root of negative number is not real");
+			}
+			return -this._nthRoot(-v, n, precision);
 		}
 		const scale = 10n ** precision;
 
@@ -3453,28 +3616,6 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (x > 0n) return angle;
 		if (y >= 0n) return angle + this._pi(precision);
 		return angle - this._pi(precision);
-
-		// // y == 0
-		// if (y === 0n) {
-		// 	if (x > 0n) return 0n;
-		// 	if (x < 0n) return this._pi(precision);
-		// }
-		// const scale = 10n ** precision;
-
-		// const ratio = (y * scale) / x;
-
-		// const angle = this._atan(ratio, precision, maxSteps);
-
-		// if (x > 0n) {
-		// 	// 第1,4象限: そのまま
-		// 	return angle;
-		// }
-		// const pi = this._pi(precision);
-		// // 第2,3象限: πを足す
-		// if (y >= 0n) {
-		// 	return angle + pi;
-		// }
-		// return angle - pi;
 	}
 
 	/**
@@ -3540,6 +3681,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @param {BigInt} precision - 精度
 	 * @param {BigInt} [maxSteps=10000n] - 最大反復回数
 	 * @returns {BigInt}
+	 * @static
 	 */
 	static _ln10(precision, maxSteps = 10000n) {
 		const scale = 10n ** precision;
@@ -3579,6 +3721,17 @@ class BigFloat extends JavaLibraryScriptCore {
 
 		const raw = construct._ln(val, totalPr, maxSteps);
 		return this._makeResult(raw, this._precision, totalPr);
+	}
+
+	/**
+	 * 自然対数 ln(2)
+	 * @param {BigInt} precision
+	 * @param {BigInt} maxSteps
+	 * @returns {BigInt}
+	 */
+	static _ln2(precision, maxSteps) {
+		const scale = 10n ** precision;
+		return this._ln(2n * scale, precision, maxSteps);
 	}
 
 	/**
@@ -3693,6 +3846,117 @@ class BigFloat extends JavaLibraryScriptCore {
 		const totalPr = this._precision + exPrec;
 		const val = this.value * 10n ** exPrec;
 		const raw = construct._log1p(val, totalPr, maxSteps);
+		return this._makeResult(raw, this._precision, totalPr);
+	}
+
+	/**
+	 * 台形積分
+	 * @param {(k:BigInt) => BigInt} f
+	 * @param {BigInt} a - スケール済
+	 * @param {BigInt} b - スケール済
+	 * @param {BigInt} n
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _integral(f, a, b, n, precision) {
+		const scale = 10n ** precision;
+
+		if (n <= 0n || a === b) return 0n;
+
+		const delta = b - a;
+
+		let sum = f(a) + f(b);
+
+		for (let i = 1n; i < n; i++) {
+			const numerator = a * n + i * delta;
+			const x_i = numerator / n;
+			const term = 2n * f(x_i);
+			if (term === 0n) break;
+			sum += term;
+		}
+
+		const denominator = scale * n * 2n;
+		if (denominator === 0n) return 0n;
+		return (delta * sum) / denominator;
+	}
+
+	/**
+	 * sin(π * z)
+	 * @param {BigInt} z
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 */
+	static _sinPi(z, precision) {
+		// π * z / scale のsinを計算
+		// 既存の_sinと_pi使う想定
+		const pi = this._pi(precision);
+		const x = (pi * z) / 10n ** precision;
+		return this._sin(x, precision);
+	}
+
+	/**
+	 * γ関数[台形積分]
+	 * @param {BigInt} z
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 * @deprecated
+	 */
+	static _gammaIntegral(z, precision) {
+		const scale = 10n ** precision;
+		const scale2 = scale * scale;
+
+		// z < 0.5 の判定（scale付き比較）
+		if (z < scale / 2n) {
+			// 反射公式
+			const pi = this._pi(precision);
+			const sinPiZ = this._sinPi(z, precision);
+			const oneMinusZ = scale - z;
+			const gammaOneMinusZ = this._gammaIntegral(oneMinusZ, precision);
+			return (pi * scale2) / (sinPiZ * gammaOneMinusZ);
+		}
+
+		// 定数
+		const L = 30n * scale;
+		const d = 100000n;
+
+		// f1(t) = t^{z-1} * e^{-t} をBigIntで定義
+		const f1 = (t) => {
+			const tPow = this._pow(t, z - scale, precision); // z-1
+			const expNegT = this._exp(-t, precision);
+			return (tPow * expNegT) / scale;
+		};
+
+		const integralPart = this._integral(f1, scale, L, d, precision);
+
+		// f2(k) = (-1)^k / ((z+k) * k!)
+		let sign = 1n;
+		let sum = 0n;
+		for (let i = 0n; i < 1000n; i++) {
+			const kFactorial = this._factorial(i);
+			const denom = (z + i * scale) * kFactorial;
+			const term = (sign * scale2) / denom;
+			if (term === 0n) break;
+			sum += term;
+			sign *= -1n;
+		}
+
+		return integralPart + sum;
+	}
+
+	/**
+	 * ガンマ関数[台形積分]
+	 * @returns {BigFloat}
+	 * @deprecated
+	 */
+	gamma() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const exPrec = construct.config.extraPrecision;
+		const totalPr = this._precision + exPrec;
+		const val = this.value * 10n ** exPrec;
+		const raw = construct._gammaIntegral(val, totalPr);
 		return this._makeResult(raw, this._precision, totalPr);
 	}
 }

@@ -10,14 +10,18 @@
 			"bat": "cmd /c",
 		},
 		"cSpell.words": [
+			"binom",
 			"Chebyshev",
 			"Chudnovsky",
+			"coeffs",
 			"CORDIC",
 			"javalibraryscript",
+			"laguerre",
 			"Maclaurin",
 			"prec",
 			"prereleased",
-			"softprops"
+			"softprops",
+			"spouge"
 		]
 	}
 }
