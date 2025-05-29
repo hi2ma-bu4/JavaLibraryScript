@@ -1115,92 +1115,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static parseFloat(str: string, precision?: bigint, base?: number): BigFloat;
     /**
-     * 最大値を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static max(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 最小値を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static min(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 合計値を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static sum(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 平均値を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static average(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 中央値を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static median(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 積を返す (丸め誤差に注意)
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static product(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 分散を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static variance(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 標準偏差を返す
-     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static stddev(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
-    /**
-     * 階乗を計算する
-     * @param {BigInt} n
-     * @returns {BigInt}
-     * @static
-     */
-    static _factorial(n: bigint): bigint;
-    /**
-     * 二項係数を計算する
-     * @param {BigInt} n
-     * @param {BigInt} k
-     * @returns {BigInt}
-     * @static
-     */
-    static _binomial(n: bigint, k: bigint): bigint;
-    /**
-     * 精度をチェックする
-     * @param {BigInt} precision
-     * @throws {Error}
-     * @static
-     */
-    static _checkPrecision(precision: bigint): void;
-    /**
      * 引数を正規化する
      * @param {any[]} args
      * @returns {any[]}
@@ -1225,127 +1139,12 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _makeResult(val: bigint, precision: bigint, exPrecision?: bigint): BigFloat;
     /**
-     * 数値を丸める
-     * @param {BigInt} val
-     * @param {BigInt} currentPrec
-     * @param {BigInt} targetPrec
-     * @returns {BigInt}
-     * @static
-     */
-    static _round(val: bigint, currentPrec: bigint, targetPrec: bigint): bigint;
-    static _randomBigInt(precision: any): bigint;
-    /**
-     * 乱数を生成する
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigFloat}
+     * 精度をチェックする
+     * @param {BigInt} precision
      * @throws {Error}
      * @static
      */
-    static random(precision?: bigint): BigFloat;
-    /**
-     * 円周率[Gregory-Leibniz法] (超高速・超低収束)
-     * @param {BigInt} [precision=20n] - 精度
-     * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
-     * @returns {BigInt}
-     * @static
-     */
-    static _piLeibniz(precision?: bigint, mulPrecision?: bigint): bigint;
-    /**
-     * 円周率[ニュートン法] (高速・低収束)
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigInt}
-     * @static
-     */
-    static _piNewton(precision?: bigint): bigint;
-    /**
-     * 円周率[Chudnovsky法] (低速・高収束)
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigInt}
-     * @static
-     */
-    static _piChudnovsky(precision?: bigint): bigint;
-    /**
-     * キャッシュを取得すべきか判定
-     * @param {String} key
-     * @param {BigInt} precision
-     * @param {Number} [priority=0]
-     * @returns {Boolean}
-     * @static
-     */
-    static _getCheckCache(key: string, precision: bigint, priority?: number): boolean;
-    /**
-     * キャッシュを取得する
-     * @param {String} name
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     * @throws {Error}
-     * @static
-     */
-    static _getCache(key: any, precision: bigint): bigint;
-    /**
-     * キャッシュを更新する
-     * @param {String} key
-     * @param {BigInt} value
-     * @param {BigInt} precision
-     * @param {Number} [priority=0]
-     * @static
-     */
-    static _updateCache(key: string, value: bigint, precision: bigint, priority?: number): void;
-    /**
-     * 円周率
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigInt}
-     * @static
-     */
-    static _pi(precision?: bigint): bigint;
-    /**
-     * 円周率
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static pi(precision?: bigint): BigFloat;
-    /**
-     * 指数関数のTaylor展開
-     * @param {BigInt} x
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     * @static
-     */
-    static _exp(x: bigint, precision: bigint): bigint;
-    /**
-     * ネイピア数
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     * @static
-     */
-    static _e(precision: bigint): bigint;
-    /**
-     * ネイピア数
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {BigFloat}
-     * @throws {Error}
-     * @static
-     */
-    static e(precision?: bigint): BigFloat;
-    /**
-     * 2の指数関数
-     * @param {BigInt} value
-     * @param {BigInt} precision
-     * @param {number} maxSteps
-     * @returns {BigInt}
-     * @static
-     */
-    static _exp2(value: bigint, precision: bigint, maxSteps: number): bigint;
-    /**
-     * 指数関数 exp(x) - 1
-     * @param {BigInt} value
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     * @static
-     */
-    static _expm1(value: bigint, precision: bigint): bigint;
+    static _checkPrecision(precision: bigint): void;
     /**
      * 剰余
      * @param {BigInt} x
@@ -1361,6 +1160,15 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _abs(val: bigint): bigint;
+    /**
+     * 数値を丸める
+     * @param {BigInt} val
+     * @param {BigInt} currentPrec
+     * @param {BigInt} targetPrec
+     * @returns {BigInt}
+     * @static
+     */
+    static _round(val: bigint, currentPrec: bigint, targetPrec: bigint): bigint;
     /**
      * べき乗
      * @param {BigInt} base - 基数
@@ -1418,18 +1226,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _tan(x: bigint, precision: bigint, maxSteps: bigint): bigint;
     /**
-     * Newton法
-     * @param {(x:BigInt) => BigInt} f
-     * @param {(x:BigInt) => BigInt} df
-     * @param {BigInt} initial
-     * @param {BigInt} precision
-     * @param {number} maxSteps
-     * @returns {BigInt}
-     * @throws {Error}
-     * @static
-     */
-    static _trigFuncsNewton(f: (x: bigint) => bigint, df: (x: bigint) => bigint, initial: bigint, precision: bigint, maxSteps?: number): bigint;
-    /**
      * 逆正弦
      * @param {BigInt} x
      * @param {BigInt} precision
@@ -1450,14 +1246,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _acos(x: bigint, precision: bigint, maxSteps: bigint): bigint;
     /**
-     * 逆正接[Machine's formula]
-     * @param {BigInt} invX
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     * @static
-     */
-    static _atanMachine(invX: bigint, precision: bigint): bigint;
-    /**
      * 逆正接
      * @param {BigInt} x
      * @param {BigInt} precision
@@ -1467,7 +1255,68 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _atan(x: bigint, precision: bigint, maxSteps: bigint): bigint;
-    static _atan2(y: any, x: any, precision: any, maxSteps: any): bigint;
+    /**
+     * 逆正接2 (atan2(y, x))
+     * @param {BigInt} y
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     * @static
+     */
+    static _atan2(y: bigint, x: bigint, precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * 逆正接[Machine's formula]
+     * @param {BigInt} invX
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _atanMachine(invX: bigint, precision: bigint): bigint;
+    /**
+     * Newton法
+     * @param {(x:BigInt) => BigInt} f
+     * @param {(x:BigInt) => BigInt} df
+     * @param {BigInt} initial
+     * @param {BigInt} precision
+     * @param {number} maxSteps
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _trigFuncsNewton(f: (x: bigint) => bigint, df: (x: bigint) => bigint, initial: bigint, precision: bigint, maxSteps?: number): bigint;
+    /**
+     * sin(π * z)
+     * @param {BigInt} z
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     */
+    static _sinPi(z: bigint, precision: bigint): bigint;
+    /**
+     * 指数関数のTaylor展開
+     * @param {BigInt} x
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _exp(x: bigint, precision: bigint): bigint;
+    /**
+     * 2の指数関数
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @param {number} maxSteps
+     * @returns {BigInt}
+     * @static
+     */
+    static _exp2(value: bigint, precision: bigint, maxSteps: number): bigint;
+    /**
+     * 指数関数 exp(x) - 1
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _expm1(value: bigint, precision: bigint): bigint;
     /**
      * 自然対数[Atanh法]
      * @param {BigInt} value
@@ -1478,21 +1327,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @static
      */
     static _ln(value: bigint, precision: bigint, maxSteps: bigint): bigint;
-    /**
-     * 自然対数 ln(10) (簡易計算用)
-     * @param {BigInt} precision - 精度
-     * @param {BigInt} [maxSteps=10000n] - 最大反復回数
-     * @returns {BigInt}
-     * @static
-     */
-    static _ln10(precision: bigint, maxSteps?: bigint): bigint;
-    /**
-     * 自然対数 ln(2)
-     * @param {BigInt} precision
-     * @param {BigInt} maxSteps
-     * @returns {BigInt}
-     */
-    static _ln2(precision: bigint, maxSteps: bigint): bigint;
     /**
      * 対数
      * @param {BigInt} baseValue
@@ -1526,6 +1360,165 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _log1p(value: any, precision: any, maxSteps: any): BigFloat;
     /**
+     * 自然対数 ln(10) (簡易計算用)
+     * @param {BigInt} precision - 精度
+     * @param {BigInt} [maxSteps=10000n] - 最大反復回数
+     * @returns {BigInt}
+     * @static
+     */
+    static _ln10(precision: bigint, maxSteps?: bigint): bigint;
+    /**
+     * 自然対数 ln(2)
+     * @param {BigInt} precision
+     * @param {BigInt} maxSteps
+     * @returns {BigInt}
+     */
+    static _ln2(precision: bigint, maxSteps: bigint): bigint;
+    /**
+     * ネイピア数
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _e(precision: bigint): bigint;
+    /**
+     * ネイピア数
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static e(precision?: bigint): BigFloat;
+    /**
+     * 円周率[Gregory-Leibniz法] (超高速・超低収束)
+     * @param {BigInt} [precision=20n] - 精度
+     * @param {BigInt} [mulPrecision=100n] - 計算精度の倍率
+     * @returns {BigInt}
+     * @static
+     */
+    static _piLeibniz(precision?: bigint, mulPrecision?: bigint): bigint;
+    /**
+     * 円周率[ニュートン法] (高速・低収束)
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigInt}
+     * @static
+     */
+    static _piNewton(precision?: bigint): bigint;
+    /**
+     * 円周率[Chudnovsky法] (低速・高収束)
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigInt}
+     * @static
+     */
+    static _piChudnovsky(precision?: bigint): bigint;
+    /**
+     * 円周率
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigInt}
+     * @static
+     */
+    static _pi(precision?: bigint): bigint;
+    /**
+     * 円周率
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static pi(precision?: bigint): BigFloat;
+    /**
+     * 円周率の2倍
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigInt}
+     * @static
+     */
+    static _tau(precision?: bigint): bigint;
+    /**
+     * 円周率の2倍
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigFloat}
+     * @static
+     */
+    static tau(precision?: bigint): BigFloat;
+    /**
+     * 最大値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static max(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 最小値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static min(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 合計値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static sum(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 積を返す (丸め誤差に注意)
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static product(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 平均値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static average(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 中央値を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static median(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 分散を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static variance(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * 標準偏差を返す
+     * @param {...(BigFloat | number | string | BigInt) | Array<BigFloat | number | string | BigInt>} args
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static stddev(...args: ((BigFloat | number | string | bigint) | Array<BigFloat | number | string | bigint>)[]): BigFloat;
+    /**
+     * bigintの乱数を生成する
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     */
+    static _randomBigInt(precision: bigint): bigint;
+    /**
+     * 乱数を生成する
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {BigFloat}
+     * @throws {Error}
+     * @static
+     */
+    static random(precision?: bigint): BigFloat;
+    /**
      * 台形積分
      * @param {(k:BigInt) => BigInt} f
      * @param {BigInt} a - スケール済
@@ -1537,13 +1530,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _integral(f: (k: bigint) => bigint, a: bigint, b: bigint, n: bigint, precision: bigint): bigint;
     /**
-     * sin(π * z)
-     * @param {BigInt} z
-     * @param {BigInt} precision
-     * @returns {BigInt}
-     */
-    static _sinPi(z: bigint, precision: bigint): bigint;
-    /**
      * γ関数[台形積分]
      * @param {BigInt} z
      * @param {BigInt} precision
@@ -1552,6 +1538,48 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @deprecated
      */
     static _gammaIntegral(z: bigint, precision: bigint): bigint;
+    /**
+     * 階乗を計算する
+     * @param {BigInt} n
+     * @returns {BigInt}
+     * @static
+     */
+    static _factorial(n: bigint): bigint;
+    /**
+     * 二項係数を計算する
+     * @param {BigInt} n
+     * @param {BigInt} k
+     * @returns {BigInt}
+     * @static
+     */
+    static _binomial(n: bigint, k: bigint): bigint;
+    /**
+     * キャッシュを取得すべきか判定
+     * @param {String} key
+     * @param {BigInt} precision
+     * @param {Number} [priority=0]
+     * @returns {Boolean}
+     * @static
+     */
+    static _getCheckCache(key: string, precision: bigint, priority?: number): boolean;
+    /**
+     * キャッシュを取得する
+     * @param {String} name
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _getCache(key: any, precision: bigint): bigint;
+    /**
+     * キャッシュを更新する
+     * @param {String} key
+     * @param {BigInt} value
+     * @param {BigInt} precision
+     * @param {Number} [priority=0]
+     * @static
+     */
+    static _updateCache(key: string, value: bigint, precision: bigint, priority?: number): void;
     /**
      * -1のBigFloat
      * @param {BigInt} [precision=20n] 精度
@@ -1588,39 +1616,50 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     clone(): BigFloat;
     /**
+     * 文字列を解析して数値を取得
+     * @param {string} str - 文字列
+     * @returns {{intPart: string, fracPart: string, sign: number}}
+     */
+    _parse(str: string): {
+        intPart: string;
+        fracPart: string;
+        sign: number;
+    };
+    /**
+     * 数値を正規化
+     * @param {BigInt} val
+     * @returns {string}
+     */
+    _normalize(val: bigint): string;
+    /**
+     * 精度を合わせる
+     * @param {BigFloat} other
+     * @param {boolean} [useExPrecision=false] - 追加の精度を使う
+     * @returns {[BigInt, BigInt, BigInt, BigInt]}
+     * @throws {Error}
+     */
+    _bothRescale(other: BigFloat, useExPrecision?: boolean): [bigint, bigint, bigint, bigint];
+    /**
+     * 結果を作成する
+     * @param {BigInt} val
+     * @param {BigInt} precision
+     * @param {BigInt} [exPrecision]
+     * @param {boolean} [okMutate=true] - 破壊的変更を許容
+     * @returns {this}
+     */
+    _makeResult(val: bigint, precision: bigint, exPrecision?: bigint, okMutate?: boolean): this;
+    /**
      * 精度を変更する
      * @param {number} precision
      */
     changePrecision(precision: number): void;
     /**
-     * 数値に変換する
+     * どこまで精度が一致しているかを判定する
+     * @param {BigFloat | number | string | BigInt} other - 比較する値
      * @returns {number}
+     * @throws {Error}
      */
-    toNumber(): number;
-    /**
-     * 文字列に変換する
-     * @param {number} base - 基数
-     * @param {number} precision - 精度
-     * @returns {string}
-     */
-    toString(base?: number, precision?: number): string;
-    /**
-     * JSONに変換する
-     * @returns {string}
-     */
-    toJSON(): string;
-    /**
-     * 小数点以下の桁数を指定して数値を丸める
-     * @param {number} digits - 小数点以下の桁数
-     * @returns {string}
-     */
-    toFixed(digits: number): string;
-    /**
-     * 指数表記に変換する
-     * @param {number} digits - 小数点以下の桁数
-     * @returns {string}
-     */
-    toExponential(digits?: number): string;
+    matchingPrecision(other: BigFloat | number | string | bigint): number;
     /**
      * 等しいかどうかを判定する
      * @param {BigFloat | number | string | BigInt} other - 比較する値
@@ -1693,39 +1732,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     isNegative(): boolean;
     /**
-     * 小数点以下を切り捨て
-     * @returns {BigFloat}
-     */
-    floor(): BigFloat;
-    /**
-     * 小数点以下を切り上げ
-     * @returns {BigFloat}
-     */
-    ceil(): BigFloat;
-    /**
-     * 四捨五入
-     * @returns {BigFloat}
-     */
-    round(): BigFloat;
-    /**
-     * 整数部分だけを取得
-     * @returns {BigFloat}
-     */
-    trunc(): BigFloat;
-    /**
-     * 逆数を返す
-     * @returns {BigFloat}
-     * @throws {Error}
-     */
-    reciprocal(): BigFloat;
-    /**
-     * どこまで精度が一致しているかを判定する
-     * @param {BigFloat | number | string | BigInt} other - 比較する値
-     * @returns {number}
-     * @throws {Error}
-     */
-    matchingPrecision(other: BigFloat | number | string | bigint): number;
-    /**
      * 相対差を計算する
      * @param {BigFloat | number | string | BigInt} other - 比較する値
      * @returns {BigInt}
@@ -1747,60 +1753,34 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     percentDiff(other: BigFloat | number | string | bigint): bigint;
     /**
-     * 文字列を解析して数値を取得
-     * @param {string} str - 文字列
-     * @returns {{intPart: string, fracPart: string, sign: number}}
-     */
-    _parse(str: string): {
-        intPart: string;
-        fracPart: string;
-        sign: number;
-    };
-    /**
-     * 数値を正規化
-     * @param {BigInt} val
+     * 文字列に変換する
+     * @param {number} base - 基数
+     * @param {number} precision - 精度
      * @returns {string}
      */
-    _normalize(val: bigint): string;
+    toString(base?: number, precision?: number): string;
     /**
-     * 精度を合わせる
-     * @param {BigFloat} other
-     * @param {boolean} [useExPrecision=false] - 追加の精度を使う
-     * @returns {[BigInt, BigInt, BigInt, BigInt]}
-     * @throws {Error}
+     * JSONに変換する
+     * @returns {string}
      */
-    _bothRescale(other: BigFloat, useExPrecision?: boolean): [bigint, bigint, bigint, bigint];
+    toJSON(): string;
     /**
-     * 結果を作成する
-     * @param {BigInt} val
-     * @param {BigInt} precision
-     * @param {BigInt} [exPrecision]
-     * @param {boolean} [okMutate=true] - 破壊的変更を許容
-     * @returns {this}
+     * 数値に変換する
+     * @returns {number}
      */
-    _makeResult(val: bigint, precision: bigint, exPrecision?: bigint, okMutate?: boolean): this;
+    toNumber(): number;
     /**
-     * 指数関数
-     * @param {BigInt} [precision=20n] - 精度
-     * @returns {this}
-     * @throws {Error}
+     * 小数点以下の桁数を指定して数値を丸める
+     * @param {number} digits - 小数点以下の桁数
+     * @returns {string}
      */
-    exp(): this;
+    toFixed(digits: number): string;
     /**
-     * 2の指数関数
-     * @returns {this}
+     * 指数表記に変換する
+     * @param {number} digits - 小数点以下の桁数
+     * @returns {string}
      */
-    exp2(): this;
-    /**
-     * 指数関数 exp(x) - 1
-     * @returns {this}
-     */
-    expm1(): this;
-    /**
-     * precisionを最小限まで縮める
-     * @returns {this}
-     */
-    scale(): this;
+    toExponential(digits?: number): string;
     /**
      * 加算
      * @param {BigFloat} other
@@ -1849,6 +1829,32 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     abs(): this;
     /**
+     * 逆数を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    reciprocal(): BigFloat;
+    /**
+     * 小数点以下を切り捨て
+     * @returns {BigFloat}
+     */
+    floor(): BigFloat;
+    /**
+     * 小数点以下を切り上げ
+     * @returns {BigFloat}
+     */
+    ceil(): BigFloat;
+    /**
+     * 四捨五入
+     * @returns {BigFloat}
+     */
+    round(): BigFloat;
+    /**
+     * 整数部分だけを取得
+     * @returns {BigFloat}
+     */
+    trunc(): BigFloat;
+    /**
      * べき乗
      * @param {BigFloat} exponent - 指数
      * @returns {this}
@@ -1874,6 +1880,11 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @throws {Error}
      */
     nthRoot(n: bigint): this;
+    /**
+     * precisionを最小限まで縮める
+     * @returns {this}
+     */
+    scale(): this;
     /**
      * 正弦[Maclaurin展開]
      * @returns {this}
@@ -1916,6 +1927,23 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @throws {Error}
      */
     atan2(x: BigFloat): this;
+    /**
+     * 指数関数
+     * @param {BigInt} [precision=20n] - 精度
+     * @returns {this}
+     * @throws {Error}
+     */
+    exp(): this;
+    /**
+     * 2の指数関数
+     * @returns {this}
+     */
+    exp2(): this;
+    /**
+     * 指数関数 exp(x) - 1
+     * @returns {this}
+     */
+    expm1(): this;
     /**
      * 自然対数 ln(x)
      * @returns {BigFloat}
