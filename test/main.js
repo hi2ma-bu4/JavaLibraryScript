@@ -2,6 +2,11 @@ try {
 	// IDEの型表示用
 	const { default: JavaLibraryScript } = require("../types/JavaLibraryScript");
 } catch (e) {}
+const worker = new Worker("./worker.js");
+
+setInterval(() => {
+	//worker.terminate();
+}, 1000);
 
 jasc.on("DOMContentLoaded", () => {
 	const log = new JavaLibraryScript.libs.sys.Logger("", JavaLibraryScript.libs.sys.Logger.LOG_LEVEL.TIME);

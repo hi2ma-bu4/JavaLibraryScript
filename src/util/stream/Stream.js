@@ -1,19 +1,22 @@
 const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
+const { BigFloat } = require("../../math/BigFloat");
 
 const Any = TypeChecker.Any;
 
 /** @typedef {import("./NumberStream.js")} NumberStreamType */
 // /** @typedef {import("./StringStream.js")} StringStream_forceRep */ // なぜかこいつだけ動かん
+/** @typedef {import("./BigFloatStream")} BigFloatStreamType */
 /** @typedef {import("./EntryStream.js")} EntryStreamType */
 /** @typedef {import("./AsyncStream.js")} AsyncStreamType */
 /** @typedef {import("../HashSet.js")} HashSetType */
 
-let NumberStream, StringStream, EntryStream, AsyncStream, HashSet;
+let NumberStream, StringStream, BigFloatStream, EntryStream, AsyncStream, HashSet;
 function init() {
 	if (NumberStream) return;
 	NumberStream = require("./NumberStream");
 	StringStream = require("./StringStream");
+	BigFloatStream = require("./BigFloatStream");
 	EntryStream = require("./EntryStream");
 	AsyncStream = require("./AsyncStream");
 	HashSet = require("../HashSet");
@@ -415,6 +418,29 @@ class Stream extends StreamInterface {
 				const mapped = fn(item);
 				if (typeof mapped !== "string") {
 					throw new TypeError(`mapToString() must return string. Got ${typeof mapped}`);
+				}
+				yield mapped;
+			}
+		});
+	}
+
+	/**
+	 * StreamをBigFloatStreamに変換
+	 * @param {Function | number | BigInt} [fn=20n] - 数値なら自動変換
+	 * @returns {BigFloatStreamType}
+	 */
+	mapToBigFloat(fn = 20n) {
+		const type = typeof fn;
+		return this._convertToX(BigFloatStream, function* (iter) {
+			for (const item of iter) {
+				let mapped;
+
+				if (type === "function") mapped = fn(item);
+				else if (type === "number" || type === "bigint") {
+					mapped = new BigFloat(item, fn);
+				}
+				if (!(mapped instanceof BigFloat)) {
+					throw new TypeError(`mapToBigFloat() must return BigFloat. Got ${typeof mapped}`);
 				}
 				yield mapped;
 			}

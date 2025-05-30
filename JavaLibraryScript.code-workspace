@@ -10,6 +10,7 @@
 			"bat": "cmd /c",
 		},
 		"cSpell.words": [
+			"Akiyama",
 			"binom",
 			"Chebyshev",
 			"Chudnovsky",
@@ -22,7 +23,8 @@
 			"prec",
 			"prereleased",
 			"softprops",
-			"spouge"
+			"spouge",
+			"Tanigawa"
 		]
 	}
 }

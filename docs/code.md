@@ -232,12 +232,22 @@ class AsyncStream(source: Iterable | AsyncIterator): AsyncStream
 
 非同期Stream (LazyAsyncList)
 
+## util\stream\BigFloatStream.js
+
+### BigFloatStream (JavaLibraryScript.util.stream.BigFloatStream)
+
+```ts
+class BigFloatStream(source: Iterable<BigFloat>): BigFloatStream
+```
+
+BigFloat専用Stream (LazyList)
+
 ## util\stream\EntryStream.js
 
 ### EntryStream (JavaLibraryScript.util.stream.EntryStream)
 
 ```ts
-class EntryStream<K, V>(source: Iterable, KeyType: Function, ValueType: Function): EntryStream<K, V>
+class EntryStream<K, V>(source: Iterable<[K, V]>, KeyType: Function, ValueType: Function): EntryStream<K, V>
 ```
 
 Entry専用Stream (LazyList)
@@ -247,7 +257,7 @@ Entry専用Stream (LazyList)
 ### NumberStream (JavaLibraryScript.util.stream.NumberStream)
 
 ```ts
-class NumberStream<V>(source: Iterable<V): NumberStream<V>
+class NumberStream(source: Iterable<Number>): NumberStream
 ```
 
 数値専用Stream (LazyList)
@@ -287,7 +297,7 @@ Streamの基底クラス
 ### StringStream (JavaLibraryScript.util.stream.StringStream)
 
 ```ts
-class StringStream<V>(source: Iterable<V>): StringStream<V>
+class StringStream(source: Iterable<String>): StringStream
 ```
 
 文字列専用Stream (LazyList)

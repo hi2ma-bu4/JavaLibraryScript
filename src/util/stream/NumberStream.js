@@ -2,13 +2,12 @@ const Stream = require("./Stream");
 
 /**
  * 数値専用Stream (LazyList)
- * @template V
- * @extends {Stream<V>}
+ * @extends {Stream<Number>}
  * @class
  */
 class NumberStream extends Stream {
 	/**
-	 * @param {Iterable<V} source
+	 * @param {Iterable<Number>} source
 	 */
 	constructor(source) {
 		super(source, Number);

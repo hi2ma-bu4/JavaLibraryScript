@@ -571,11 +571,14 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 	/**
 	 * 精度を変更する
-	 * @param {number} precision
+	 * @param {BigInt} precision
+	 * @returns {this}
 	 */
 	changePrecision(precision) {
-		this._precision = BigInt(precision);
-		this.value = this.constructor._round(this.value, precision, this._precision);
+		precision = BigInt(precision);
+		this.value = this.constructor._round(this.value, this._precision, precision);
+		this._precision = precision;
+		return this;
 	}
 	/**
 	 * どこまで精度が一致しているかを判定する
@@ -2462,59 +2465,152 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (denominator === 0n) return 0n;
 		return (delta * sum) / denominator;
 	}
-	/**
-	 * γ関数[台形積分]
-	 * @param {BigInt} z
-	 * @param {BigInt} precision
-	 * @returns {BigInt}
-	 * @static
-	 * @deprecated
-	 */
-	static _gammaIntegral(z, precision) {
-		const scale = 10n ** precision;
-		const scale2 = scale * scale;
 
-		// z < 0.5 の判定（scale付き比較）
-		if (z < scale / 2n) {
-			// 反射公式
-			const pi = this._pi(precision);
-			const sinPiZ = this._sinPi(z, precision);
-			const oneMinusZ = scale - z;
-			const gammaOneMinusZ = this._gammaIntegral(oneMinusZ, precision);
-			return (pi * scale2) / (sinPiZ * gammaOneMinusZ);
+	/**
+	 * ベルヌーイ数 [阿部-Zeta関数/Akiyama-Tanigawaアルゴリズム]
+	 * @param {number} n - ベルヌーイ数のインデックス (偶数のみ有効)
+	 * @param {BigInt} precision - 精度
+	 * @returns {BigInt[]} 0からnまでのベルヌーイ数の配列
+	 * @static
+	 */
+	static _bernoulliNumbers(n, precision) {
+		const A = new Array(n + 1).fill(null).map(() => 0n);
+		const B = new Array(n + 1).fill(null);
+
+		const scale = 10n ** precision;
+
+		for (let m = 0; m <= n; m++) {
+			A[m] = scale / BigInt(m + 1);
+			for (let j = m; j >= 1; j--) {
+				const term = A[j - 1] - A[j];
+				A[j - 1] = BigInt(j) * term;
+			}
+			B[m] = A[0];
 		}
 
-		// 定数
-		const L = 30n * scale;
-		const d = 100000n;
+		if (n >= 1) {
+			B[1] = -scale / 2n;
+		}
+		return B;
+	}
 
-		// f1(t) = t^{z-1} * e^{-t} をBigIntで定義
-		const f1 = (t) => {
-			const tPow = this._pow(t, z - scale, precision); // z-1
-			const expNegT = this._exp(-t, precision);
-			return (tPow * expNegT) / scale;
-		};
+	/**
+	 * Lanczos-Spouge近似のパラメータ a を決定
+	 * @param {BigInt} precision - 精度
+	 * @returns {number} 非スケール
+	 * @static
+	 */
+	static _getSpougeParamA(precision) {
+		const config = this.config;
+		const maxSteps = config.lnMaxSteps;
+		const log10_2pi = this._log10(2n * this._pi(precision), precision, maxSteps);
 
-		const integralPart = this._integral(f1, scale, L, d, precision);
+		const b = new this();
+		b.value = precision * log10_2pi;
+		b._precision = precision;
 
-		// f2(k) = (-1)^k / ((z+k) * k!)
+		// 予備で+10
+		const calculated_a = Math.ceil(b.toNumber() + 10);
+		// a > 2 が必要。
+		return Math.max(3, calculated_a);
+	}
+
+	/**
+	 * Lanczos-Spouge近似の係数を動的に計算
+	 * @param {number} numCoeffs - 係数の数
+	 * @param {number} a - 非スケール
+	 * @param {BigInt} precision - 精度
+	 * @returns {BigInt[]} 係数
+	 * @static
+	 */
+	static _lanczosSpougeCoefficients(numCoeffs, a, precision) {
+		const scale = 10n ** precision;
+		const half_scale = scale / 2n;
+
+		const aBig = BigInt(a) * scale;
+
+		const coeffs = [scale];
+
 		let sign = 1n;
-		let sum = 0n;
-		for (let i = 0n; i < 1000n; i++) {
-			const kFactorial = this._factorial(i);
-			const denom = (z + i * scale) * kFactorial;
-			const term = (sign * scale2) / denom;
-			if (term === 0n) break;
-			sum += term;
+		for (let k = 1; k < numCoeffs; k++) {
+			const k_minus_1_fact = this._factorial(BigInt(k - 1));
+
+			const kBig = BigInt(k) * scale;
+
+			// (-k + a)
+			const term_base = aBig - kBig;
+			// k - 1/2
+			const term1_exp = kBig - half_scale;
+			// (-k + a)^(k - 1/2)
+			const term1 = this._pow(term_base, term1_exp, precision);
+
+			// e^(-k + a)
+			const term2 = this._exp(term_base, precision);
+
+			//let c_k = (((((sign * scale) / k_minus_1_fact) * term1) / scale) * term2) / scale;
+			let c_k = (sign * term1 * term2) / (k_minus_1_fact * scale);
+
+			coeffs.push(c_k);
+
 			sign *= -1n;
 		}
-
-		return integralPart + sum;
+		return coeffs;
 	}
+
+	/**
+	 * Lanczos-Spouge近似
+	 * @param {BigInt} z - スケール済
+	 * @param {BigInt} precision - 精度
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _gammaLanczos(z, precision) {
+		const scale = 10n ** precision;
+		if (z <= 0n && z % scale === 0n) {
+			throw new Error("z must not be a minus integer");
+		}
+		const scale2 = scale * scale;
+		const half_scale = scale / 2n;
+
+		if (z < half_scale) {
+			const config = this.config;
+			const maxSteps = config.trigFuncsMaxSteps;
+			// 反射公式
+			const pi = this._pi(precision);
+			const oneMinusZ = scale - z;
+			const gammaOneMinusZ = this._gammaLanczos(oneMinusZ, precision);
+			const pi_z = (pi * z) / scale;
+			const sin_pi_z = this._sin(pi_z, precision, maxSteps);
+			const denominator = sin_pi_z * gammaOneMinusZ; // scale^2
+			if (denominator === 0n) {
+				throw new Error("division by zero");
+			}
+			return (pi * scale2) / denominator;
+		}
+
+		const a = this._getSpougeParamA(precision);
+		const numCoeffs = Math.trunc(a);
+		const coeffs = this._lanczosSpougeCoefficients(numCoeffs, a, precision);
+
+		const z_minus_1 = z - scale;
+		let series = coeffs[0];
+		for (let k = 1; k < numCoeffs; k++) {
+			const term = (coeffs[k] * scale) / (z_minus_1 + BigInt(k) * scale);
+			series += term;
+		}
+
+		const t = z_minus_1 + BigInt(a) * scale;
+		const exponent = z - half_scale;
+		const t_pow_exp = this._pow(t, exponent, precision);
+		const exp_minus_t = this._exp(-t, precision);
+
+		return (t_pow_exp * exp_minus_t * series) / scale2;
+	}
+
 	/**
 	 * ガンマ関数[台形積分]
 	 * @returns {BigFloat}
-	 * @deprecated
 	 */
 	gamma() {
 		/** @type {typeof BigFloat} */
@@ -2522,7 +2618,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		const exPrec = construct.config.extraPrecision;
 		const totalPr = this._precision + exPrec;
 		const val = this.value * 10n ** exPrec;
-		const raw = construct._gammaIntegral(val, totalPr);
+		const raw = construct._gammaLanczos(val, totalPr);
 		return this._makeResult(raw, this._precision, totalPr);
 	}
 	// --------------------------------------------------

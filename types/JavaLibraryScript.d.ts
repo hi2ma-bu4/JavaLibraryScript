@@ -448,23 +448,23 @@ declare class EntryStream<K, V> extends Stream<V> {
      */
     static from<T extends EntryStream<any, any>>(): any;
     /**
-     * @param {Iterable} source
+     * @param {Iterable<[K, V]>} source
      * @param {Function} KeyType
      * @param {Function} ValueType
      */
-    constructor(source: Iterable<any>, KeyType: Function, ValueType: Function);
+    constructor(source: Iterable<[K, V]>, KeyType: Function, ValueType: Function);
     mapToEntry: any;
     _KeyType: Function | Symbol;
     /**
      * EntryStreamからキーのStreamを返却
-     * @returns {Stream}
+     * @returns {Stream<K>}
      */
-    keys(): Stream<any>;
+    keys(): Stream<K>;
     /**
      * EntryStreamから値のStreamを返却
-     * @returns {Stream}
+     * @returns {Stream<V>}
      */
-    values(): Stream<any>;
+    values(): Stream<V>;
     /**
      * EntryStreamのキーをマップ
      * @param {Function} fn
@@ -490,429 +490,6 @@ declare namespace EntryStream {
 }
 
 type HashMapType = HashMap<any, any>;
-
-/**
- * 数値専用Stream (LazyList)
- * @template V
- * @extends {Stream<V>}
- * @class
- */
-declare class NumberStream<V> extends Stream<V> {
-    /**
-     * @param {Iterable<V} source
-     */
-    constructor(source: Iterable<V>);
-    mapToNumber: any;
-    /**
-     * 合計
-     * @returns {Number}
-     */
-    sum(): number;
-    /**
-     * 平均
-     * @returns {Number}
-     */
-    average(): number;
-    /**
-     * 最小値
-     * @returns {Number | null}
-     */
-    min(): number | null;
-    /**
-     * 最大値
-     * @returns {Number | null}
-     */
-    max(): number | null;
-}
-
-/**
- * Streamオブジェクト(LazyList)
- * @template V
- * @extends {StreamInterface}
- * @class
- */
-declare class Stream<V> extends StreamInterface {
-    /**
-     * Stream化
-     * @template {Stream} T
-     * @this {new (Iterable) => T}
-     * @param {Iterable<V>} iterable
-     * @param {Function} ValueType
-     * @returns {T}
-     * @static
-     */
-    static from<T extends Stream<any>>(this: new (Iterable: any) => T, iterable: Iterable<V>, ValueType: Function): T;
-    /**
-     * @param {Iterable<V>} source
-     * @param {Function} ValueType
-     */
-    constructor(source: Iterable<V>, ValueType: Function);
-    _iter: Iterator<V, any, any>;
-    _pipeline: any[];
-    _ValueType: Function | Symbol;
-    /**
-     * pipelineに追加
-     * @param {Generator} fn
-     * @returns {this}
-     */
-    _use(fn: Generator): this;
-    /**
-     * 他Streamに変換
-     * @param {Function} construct
-     * @param {Generator} fn
-     * @param {...any} args
-     * @returns {this}
-     */
-    _convertToX(construct: Function, fn: Generator, ...args: any[]): this;
-    /**
-     * pipelineを圧縮
-     * @returns {this}
-     */
-    flattenPipeline(): this;
-    /**
-     * 処理を一括関数化
-     * @returns {Function}
-     */
-    toFunction(): Function;
-    /**
-     * Streamをマップ
-     * @param {Function} fn
-     * @returns {this}
-     */
-    map(fn: Function): this;
-    /**
-     * Streamをフィルタ
-     * @param {Function} fn
-     * @returns {this}
-     */
-    filter(fn: Function): this;
-    /**
-     * Streamを展開
-     * @param {Function} fn
-     * @returns {this}
-     */
-    flatMap(fn: Function): this;
-    /**
-     * Streamの重複を排除
-     * @param {Function} keyFn
-     * @returns {this}
-     */
-    distinct(keyFn?: Function): this;
-    /**
-     * Streamをソート
-     * @param {Function} compareFn
-     * @returns {this}
-     */
-    sorted(compareFn?: Function): this;
-    /**
-     * Streamの要素は変更せずに関数のみを実行
-     * @param {Function} fn
-     * @returns {this}
-     */
-    peek(fn: Function): this;
-    /**
-     * Streamの要素数を先頭から制限
-     * @param {Number} n
-     * @returns {this}
-     */
-    limit(n: number): this;
-    /**
-     * Streamの要素数を先頭からスキップ
-     * @param {Number} n
-     * @returns {this}
-     */
-    skip(n: number): this;
-    /**
-     * Streamを分割
-     * @param {Number} size
-     * @returns {this}
-     */
-    chunk(size: number): this;
-    /**
-     * Streamをスライド分割
-     * @param {Number} size
-     * @param {Number} step
-     * @returns {this}
-     */
-    windowed(size: number, step?: number): this;
-    /**
-     * StreamをforEach
-     * @param {Function} fn
-     */
-    forEach(fn: Function): void;
-    /**
-     * Streamを配列化
-     * @returns {V[]}
-     */
-    toArray(): V[];
-    /**
-     * Streamをreduce
-     * @param {Function} fn
-     * @param {any} initial
-     * @returns {any}
-     */
-    reduce(fn: Function, initial: any): any;
-    /**
-     * Streamの要素数を取得
-     * @returns {Number}
-     */
-    count(): number;
-    /**
-     * Streamで条件を満たす要素があるか検査
-     * @param {Function} fn
-     * @returns {Boolean}
-     */
-    some(fn: Function): boolean;
-    /**
-     * Streamで全ての要素が条件を満たすか検査
-     * @param {Function} fn
-     * @returns {Boolean}
-     */
-    every(fn: Function): boolean;
-    /**
-     * Streamから最初の要素を取得
-     * @returns {any}
-     */
-    findFirst(): any;
-    /**
-     * Streamから任意の要素を取得
-     * @returns {any}
-     */
-    findAny(): any;
-    /**
-     * Java Collectors 相当
-     * @param {Function} collectorFn
-     * @returns {any}
-     */
-    collectWith(collectorFn: Function): any;
-    /**
-     * StreamをNumberStreamに変換
-     * @param {Function} fn
-     * @returns {NumberStreamType}
-     */
-    mapToNumber(fn: Function): NumberStreamType;
-    /**
-     * StreamをStringStreamに変換
-     * @param {Function} fn
-     * @returns {StringStream}
-     */
-    mapToString(fn: Function): StringStream;
-    /**
-     * StreamをEntryStreamに変換
-     * @param {Function} fn
-     * @returns {EntryStreamType}
-     */
-    mapToEntry(fn: Function): EntryStreamType;
-    /**
-     * StreamをAsyncStreamに変換
-     * @param {Function} fn
-     * @returns {AsyncStreamType}
-     */
-    mapToAsync(fn: Function): AsyncStreamType;
-    /**
-     * StreamをHashSetに変換
-     * @param {Function} [ValueType]
-     * @returns {HashSetType}
-     */
-    toHashSet(ValueType?: Function): HashSetType;
-    /**
-     * Streamをイテレータ化
-     * @returns {Iterator}
-     */
-    [Symbol.iterator](): Iterator<any, any, any>;
-    /**
-     * Streamをイテレータ化(非同期)
-     * @returns {AsyncIterator}
-     */
-    [Symbol.asyncIterator](): AsyncIterator<any, any, any>;
-}
-declare namespace Stream {
-    export type { NumberStreamType, EntryStreamType, AsyncStreamType, HashSetType };
-}
-
-type NumberStreamType = NumberStream<any>;
-type EntryStreamType = EntryStream<any, any>;
-type AsyncStreamType = AsyncStream;
-type HashSetType = HashSet<any>;
-
-/**
- * 型チェック機能のついたList
- * @template V
- * @extends {ListInterface<V>}
- * @class
- */
-declare class ArrayList<V> extends ListInterface<V> {
-    /**
-     * @param {Function} ValueType
-     * @param {Iterable<V>} [collection]
-     */
-    constructor(ValueType: Function, collection?: Iterable<V>);
-    _list: any[];
-    /**
-     * 要素を追加する
-     * @param {V} item
-     * @returns {this}
-     * @throws {TypeError}
-     */
-    add(item: V): this;
-    /**
-     * 値を一括で追加する
-     * @param {Iterable<V>} collection
-     * @returns {this}
-     * @throws {TypeError}
-     */
-    addAll(collection: Iterable<V>): this;
-    /**
-     * 指定したインデックスの要素を取得する
-     * @param {Number} index
-     * @returns {V}
-     */
-    get(index: number): V;
-    /**
-     * 指定したインデックスの要素を設定する
-     * @param {Number} index
-     * @param {V} item
-     * @returns {this}
-     * @throws {TypeError}
-     */
-    set(index: number, item: V): this;
-    /**
-     * 指定したインデックスの要素を削除する
-     * @param {Number} index
-     * @returns {V}
-     */
-    remove(index: number): V;
-    /**
-     * 要素数を返却する
-     * @returns {Number}
-     * @readonly
-     */
-    readonly get size(): number;
-    /**
-     * 全要素を削除する
-     */
-    clear(): void;
-    /**
-     * 等価判定を行う
-     * @param {this} other
-     * @returns {boolean}
-     */
-    equals(other: this): boolean;
-    /**
-     * EnumのIteratorを返却する
-     * @returns {ArrayIterator<V>}
-     */
-    values(): ArrayIterator<V>;
-    /**
-     * 全てのデータを呼び出す
-     * @param {Function} callback
-     * @param {any} [thisArg]
-     */
-    forEach(callback: Function, thisArg?: any): void;
-    /**
-     * ソートする
-     * @param {Function} [compareFn]
-     * @returns {this}
-     */
-    sort(compareFn?: Function): this;
-    /**
-     * ソートしたStreamを返却する
-     * @param {Function} [compareFn]
-     * @returns {Generator<V>}
-     */
-    sorted(compareFn?: Function): Generator<V>;
-    /**
-     * 指定した範囲の配列を返却する
-     * @param {Number} from
-     * @param {Number} to
-     * @returns {ArrayList<V>}
-     */
-    subList(from: number, to: number): ArrayList<V>;
-    /**
-     * Streamを返却する
-     * @returns {Stream<V>}
-     */
-    stream(): Stream<V>;
-    /**
-     * 配列に変換する
-     * @returns {V[]}
-     */
-    toArray(): V[];
-    /**
-     * instanceof を実装する
-     * @param {any} obj
-     * @returns {boolean}
-     */
-    [Symbol.hasInstance](obj: any): boolean;
-    /**
-     * イテレータを返却する
-     * @returns {Iterator<V>}
-     */
-    [Symbol.iterator](): Iterator<V>;
-}
-/**
- * 配列を返却する
- * @param {Function} ValueType
- * @param {Iterable<V>} [collection]
- * @returns {ArrayList<V>}
- */
-declare function arrayList(ValueType: Function, collection?: Iterable<V>): ArrayList<V>;
-
-/**
- * 文字列専用Stream (LazyList)
- * @template V
- * @extends {Stream<V>}
- * @class
- */
-declare class StringStream<V> extends Stream<V> {
-    /**
-     * @param {Iterable<V>} source
-     */
-    constructor(source: Iterable<V>);
-    mapToString: any;
-    /**
-     * 文字列連結
-     * @param {string} separator
-     * @returns {string}
-     */
-    join(separator?: string): string;
-    /**
-     * 文字列を結合
-     * @returns {string}
-     */
-    concatAll(): string;
-    /**
-     * 最長の文字列を返す
-     * @returns {string}
-     */
-    longest(): string;
-    /**
-     * 最短の文字列を返す
-     * @returns {string}
-     */
-    shortest(): string;
-}
-
-/**
- * Streamの型チェック
- * @extends {JavaLibraryScriptCore}
- * @class
- */
-declare class StreamChecker extends JavaLibraryScriptCore {
-    /**
-     * TypeをStreamに変換する
-     * @param {Function} expected
-     * @returns {StreamInterface}
-     */
-    static typeToStream(expected: Function): StreamInterface;
-    /**
-     * StreamをTypeに変換する
-     * @param {StreamInterface} stream
-     * @returns {Function}
-     * @static
-     */
-    static streamToType(stream: StreamInterface): Function;
-}
 
 /**
  * BigFloat の設定
@@ -1530,14 +1107,38 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _integral(f: (k: bigint) => bigint, a: bigint, b: bigint, n: bigint, precision: bigint): bigint;
     /**
-     * γ関数[台形積分]
-     * @param {BigInt} z
-     * @param {BigInt} precision
-     * @returns {BigInt}
+     * ベルヌーイ数 [阿部-Zeta関数/Akiyama-Tanigawaアルゴリズム]
+     * @param {number} n - ベルヌーイ数のインデックス (偶数のみ有効)
+     * @param {BigInt} precision - 精度
+     * @returns {BigInt[]} 0からnまでのベルヌーイ数の配列
      * @static
-     * @deprecated
      */
-    static _gammaIntegral(z: bigint, precision: bigint): bigint;
+    static _bernoulliNumbers(n: number, precision: bigint): bigint[];
+    /**
+     * Lanczos-Spouge近似のパラメータ a を決定
+     * @param {BigInt} precision - 精度
+     * @returns {number} 非スケール
+     * @static
+     */
+    static _getSpougeParamA(precision: bigint): number;
+    /**
+     * Lanczos-Spouge近似の係数を動的に計算
+     * @param {number} numCoeffs - 係数の数
+     * @param {number} a - 非スケール
+     * @param {BigInt} precision - 精度
+     * @returns {BigInt[]} 係数
+     * @static
+     */
+    static _lanczosSpougeCoefficients(numCoeffs: number, a: number, precision: bigint): bigint[];
+    /**
+     * Lanczos-Spouge近似
+     * @param {BigInt} z - スケール済
+     * @param {BigInt} precision - 精度
+     * @returns {BigInt}
+     * @throws {Error}
+     * @static
+     */
+    static _gammaLanczos(z: bigint, precision: bigint): bigint;
     /**
      * 階乗を計算する
      * @param {BigInt} n
@@ -1650,9 +1251,10 @@ declare class BigFloat extends JavaLibraryScriptCore {
     _makeResult(val: bigint, precision: bigint, exPrecision?: bigint, okMutate?: boolean): this;
     /**
      * 精度を変更する
-     * @param {number} precision
+     * @param {BigInt} precision
+     * @returns {this}
      */
-    changePrecision(precision: number): void;
+    changePrecision(precision: bigint): this;
     /**
      * どこまで精度が一致しているかを判定する
      * @param {BigFloat | number | string | BigInt} other - 比較する値
@@ -1973,7 +1575,6 @@ declare class BigFloat extends JavaLibraryScriptCore {
     /**
      * ガンマ関数[台形積分]
      * @returns {BigFloat}
-     * @deprecated
      */
     gamma(): BigFloat;
 }
@@ -1985,6 +1586,580 @@ declare class BigFloat extends JavaLibraryScriptCore {
  * @throws {Error}
  */
 declare function bigFloat(value: string | number | bigint | BigFloat, precision?: number): BigFloat;
+
+/**
+ * BigFloat専用Stream (LazyList)
+ * @extends {Stream<BigFloat>}
+ * @class
+ */
+declare class BigFloatStream extends Stream<BigFloat> {
+    /**
+     * @param {Iterable<BigFloat>} source
+     */
+    constructor(source: Iterable<BigFloat>);
+    mapToBigFloat: any;
+    /**
+     * 精度を変更する
+     * @param {BigInt} precision
+     * @returns {this}
+     * @throws {Error}
+     */
+    changePrecision(precision: bigint): this;
+    /**
+     * 加算
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    add(other: BigFloat): this;
+    /**
+     * 減算
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    sub(other: BigFloat): this;
+    /**
+     * 乗算
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    mul(other: BigFloat): this;
+    /**
+     * 除算
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    div(other: BigFloat): this;
+    /**
+     * 剰余
+     * @param {BigFloat} other
+     * @returns {this}
+     * @throws {Error}
+     */
+    mod(other: BigFloat): this;
+    /**
+     * 符号反転
+     * @returns {this}
+     * @throws {Error}
+     */
+    neg(): this;
+    /**
+     * 絶対値
+     * @returns {this}
+     * @throws {Error}
+     */
+    abs(): this;
+    /**
+     * 逆数を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    reciprocal(): BigFloat;
+    /**
+     * べき乗
+     * @param {BigFloat} exponent - 指数
+     * @returns {this}
+     */
+    pow(exponent: BigFloat): this;
+    /**
+     * 平方根
+     * @returns {this}
+     * @throws {Error}
+     */
+    sqrt(): this;
+    /**
+     * 立方根
+     * @returns {this}
+     * @throws {Error}
+     */
+    cbrt(): this;
+    /**
+     * n乗根
+     * @param {BigInt} n
+     * @returns {this}
+     * @throws {Error}
+     */
+    nthRoot(n: bigint): this;
+    /**
+     * 最大値を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    max(): BigFloat;
+    /**
+     * 最小値を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    min(): BigFloat;
+    /**
+     * 合計値を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    sum(): BigFloat;
+    /**
+     * 積を返す (丸め誤差に注意)
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    product(): BigFloat;
+    /**
+     * 平均値を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    average(): BigFloat;
+    /**
+     * 中央値を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    median(): BigFloat;
+    /**
+     * 分散を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    variance(): BigFloat;
+    /**
+     * 標準偏差を返す
+     * @returns {BigFloat}
+     * @throws {Error}
+     */
+    stddev(): BigFloat;
+}
+
+/**
+ * 数値専用Stream (LazyList)
+ * @extends {Stream<Number>}
+ * @class
+ */
+declare class NumberStream extends Stream<number> {
+    /**
+     * @param {Iterable<Number>} source
+     */
+    constructor(source: Iterable<number>);
+    mapToNumber: any;
+    /**
+     * 合計
+     * @returns {Number}
+     */
+    sum(): number;
+    /**
+     * 平均
+     * @returns {Number}
+     */
+    average(): number;
+    /**
+     * 最小値
+     * @returns {Number | null}
+     */
+    min(): number | null;
+    /**
+     * 最大値
+     * @returns {Number | null}
+     */
+    max(): number | null;
+}
+
+/**
+ * Streamオブジェクト(LazyList)
+ * @template V
+ * @extends {StreamInterface}
+ * @class
+ */
+declare class Stream<V> extends StreamInterface {
+    /**
+     * Stream化
+     * @template {Stream} T
+     * @this {new (Iterable) => T}
+     * @param {Iterable<V>} iterable
+     * @param {Function} ValueType
+     * @returns {T}
+     * @static
+     */
+    static from<T extends Stream<any>>(this: new (Iterable: any) => T, iterable: Iterable<V>, ValueType: Function): T;
+    /**
+     * @param {Iterable<V>} source
+     * @param {Function} ValueType
+     */
+    constructor(source: Iterable<V>, ValueType: Function);
+    _iter: Iterator<V, any, any>;
+    _pipeline: any[];
+    _ValueType: Function | Symbol;
+    /**
+     * pipelineに追加
+     * @param {Generator} fn
+     * @returns {this}
+     */
+    _use(fn: Generator): this;
+    /**
+     * 他Streamに変換
+     * @param {Function} construct
+     * @param {Generator} fn
+     * @param {...any} args
+     * @returns {this}
+     */
+    _convertToX(construct: Function, fn: Generator, ...args: any[]): this;
+    /**
+     * pipelineを圧縮
+     * @returns {this}
+     */
+    flattenPipeline(): this;
+    /**
+     * 処理を一括関数化
+     * @returns {Function}
+     */
+    toFunction(): Function;
+    /**
+     * Streamをマップ
+     * @param {Function} fn
+     * @returns {this}
+     */
+    map(fn: Function): this;
+    /**
+     * Streamをフィルタ
+     * @param {Function} fn
+     * @returns {this}
+     */
+    filter(fn: Function): this;
+    /**
+     * Streamを展開
+     * @param {Function} fn
+     * @returns {this}
+     */
+    flatMap(fn: Function): this;
+    /**
+     * Streamの重複を排除
+     * @param {Function} keyFn
+     * @returns {this}
+     */
+    distinct(keyFn?: Function): this;
+    /**
+     * Streamをソート
+     * @param {Function} compareFn
+     * @returns {this}
+     */
+    sorted(compareFn?: Function): this;
+    /**
+     * Streamの要素は変更せずに関数のみを実行
+     * @param {Function} fn
+     * @returns {this}
+     */
+    peek(fn: Function): this;
+    /**
+     * Streamの要素数を先頭から制限
+     * @param {Number} n
+     * @returns {this}
+     */
+    limit(n: number): this;
+    /**
+     * Streamの要素数を先頭からスキップ
+     * @param {Number} n
+     * @returns {this}
+     */
+    skip(n: number): this;
+    /**
+     * Streamを分割
+     * @param {Number} size
+     * @returns {this}
+     */
+    chunk(size: number): this;
+    /**
+     * Streamをスライド分割
+     * @param {Number} size
+     * @param {Number} step
+     * @returns {this}
+     */
+    windowed(size: number, step?: number): this;
+    /**
+     * StreamをforEach
+     * @param {Function} fn
+     */
+    forEach(fn: Function): void;
+    /**
+     * Streamを配列化
+     * @returns {V[]}
+     */
+    toArray(): V[];
+    /**
+     * Streamをreduce
+     * @param {Function} fn
+     * @param {any} initial
+     * @returns {any}
+     */
+    reduce(fn: Function, initial: any): any;
+    /**
+     * Streamの要素数を取得
+     * @returns {Number}
+     */
+    count(): number;
+    /**
+     * Streamで条件を満たす要素があるか検査
+     * @param {Function} fn
+     * @returns {Boolean}
+     */
+    some(fn: Function): boolean;
+    /**
+     * Streamで全ての要素が条件を満たすか検査
+     * @param {Function} fn
+     * @returns {Boolean}
+     */
+    every(fn: Function): boolean;
+    /**
+     * Streamから最初の要素を取得
+     * @returns {any}
+     */
+    findFirst(): any;
+    /**
+     * Streamから任意の要素を取得
+     * @returns {any}
+     */
+    findAny(): any;
+    /**
+     * Java Collectors 相当
+     * @param {Function} collectorFn
+     * @returns {any}
+     */
+    collectWith(collectorFn: Function): any;
+    /**
+     * StreamをNumberStreamに変換
+     * @param {Function} fn
+     * @returns {NumberStreamType}
+     */
+    mapToNumber(fn: Function): NumberStreamType;
+    /**
+     * StreamをStringStreamに変換
+     * @param {Function} fn
+     * @returns {StringStream}
+     */
+    mapToString(fn: Function): StringStream;
+    /**
+     * StreamをBigFloatStreamに変換
+     * @param {Function | number | BigInt} [fn=20n] - 数値なら自動変換
+     * @returns {BigFloatStreamType}
+     */
+    mapToBigFloat(fn?: Function | number | bigint): BigFloatStreamType;
+    /**
+     * StreamをEntryStreamに変換
+     * @param {Function} fn
+     * @returns {EntryStreamType}
+     */
+    mapToEntry(fn: Function): EntryStreamType;
+    /**
+     * StreamをAsyncStreamに変換
+     * @param {Function} fn
+     * @returns {AsyncStreamType}
+     */
+    mapToAsync(fn: Function): AsyncStreamType;
+    /**
+     * StreamをHashSetに変換
+     * @param {Function} [ValueType]
+     * @returns {HashSetType}
+     */
+    toHashSet(ValueType?: Function): HashSetType;
+    /**
+     * Streamをイテレータ化
+     * @returns {Iterator}
+     */
+    [Symbol.iterator](): Iterator<any, any, any>;
+    /**
+     * Streamをイテレータ化(非同期)
+     * @returns {AsyncIterator}
+     */
+    [Symbol.asyncIterator](): AsyncIterator<any, any, any>;
+}
+declare namespace Stream {
+    export type { NumberStreamType, BigFloatStreamType, EntryStreamType, AsyncStreamType, HashSetType };
+}
+
+type NumberStreamType = NumberStream;
+type BigFloatStreamType = BigFloatStream;
+type EntryStreamType = EntryStream<any, any>;
+type AsyncStreamType = AsyncStream;
+type HashSetType = HashSet<any>;
+
+/**
+ * 型チェック機能のついたList
+ * @template V
+ * @extends {ListInterface<V>}
+ * @class
+ */
+declare class ArrayList<V> extends ListInterface<V> {
+    /**
+     * @param {Function} ValueType
+     * @param {Iterable<V>} [collection]
+     */
+    constructor(ValueType: Function, collection?: Iterable<V>);
+    _list: any[];
+    /**
+     * 要素を追加する
+     * @param {V} item
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    add(item: V): this;
+    /**
+     * 値を一括で追加する
+     * @param {Iterable<V>} collection
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    addAll(collection: Iterable<V>): this;
+    /**
+     * 指定したインデックスの要素を取得する
+     * @param {Number} index
+     * @returns {V}
+     */
+    get(index: number): V;
+    /**
+     * 指定したインデックスの要素を設定する
+     * @param {Number} index
+     * @param {V} item
+     * @returns {this}
+     * @throws {TypeError}
+     */
+    set(index: number, item: V): this;
+    /**
+     * 指定したインデックスの要素を削除する
+     * @param {Number} index
+     * @returns {V}
+     */
+    remove(index: number): V;
+    /**
+     * 要素数を返却する
+     * @returns {Number}
+     * @readonly
+     */
+    readonly get size(): number;
+    /**
+     * 全要素を削除する
+     */
+    clear(): void;
+    /**
+     * 等価判定を行う
+     * @param {this} other
+     * @returns {boolean}
+     */
+    equals(other: this): boolean;
+    /**
+     * EnumのIteratorを返却する
+     * @returns {ArrayIterator<V>}
+     */
+    values(): ArrayIterator<V>;
+    /**
+     * 全てのデータを呼び出す
+     * @param {Function} callback
+     * @param {any} [thisArg]
+     */
+    forEach(callback: Function, thisArg?: any): void;
+    /**
+     * ソートする
+     * @param {Function} [compareFn]
+     * @returns {this}
+     */
+    sort(compareFn?: Function): this;
+    /**
+     * ソートしたStreamを返却する
+     * @param {Function} [compareFn]
+     * @returns {Generator<V>}
+     */
+    sorted(compareFn?: Function): Generator<V>;
+    /**
+     * 指定した範囲の配列を返却する
+     * @param {Number} from
+     * @param {Number} to
+     * @returns {ArrayList<V>}
+     */
+    subList(from: number, to: number): ArrayList<V>;
+    /**
+     * Streamを返却する
+     * @returns {Stream<V>}
+     */
+    stream(): Stream<V>;
+    /**
+     * 配列に変換する
+     * @returns {V[]}
+     */
+    toArray(): V[];
+    /**
+     * instanceof を実装する
+     * @param {any} obj
+     * @returns {boolean}
+     */
+    [Symbol.hasInstance](obj: any): boolean;
+    /**
+     * イテレータを返却する
+     * @returns {Iterator<V>}
+     */
+    [Symbol.iterator](): Iterator<V>;
+}
+/**
+ * 配列を返却する
+ * @param {Function} ValueType
+ * @param {Iterable<V>} [collection]
+ * @returns {ArrayList<V>}
+ */
+declare function arrayList(ValueType: Function, collection?: Iterable<V>): ArrayList<V>;
+
+/**
+ * 文字列専用Stream (LazyList)
+ * @extends {Stream<String>}
+ * @class
+ */
+declare class StringStream extends Stream<string> {
+    /**
+     * @param {Iterable<String>} source
+     */
+    constructor(source: Iterable<string>);
+    mapToString: any;
+    /**
+     * 文字列連結
+     * @param {string} separator
+     * @returns {string}
+     */
+    join(separator?: string): string;
+    /**
+     * 文字列を結合
+     * @returns {string}
+     */
+    concatAll(): string;
+    /**
+     * 最長の文字列を返す
+     * @returns {string}
+     */
+    longest(): string;
+    /**
+     * 最短の文字列を返す
+     * @returns {string}
+     */
+    shortest(): string;
+}
+
+/**
+ * Streamの型チェック
+ * @extends {JavaLibraryScriptCore}
+ * @class
+ */
+declare class StreamChecker extends JavaLibraryScriptCore {
+    /**
+     * TypeをStreamに変換する
+     * @param {Function} expected
+     * @returns {StreamInterface}
+     */
+    static typeToStream(expected: Function): StreamInterface;
+    /**
+     * StreamをTypeに変換する
+     * @param {StreamInterface} stream
+     * @returns {Function}
+     * @static
+     */
+    static streamToType(stream: StreamInterface): Function;
+}
 
 /**
  * ログ出力管理クラス
@@ -2919,6 +3094,7 @@ declare const util: {
     SetInterface: typeof SetInterface;
     stream: {
         AsyncStream: typeof AsyncStream;
+        BigFloatStream: typeof BigFloatStream;
         EntryStream: typeof EntryStream;
         NumberStream: typeof NumberStream;
         Stream: typeof Stream;

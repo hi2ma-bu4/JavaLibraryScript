@@ -2014,6 +2014,9 @@ const JavaLibraryScript = require("./index");
 if (typeof window !== "undefined") {
 	window.JavaLibraryScript = JavaLibraryScript;
 }
+if (typeof self !== "undefined") {
+	self.JavaLibraryScript = JavaLibraryScript;
+}
 
 module.exports = JavaLibraryScript;
 
@@ -2591,11 +2594,14 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 	/**
 	 * 精度を変更する
-	 * @param {number} precision
+	 * @param {BigInt} precision
+	 * @returns {this}
 	 */
 	changePrecision(precision) {
-		this._precision = BigInt(precision);
-		this.value = this.constructor._round(this.value, precision, this._precision);
+		precision = BigInt(precision);
+		this.value = this.constructor._round(this.value, this._precision, precision);
+		this._precision = precision;
+		return this;
 	}
 	/**
 	 * どこまで精度が一致しているかを判定する
@@ -4482,59 +4488,152 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (denominator === 0n) return 0n;
 		return (delta * sum) / denominator;
 	}
-	/**
-	 * γ関数[台形積分]
-	 * @param {BigInt} z
-	 * @param {BigInt} precision
-	 * @returns {BigInt}
-	 * @static
-	 * @deprecated
-	 */
-	static _gammaIntegral(z, precision) {
-		const scale = 10n ** precision;
-		const scale2 = scale * scale;
 
-		// z < 0.5 の判定（scale付き比較）
-		if (z < scale / 2n) {
-			// 反射公式
-			const pi = this._pi(precision);
-			const sinPiZ = this._sinPi(z, precision);
-			const oneMinusZ = scale - z;
-			const gammaOneMinusZ = this._gammaIntegral(oneMinusZ, precision);
-			return (pi * scale2) / (sinPiZ * gammaOneMinusZ);
+	/**
+	 * ベルヌーイ数 [阿部-Zeta関数/Akiyama-Tanigawaアルゴリズム]
+	 * @param {number} n - ベルヌーイ数のインデックス (偶数のみ有効)
+	 * @param {BigInt} precision - 精度
+	 * @returns {BigInt[]} 0からnまでのベルヌーイ数の配列
+	 * @static
+	 */
+	static _bernoulliNumbers(n, precision) {
+		const A = new Array(n + 1).fill(null).map(() => 0n);
+		const B = new Array(n + 1).fill(null);
+
+		const scale = 10n ** precision;
+
+		for (let m = 0; m <= n; m++) {
+			A[m] = scale / BigInt(m + 1);
+			for (let j = m; j >= 1; j--) {
+				const term = A[j - 1] - A[j];
+				A[j - 1] = BigInt(j) * term;
+			}
+			B[m] = A[0];
 		}
 
-		// 定数
-		const L = 30n * scale;
-		const d = 100000n;
+		if (n >= 1) {
+			B[1] = -scale / 2n;
+		}
+		return B;
+	}
 
-		// f1(t) = t^{z-1} * e^{-t} をBigIntで定義
-		const f1 = (t) => {
-			const tPow = this._pow(t, z - scale, precision); // z-1
-			const expNegT = this._exp(-t, precision);
-			return (tPow * expNegT) / scale;
-		};
+	/**
+	 * Lanczos-Spouge近似のパラメータ a を決定
+	 * @param {BigInt} precision - 精度
+	 * @returns {number} 非スケール
+	 * @static
+	 */
+	static _getSpougeParamA(precision) {
+		const config = this.config;
+		const maxSteps = config.lnMaxSteps;
+		const log10_2pi = this._log10(2n * this._pi(precision), precision, maxSteps);
 
-		const integralPart = this._integral(f1, scale, L, d, precision);
+		const b = new this();
+		b.value = precision * log10_2pi;
+		b._precision = precision;
 
-		// f2(k) = (-1)^k / ((z+k) * k!)
+		// 予備で+10
+		const calculated_a = Math.ceil(b.toNumber() + 10);
+		// a > 2 が必要。
+		return Math.max(3, calculated_a);
+	}
+
+	/**
+	 * Lanczos-Spouge近似の係数を動的に計算
+	 * @param {number} numCoeffs - 係数の数
+	 * @param {number} a - 非スケール
+	 * @param {BigInt} precision - 精度
+	 * @returns {BigInt[]} 係数
+	 * @static
+	 */
+	static _lanczosSpougeCoefficients(numCoeffs, a, precision) {
+		const scale = 10n ** precision;
+		const half_scale = scale / 2n;
+
+		const aBig = BigInt(a) * scale;
+
+		const coeffs = [scale];
+
 		let sign = 1n;
-		let sum = 0n;
-		for (let i = 0n; i < 1000n; i++) {
-			const kFactorial = this._factorial(i);
-			const denom = (z + i * scale) * kFactorial;
-			const term = (sign * scale2) / denom;
-			if (term === 0n) break;
-			sum += term;
+		for (let k = 1; k < numCoeffs; k++) {
+			const k_minus_1_fact = this._factorial(BigInt(k - 1));
+
+			const kBig = BigInt(k) * scale;
+
+			// (-k + a)
+			const term_base = aBig - kBig;
+			// k - 1/2
+			const term1_exp = kBig - half_scale;
+			// (-k + a)^(k - 1/2)
+			const term1 = this._pow(term_base, term1_exp, precision);
+
+			// e^(-k + a)
+			const term2 = this._exp(term_base, precision);
+
+			//let c_k = (((((sign * scale) / k_minus_1_fact) * term1) / scale) * term2) / scale;
+			let c_k = (sign * term1 * term2) / (k_minus_1_fact * scale);
+
+			coeffs.push(c_k);
+
 			sign *= -1n;
 		}
-
-		return integralPart + sum;
+		return coeffs;
 	}
+
+	/**
+	 * Lanczos-Spouge近似
+	 * @param {BigInt} z - スケール済
+	 * @param {BigInt} precision - 精度
+	 * @returns {BigInt}
+	 * @throws {Error}
+	 * @static
+	 */
+	static _gammaLanczos(z, precision) {
+		const scale = 10n ** precision;
+		if (z <= 0n && z % scale === 0n) {
+			throw new Error("z must not be a minus integer");
+		}
+		const scale2 = scale * scale;
+		const half_scale = scale / 2n;
+
+		if (z < half_scale) {
+			const config = this.config;
+			const maxSteps = config.trigFuncsMaxSteps;
+			// 反射公式
+			const pi = this._pi(precision);
+			const oneMinusZ = scale - z;
+			const gammaOneMinusZ = this._gammaLanczos(oneMinusZ, precision);
+			const pi_z = (pi * z) / scale;
+			const sin_pi_z = this._sin(pi_z, precision, maxSteps);
+			const denominator = sin_pi_z * gammaOneMinusZ; // scale^2
+			if (denominator === 0n) {
+				throw new Error("division by zero");
+			}
+			return (pi * scale2) / denominator;
+		}
+
+		const a = this._getSpougeParamA(precision);
+		const numCoeffs = Math.trunc(a);
+		const coeffs = this._lanczosSpougeCoefficients(numCoeffs, a, precision);
+
+		const z_minus_1 = z - scale;
+		let series = coeffs[0];
+		for (let k = 1; k < numCoeffs; k++) {
+			const term = (coeffs[k] * scale) / (z_minus_1 + BigInt(k) * scale);
+			series += term;
+		}
+
+		const t = z_minus_1 + BigInt(a) * scale;
+		const exponent = z - half_scale;
+		const t_pow_exp = this._pow(t, exponent, precision);
+		const exp_minus_t = this._exp(-t, precision);
+
+		return (t_pow_exp * exp_minus_t * series) / scale2;
+	}
+
 	/**
 	 * ガンマ関数[台形積分]
 	 * @returns {BigFloat}
-	 * @deprecated
 	 */
 	gamma() {
 		/** @type {typeof BigFloat} */
@@ -4542,7 +4641,7 @@ class BigFloat extends JavaLibraryScriptCore {
 		const exPrec = construct.config.extraPrecision;
 		const totalPr = this._precision + exPrec;
 		const val = this.value * 10n ** exPrec;
-		const raw = construct._gammaIntegral(val, totalPr);
+		const raw = construct._gammaLanczos(val, totalPr);
 		return this._makeResult(raw, this._precision, totalPr);
 	}
 	// --------------------------------------------------
@@ -4914,7 +5013,7 @@ function arrayList(ValueType, collection) {
 
 module.exports = { ArrayList, arrayList };
 
-},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":22,"./stream/Stream":29,"./stream/StreamChecker":30}],20:[function(require,module,exports){
+},{"../libs/IndexProxy":5,"../libs/TypeChecker":7,"./ListInterface":22,"./stream/Stream":30,"./stream/StreamChecker":31}],20:[function(require,module,exports){
 const { TypeChecker } = require("../libs");
 const MapInterface = require("./MapInterface");
 const EntryStream = require("./stream/EntryStream");
@@ -5114,7 +5213,7 @@ class HashMap extends MapInterface {
 
 module.exports = HashMap;
 
-},{"../libs":10,"./MapInterface":23,"./stream/EntryStream":27}],21:[function(require,module,exports){
+},{"../libs":10,"./MapInterface":23,"./stream/EntryStream":28}],21:[function(require,module,exports){
 const SetInterface = require("./SetInterface");
 const TypeChecker = require("../libs/TypeChecker");
 const StreamChecker = require("./stream/StreamChecker");
@@ -5318,7 +5417,7 @@ class HashSet extends SetInterface {
 
 module.exports = HashSet;
 
-},{"../libs/TypeChecker":7,"./SetInterface":24,"./stream/Stream":29,"./stream/StreamChecker":30}],22:[function(require,module,exports){
+},{"../libs/TypeChecker":7,"./SetInterface":24,"./stream/Stream":30,"./stream/StreamChecker":31}],22:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../base/Interface");
 const TypeChecker = require("../libs/TypeChecker");
@@ -5526,7 +5625,7 @@ module.exports = {
     stream: require("./stream/index.js")
 };
 
-},{"./ArrayList.js":19,"./HashMap.js":20,"./HashSet.js":21,"./ListInterface.js":22,"./MapInterface.js":23,"./SetInterface.js":24,"./stream/index.js":33}],26:[function(require,module,exports){
+},{"./ArrayList.js":19,"./HashMap.js":20,"./HashSet.js":21,"./ListInterface.js":22,"./MapInterface.js":23,"./SetInterface.js":24,"./stream/index.js":34}],26:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const Stream = require("./Stream");
 
@@ -5873,7 +5972,247 @@ class AsyncStream extends StreamInterface {
 
 module.exports = AsyncStream;
 
-},{"./Stream":29,"./StreamInterface":31}],27:[function(require,module,exports){
+},{"./Stream":30,"./StreamInterface":32}],27:[function(require,module,exports){
+const Stream = require("./Stream");
+const { BigFloat } = require("../../math/BigFloat");
+
+/**
+ * BigFloat専用Stream (LazyList)
+ * @extends {Stream<BigFloat>}
+ * @class
+ */
+class BigFloatStream extends Stream {
+	/**
+	 * @param {Iterable<BigFloat>} source
+	 */
+	constructor(source) {
+		super(source, BigFloat);
+
+		this.mapToBigFloat = undefined;
+	}
+
+	// ====================================================================================================
+	// * 内部ユーティリティ・補助関数
+	// ====================================================================================================
+	// --------------------------------------------------
+	// 精度チェック
+	// --------------------------------------------------
+	/**
+	 * 精度を変更する
+	 * @param {BigInt} precision
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	changePrecision(precision) {
+		return this.peek((x) => x.changePrecision(precision));
+	}
+	// ====================================================================================================
+	// * 四則演算・基本関数
+	// ====================================================================================================
+	// --------------------------------------------------
+	// 基本演算
+	// --------------------------------------------------
+	/**
+	 * 加算
+	 * @param {BigFloat} other
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	add(other) {
+		return this.map((x) => x.add(other));
+	}
+	/**
+	 * 減算
+	 * @param {BigFloat} other
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	sub(other) {
+		return this.map((x) => x.sub(other));
+	}
+	/**
+	 * 乗算
+	 * @param {BigFloat} other
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	mul(other) {
+		return this.map((x) => x.mul(other));
+	}
+	/**
+	 * 除算
+	 * @param {BigFloat} other
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	div(other) {
+		return this.map((x) => x.div(other));
+	}
+	/**
+	 * 剰余
+	 * @param {BigFloat} other
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	mod(other) {
+		return this.map((x) => x.mod(other));
+	}
+	// --------------------------------------------------
+	// 符号操作
+	// --------------------------------------------------
+	/**
+	 * 符号反転
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	neg() {
+		return this.map((x) => x.neg());
+	}
+	/**
+	 * 絶対値
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	abs() {
+		return this.map((x) => x.abs());
+	}
+	/**
+	 * 逆数を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	reciprocal() {
+		return this.map((x) => x.reciprocal());
+	}
+	// ====================================================================================================
+	// * 冪乗・ルート・スケーリング
+	// ====================================================================================================
+	// --------------------------------------------------
+	// べき乗
+	// --------------------------------------------------
+	/**
+	 * べき乗
+	 * @param {BigFloat} exponent - 指数
+	 * @returns {this}
+	 */
+	pow(exponent) {
+		return this.map((x) => x.pow(exponent));
+	}
+	// --------------------------------------------------
+	// 平方根・立方根・任意根
+	// --------------------------------------------------
+	/**
+	 * 平方根
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	sqrt() {
+		return this.map((x) => x.sqrt());
+	}
+	/**
+	 * 立方根
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	cbrt() {
+		return this.map((x) => x.cbrt());
+	}
+	/**
+	 * n乗根
+	 * @param {BigInt} n
+	 * @returns {this}
+	 * @throws {Error}
+	 */
+	nthRoot(n) {
+		return this.map((x) => x.nthRoot(n));
+	}
+	// ====================================================================================================
+	// * 統計関数
+	// ====================================================================================================
+	// --------------------------------------------------
+	// 集計
+	// --------------------------------------------------
+	/**
+	 * 最大値を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	max() {
+		return BigFloat.max(this.toArray());
+	}
+	/**
+	 * 最小値を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	min() {
+		return BigFloat.min(this.toArray());
+	}
+	/**
+	 * 合計値を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	sum() {
+		return BigFloat.sum(this.toArray());
+	}
+	/**
+	 * 積を返す (丸め誤差に注意)
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	product() {
+		return BigFloat.product(this.toArray());
+	}
+	// --------------------------------------------------
+	// 平均・中央値
+	// --------------------------------------------------
+	/**
+	 * 平均値を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	average() {
+		return BigFloat.average(this.toArray());
+	}
+	/**
+	 * 中央値を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	median() {
+		return BigFloat.median(this.toArray());
+	}
+	// --------------------------------------------------
+	// 分散・標準偏差
+	// --------------------------------------------------
+	/**
+	 * 分散を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	variance() {
+		return BigFloat.variance(this.toArray());
+	}
+	/**
+	 * 標準偏差を返す
+	 * @returns {BigFloat}
+	 * @throws {Error}
+	 */
+	stddev() {
+		return BigFloat.stddev(this.toArray());
+	}
+	// ====================================================================================================
+	// * 三角関数
+	// ====================================================================================================
+	// --------------------------------------------------
+	// 基本三角関数
+	// --------------------------------------------------
+}
+
+module.exports = BigFloatStream;
+
+},{"../../math/BigFloat":17,"./Stream":30}],28:[function(require,module,exports){
 const Stream = require("./Stream");
 const StreamChecker = require("./StreamChecker");
 const TypeChecker = require("../../libs/TypeChecker");
@@ -5896,7 +6235,7 @@ function init() {
  */
 class EntryStream extends Stream {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<[K, V]>} source
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
 	 */
@@ -5924,7 +6263,7 @@ class EntryStream extends Stream {
 
 	/**
 	 * EntryStreamからキーのStreamを返却
-	 * @returns {Stream}
+	 * @returns {Stream<K>}
 	 */
 	keys() {
 		return this._convertToX(StreamChecker.typeToStream(this._KeyType)).map(([k, _]) => k);
@@ -5932,7 +6271,7 @@ class EntryStream extends Stream {
 
 	/**
 	 * EntryStreamから値のStreamを返却
-	 * @returns {Stream}
+	 * @returns {Stream<V>}
 	 */
 	values() {
 		return this._convertToX(StreamChecker.typeToStream(this._ValueType)).map(([_, v]) => v);
@@ -5985,18 +6324,17 @@ class EntryStream extends Stream {
 
 module.exports = EntryStream;
 
-},{"../../libs/TypeChecker":7,"../HashMap":20,"./Stream":29,"./StreamChecker":30}],28:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../HashMap":20,"./Stream":30,"./StreamChecker":31}],29:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
  * 数値専用Stream (LazyList)
- * @template V
- * @extends {Stream<V>}
+ * @extends {Stream<Number>}
  * @class
  */
 class NumberStream extends Stream {
 	/**
-	 * @param {Iterable<V} source
+	 * @param {Iterable<Number>} source
 	 */
 	constructor(source) {
 		super(source, Number);
@@ -6057,23 +6395,26 @@ class NumberStream extends Stream {
 
 module.exports = NumberStream;
 
-},{"./Stream":29}],29:[function(require,module,exports){
+},{"./Stream":30}],30:[function(require,module,exports){
 const StreamInterface = require("./StreamInterface");
 const TypeChecker = require("../../libs/TypeChecker");
+const { BigFloat } = require("../../math/BigFloat");
 
 const Any = TypeChecker.Any;
 
 /** @typedef {import("./NumberStream.js")} NumberStreamType */
 // /** @typedef {import("./StringStream.js")} StringStream_forceRep */ // なぜかこいつだけ動かん
+/** @typedef {import("./BigFloatStream")} BigFloatStreamType */
 /** @typedef {import("./EntryStream.js")} EntryStreamType */
 /** @typedef {import("./AsyncStream.js")} AsyncStreamType */
 /** @typedef {import("../HashSet.js")} HashSetType */
 
-let NumberStream, StringStream, EntryStream, AsyncStream, HashSet;
+let NumberStream, StringStream, BigFloatStream, EntryStream, AsyncStream, HashSet;
 function init() {
 	if (NumberStream) return;
 	NumberStream = require("./NumberStream");
 	StringStream = require("./StringStream");
+	BigFloatStream = require("./BigFloatStream");
 	EntryStream = require("./EntryStream");
 	AsyncStream = require("./AsyncStream");
 	HashSet = require("../HashSet");
@@ -6482,6 +6823,29 @@ class Stream extends StreamInterface {
 	}
 
 	/**
+	 * StreamをBigFloatStreamに変換
+	 * @param {Function | number | BigInt} [fn=20n] - 数値なら自動変換
+	 * @returns {BigFloatStreamType}
+	 */
+	mapToBigFloat(fn = 20n) {
+		const type = typeof fn;
+		return this._convertToX(BigFloatStream, function* (iter) {
+			for (const item of iter) {
+				let mapped;
+
+				if (type === "function") mapped = fn(item);
+				else if (type === "number" || type === "bigint") {
+					mapped = new BigFloat(item, fn);
+				}
+				if (!(mapped instanceof BigFloat)) {
+					throw new TypeError(`mapToBigFloat() must return BigFloat. Got ${typeof mapped}`);
+				}
+				yield mapped;
+			}
+		});
+	}
+
+	/**
 	 * StreamをEntryStreamに変換
 	 * @param {Function} fn
 	 * @returns {EntryStreamType}
@@ -6548,17 +6912,19 @@ class Stream extends StreamInterface {
 
 module.exports = Stream;
 
-},{"../../libs/TypeChecker":7,"../HashSet":21,"./AsyncStream":26,"./EntryStream":27,"./NumberStream":28,"./StreamInterface":31,"./StringStream":32}],30:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../../math/BigFloat":17,"../HashSet":21,"./AsyncStream":26,"./BigFloatStream":27,"./EntryStream":28,"./NumberStream":29,"./StreamInterface":32,"./StringStream":33}],31:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const TypeChecker = require("../../libs/TypeChecker");
 const StreamInterface = require("./StreamInterface");
+const { BigFloat } = require("../../math/BigFloat");
 
-let Stream, NumberStream, StringStream, EntryStream, AsyncStream;
+let Stream, NumberStream, StringStream, BigFloatStream, EntryStream, AsyncStream;
 function init() {
 	if (Stream) return;
 	Stream = require("./Stream");
 	NumberStream = require("./NumberStream");
 	StringStream = require("./StringStream");
+	BigFloatStream = require("./BigFloatStream");
 	EntryStream = require("./EntryStream");
 	AsyncStream = require("./AsyncStream");
 }
@@ -6579,6 +6945,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 		if (expected == null) return Stream;
 		if (expected === String) return StringStream;
 		if (expected === Number) return NumberStream;
+		if (expected?.prototype instanceof BigFloat) return BigFloatStream;
 		if (expected === Map) return EntryStream;
 		if (expected === Promise) return AsyncStream;
 		return Stream;
@@ -6595,6 +6962,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 		// Stream継承
 		if (stream instanceof StringStream) return String;
 		if (stream instanceof NumberStream) return Number;
+		if (stream instanceof BigFloatStream) return BigFloat;
 		if (stream instanceof EntryStream) return Map;
 		// StreamInterface継承
 		if (stream instanceof AsyncStream) return Promise;
@@ -6605,7 +6973,7 @@ class StreamChecker extends JavaLibraryScriptCore {
 
 module.exports = StreamChecker;
 
-},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":11,"./AsyncStream":26,"./EntryStream":27,"./NumberStream":28,"./Stream":29,"./StreamInterface":31,"./StringStream":32}],31:[function(require,module,exports){
+},{"../../libs/TypeChecker":7,"../../libs/sys/JavaLibraryScriptCore":11,"../../math/BigFloat":17,"./AsyncStream":26,"./BigFloatStream":27,"./EntryStream":28,"./NumberStream":29,"./Stream":30,"./StreamInterface":32,"./StringStream":33}],32:[function(require,module,exports){
 const JavaLibraryScriptCore = require("../../libs/sys/JavaLibraryScriptCore");
 const Interface = require("../../base/Interface");
 
@@ -6643,18 +7011,17 @@ StreamInterface = Interface.convert(StreamInterface, {
 
 module.exports = StreamInterface;
 
-},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":11}],32:[function(require,module,exports){
+},{"../../base/Interface":2,"../../libs/sys/JavaLibraryScriptCore":11}],33:[function(require,module,exports){
 const Stream = require("./Stream");
 
 /**
  * 文字列専用Stream (LazyList)
- * @template V
- * @extends {Stream<V>}
+ * @extends {Stream<String>}
  * @class
  */
 class StringStream extends Stream {
 	/**
-	 * @param {Iterable<V>} source
+	 * @param {Iterable<String>} source
 	 */
 	constructor(source) {
 		super(source, String);
@@ -6706,9 +7073,10 @@ class StringStream extends Stream {
 
 module.exports = StringStream;
 
-},{"./Stream":29}],33:[function(require,module,exports){
+},{"./Stream":30}],34:[function(require,module,exports){
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
+    BigFloatStream: require("./BigFloatStream.js"),
     EntryStream: require("./EntryStream.js"),
     NumberStream: require("./NumberStream.js"),
     Stream: require("./Stream.js"),
@@ -6717,5 +7085,5 @@ module.exports = {
     StringStream: require("./StringStream.js")
 };
 
-},{"./AsyncStream.js":26,"./EntryStream.js":27,"./NumberStream.js":28,"./Stream.js":29,"./StreamChecker.js":30,"./StreamInterface.js":31,"./StringStream.js":32}]},{},[16])
+},{"./AsyncStream.js":26,"./BigFloatStream.js":27,"./EntryStream.js":28,"./NumberStream.js":29,"./Stream.js":30,"./StreamChecker.js":31,"./StreamInterface.js":32,"./StringStream.js":33}]},{},[16])
 //# sourceMappingURL=JavaLibraryScript.js.map

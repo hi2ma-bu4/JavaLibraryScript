@@ -1,5 +1,6 @@
 module.exports = {
     AsyncStream: require("./AsyncStream.js"),
+    BigFloatStream: require("./BigFloatStream.js"),
     EntryStream: require("./EntryStream.js"),
     NumberStream: require("./NumberStream.js"),
     Stream: require("./Stream.js"),

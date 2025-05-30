@@ -20,7 +20,7 @@ function init() {
  */
 class EntryStream extends Stream {
 	/**
-	 * @param {Iterable} source
+	 * @param {Iterable<[K, V]>} source
 	 * @param {Function} KeyType
 	 * @param {Function} ValueType
 	 */
@@ -48,7 +48,7 @@ class EntryStream extends Stream {
 
 	/**
 	 * EntryStreamからキーのStreamを返却
-	 * @returns {Stream}
+	 * @returns {Stream<K>}
 	 */
 	keys() {
 		return this._convertToX(StreamChecker.typeToStream(this._KeyType)).map(([k, _]) => k);
@@ -56,7 +56,7 @@ class EntryStream extends Stream {
 
 	/**
 	 * EntryStreamから値のStreamを返却
-	 * @returns {Stream}
+	 * @returns {Stream<V>}
 	 */
 	values() {
 		return this._convertToX(StreamChecker.typeToStream(this._ValueType)).map(([_, v]) => v);
