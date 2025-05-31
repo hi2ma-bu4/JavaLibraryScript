@@ -1,0 +1,209 @@
+@charset "utf-8";
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    box-sizing: border-box;
+    font-family: "メイリオ", "Meiryo", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "MS Pゴシック", sans-serif;
+    font-size: 16px;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+    margin-inline: auto;
+    max-width: 1000px;
+    width: 100%;
+}
+
+.JLS_display {
+    align-items: center;
+    background-color: #fafafa;
+    border: 1px solid #ccc;
+    display: flex;
+    flex-direction: row;
+    font-family: monospace;
+    font-size: 1.1em;
+    height: 3em;
+    justify-content: flex-start;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-inline: 10px;
+    white-space: nowrap;
+    width: 100%;
+    word-break: keep-all;
+}
+
+.JLS_display > *:first-child {
+    margin-left: auto;
+}
+
+.JLS_disp-cursor {
+    animation: blink 1s steps(1) infinite;
+    background-color: black;
+    display: inline-block;
+    height: 1em;
+    margin-left: 1px;
+    pointer-events: none;
+    width: 2px;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.JLS_output {
+    background-color: #fafafa;
+    border: 1px solid #ccc;
+    font-family: monospace;
+    font-size: 1em;
+    height: 5em;
+    min-height: 3em;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 10px;
+    resize: vertical;
+    width: 100%;
+    word-break: break-all;
+}
+
+.JLS_output .JLS_out-fraction {
+    color: gray;
+}
+
+.JLS_output .JLS_out-error {
+    color: red;
+}
+
+.JLS_btn-grid {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+}
+
+.JLS_btn-row {
+    align-items: stretch;
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.JLS_btn {
+    --btn-bg-color: red;
+    --btn-color: black;
+}
+
+.JLS_btn {
+    background-color: var(--btn-bg-color);
+    border: none;
+    border-radius: 7px;
+    box-shadow: 0 4px #ccc;
+    color: var(--btn-color);
+    cursor: pointer;
+    flex-grow: 1;
+    font-weight: bold;
+    text-align: center;
+    transition: all .1s ease;
+    width: 100%;
+}
+
+:is(.JLS_btn:active,
+    .JLS_btn.active):not(:is(:disabled, .disabled)) {
+    box-shadow: 0 2px #aaa;
+    transform: translateY(2px);
+}
+
+.JLS_btn:disabled,
+.JLS_btn.disabled {
+    --btn-bg-color: #eeeeee;
+    --btn-color: #999;
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+.JLS_btn.JLS_btn-num {
+    --btn-bg-color: #f0f0f0;
+}
+
+.JLS_btn.JLS_btn-op {
+    --btn-bg-color: #ffd966;
+}
+
+.JLS_btn.JLS_btn-equal {
+    --btn-bg-color: #ff6666;
+    --btn-color: white;
+}
+
+.JLS_btn.JLS_btn-clear {
+    --btn-bg-color: #ccccff;
+}
+
+.JLS_btn.JLS_btn-cursor {
+    --btn-bg-color: #ffe0b2;
+    --btn-color: #5d4037;
+}
+
+.JLS_btn:is(.JLS_btn-dot, .JLS_btn-bracket) {
+    --btn-bg-color: #d0f0c0;
+    --btn-color: #264d00;
+}
+
+.JLS_btn.JLS_btn-static {
+    --btn-bg-color: #a0e7e5;
+}
+
+.JLS_btn.JLS_btn-func {
+    --btn-bg-color: #e5ccff;
+    --btn-color: #4b0082;
+}
+
+.JLS_btn.JLS_btn-struct-func {
+    --btn-bg-color: #dcb0ff;
+    --btn-color: #4b0082;
+}
+
+.JLS_disp-cursor + .JLS_disp-item-placeholder {
+    margin-left: -3px;
+}
+
+.JLS_disp-item-placeholder {
+    border: 1px solid #ccc;
+}
+
+.JLS_disp-item-static {
+    color: #1ca19d;
+}
+
+.JLS_disp-item-func-open,
+.JLS_disp-item-func-close,
+.JLS_disp-item-struct-func-open,
+.JLS_disp-item-struct-func-close {
+    color: #4b0082;
+}
