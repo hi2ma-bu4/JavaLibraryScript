@@ -7,7 +7,7 @@
 html,
 body {
     box-sizing: border-box;
-    font-family: "メイリオ", "Meiryo", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "MS Pゴシック", sans-serif;
+    font-family: "メイリオ", "Meiryo", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "MS Pゴシック", sans-serif;
     font-size: 16px;
     height: 100%;
     margin: 0;
@@ -25,6 +25,10 @@ h2 {
     margin-inline: auto;
     max-width: 1000px;
     width: 100%;
+}
+
+select {
+    max-width: 100%;
 }
 
 .JLS_display {

@@ -1140,12 +1140,20 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _gammaLanczos(z: bigint, precision: bigint): bigint;
     /**
-     * 階乗を計算する
-     * @param {BigInt} n
+     * 階乗を計算する (整数のみ)
+     * @param {BigInt} n - スケールなし
      * @returns {BigInt}
      * @static
      */
     static _factorial(n: bigint): bigint;
+    /**
+     * 階乗を計算する (小数対応)
+     * @param {BigInt} n - スケールあり
+     * @param {BigInt} precision
+     * @returns {BigInt}
+     * @static
+     */
+    static _factorialGamma(n: bigint, precision: bigint): bigint;
     /**
      * 二項係数を計算する
      * @param {BigInt} n
@@ -1577,6 +1585,11 @@ declare class BigFloat extends JavaLibraryScriptCore {
      * @returns {BigFloat}
      */
     gamma(): BigFloat;
+    /**
+     * 階乗を計算する (小数計算の場合の精度に注意)
+     * @returns {BigFloat}
+     */
+    factorial(): BigFloat;
 }
 /**
  * BigFloat を作成する

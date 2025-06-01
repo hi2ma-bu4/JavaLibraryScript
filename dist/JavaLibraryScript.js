@@ -4648,8 +4648,8 @@ class BigFloat extends JavaLibraryScriptCore {
 	// 階乗・二項係数
 	// --------------------------------------------------
 	/**
-	 * 階乗を計算する
-	 * @param {BigInt} n
+	 * 階乗を計算する (整数のみ)
+	 * @param {BigInt} n - スケールなし
 	 * @returns {BigInt}
 	 * @static
 	 */
@@ -4657,6 +4657,38 @@ class BigFloat extends JavaLibraryScriptCore {
 		let f = 1n;
 		for (let i = 2n; i <= n; i++) f *= i;
 		return f;
+	}
+	/**
+	 * 階乗を計算する (小数対応)
+	 * @param {BigInt} n - スケールあり
+	 * @param {BigInt} precision
+	 * @returns {BigInt}
+	 * @static
+	 */
+	static _factorialGamma(n, precision) {
+		const scale = 10n ** precision;
+		return this._gammaLanczos(n + scale, precision);
+	}
+	/**
+	 * 階乗を計算する (小数計算の場合の精度に注意)
+	 * @returns {BigFloat}
+	 */
+	factorial() {
+		/** @type {typeof BigFloat} */
+		const construct = this.constructor;
+		const exPrec = construct.config.extraPrecision;
+		const totalPr = this._precision + exPrec;
+		const val = this.value * 10n ** exPrec;
+		const scale = 10n ** totalPr;
+		let raw;
+		if (val % scale === 0n && val >= 0n) {
+			// 整数の場合
+			raw = construct._factorial(val / scale) * scale;
+		} else {
+			// 小数の場合
+			raw = construct._factorialGamma(val, totalPr);
+		}
+		return this._makeResult(raw, this._precision, totalPr);
 	}
 	/**
 	 * 二項係数を計算する

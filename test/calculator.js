@@ -11,7 +11,7 @@ class NodeDict {
 			if (!isNaN(Number(key))) {
 				this._map.set(key, new Node({ disp: key, type: "num" }));
 			} else {
-				this._log.warn("not found", key);
+				console.warn("not found", key);
 				return new Node();
 			}
 		}
@@ -115,6 +115,7 @@ const nodeDataDict = {
 	"(": node({ label: "()", key: "(", disp: "", argLength: 1, type: "bracket" }),
 	mod: node({ label: "mod", key: "%", disp: "%", type: "op" }),
 	pi: node({ label: "π", key: "P", disp: "π", type: "static" }),
+	tau: node({ label: "τ", key: "T", disp: "τ", type: "static" }),
 	e: node({ label: "e", key: "E", disp: "e", type: "static" }),
 	rand: node({ label: "Rnd", key: "R", disp: "rand", argLength: 0, type: "struct-func" }),
 	pow: node({ label: "xⁿ", key: "^", disp: "pow", argLength: 2, type: "func" }),
@@ -124,10 +125,21 @@ const nodeDataDict = {
 	nthRoot: node({ label: "ⁿ√x", disp: "nthRoot", argLength: 2, type: "func" }),
 	abs: node({ label: "|x|", disp: "abs", argLength: 1, type: "func" }),
 	reciprocal: node({ label: "1/x", disp: "reciprocal", argLength: 1, type: "func" }),
-	exp: node({ label: "exp", disp: "exp", argLength: 1, type: "func" }),
+	exp: node({ label: "eˣ", disp: "exp", argLength: 1, type: "func" }),
+	exp2: node({ label: "2ˣ", disp: "exp2", argLength: 1, type: "func" }),
+	expm1: node({ label: "eˣ⁻¹", disp: "expm1", argLength: 1, type: "func" }),
 	"!": node({ label: "n!", key: "!", disp: "factorial", argLength: 1, type: "struct-func" }),
-	log: node({ label: "log", disp: "log", args: [null, ["1", "0"]], argLength: 2, type: "struct-func" }),
+	log: node({ label: "log", disp: "log", argLength: 2, type: "func" }),
+	log2: node({ label: "log₂", disp: "log2", argLength: 1, type: "func" }),
+	log10: node({ label: "log₁₀", disp: "log10", argLength: 1, type: "func" }),
 	ln: node({ label: "ln", disp: "ln", argLength: 1, type: "struct-func" }),
+	sin: node({ label: "sin", disp: "sin", argLength: 1, type: "func" }),
+	cos: node({ label: "cos", disp: "cos", argLength: 1, type: "func" }),
+	tan: node({ label: "tan", disp: "tan", argLength: 1, type: "func" }),
+	asin: node({ label: "asin", disp: "asin", argLength: 1, type: "func" }),
+	acos: node({ label: "acos", disp: "acos", argLength: 1, type: "func" }),
+	atan: node({ label: "atan", disp: "atan", argLength: 1, type: "func" }),
+	atan2: node({ label: "atan2", disp: "atan2", argLength: 2, type: "func" }),
 	gamma: node({ label: "Γx", disp: "gamma", argLength: 1, type: "func" }),
 };
 
@@ -306,29 +318,44 @@ class Calculator {
 	_BUTTONS = [
 		[
 			// 1行目
+			nodeDataDict.gamma.clone(),
 			nodeDataDict.rand.clone(),
 			nodeDataDict.pi.clone(),
+			nodeDataDict.tau.clone(),
 			nodeDataDict.e.clone(),
 			{ label: "AC", type: "clear", func: () => this._calcInit() },
 			{ label: "BS", key: "Backspace", type: "clear", func: () => this._key_BS() },
 		],
 		[
 			// 2行目
-			nodeDataDict.gamma.clone(),
-			nodeDataDict.reciprocal.clone(),
-			nodeDataDict.abs.clone(),
 			nodeDataDict.exp.clone(),
+			nodeDataDict.exp2.clone(),
+			nodeDataDict.expm1.clone(),
+			nodeDataDict.sin.clone(),
+			nodeDataDict.cos.clone(),
+			nodeDataDict.tan.clone(),
 		],
 		[
 			// 3行目
 			nodeDataDict.nthRoot.clone(),
 			nodeDataDict.sqrt.clone(),
-			nodeDataDict.pow.clone(),
-			nodeDataDict.pow2.clone(),
+			nodeDataDict.asin.clone(),
+			nodeDataDict.acos.clone(),
+			nodeDataDict.atan.clone(),
+			nodeDataDict.atan2.clone(),
 		],
 		[
 			// 4行目
-			nodeDataDict["!"].clone(),
+			nodeDataDict.pow.clone(),
+			nodeDataDict.pow2.clone(),
+			nodeDataDict.ln.clone(),
+			nodeDataDict.log.clone(),
+			nodeDataDict.log10.clone(),
+			nodeDataDict.log2.clone(),
+		],
+		[
+			// 5行目
+			nodeDataDict.pow10.clone(),
 			nodeDataDict["7"].clone(),
 			nodeDataDict["8"].clone(),
 			nodeDataDict["9"].clone(),
@@ -336,8 +363,8 @@ class Calculator {
 			nodeDataDict.mod.clone(),
 		],
 		[
-			// 5行目
-			nodeDataDict.pow10.clone(),
+			// 6行目
+			nodeDataDict.abs.clone(),
 			nodeDataDict["4"].clone(),
 			nodeDataDict["5"].clone(),
 			nodeDataDict["6"].clone(),
@@ -345,8 +372,8 @@ class Calculator {
 			nodeDataDict["/"].clone(),
 		],
 		[
-			// 6行目
-			nodeDataDict.log.clone(),
+			// 7行目
+			nodeDataDict.reciprocal.clone(),
 			nodeDataDict["1"].clone(),
 			nodeDataDict["2"].clone(),
 			nodeDataDict["3"].clone(),
@@ -354,8 +381,8 @@ class Calculator {
 			nodeDataDict["-"].clone(),
 		],
 		[
-			// 7行目
-			nodeDataDict.ln.clone(),
+			// 8行目
+			nodeDataDict["!"].clone(),
 			nodeDataDict["."].clone(),
 			nodeDataDict["0"].clone(),
 			{ label: "=", key: ["=", "Enter"], type: "equal", func: () => this._key_Enter() },
@@ -433,7 +460,7 @@ class Calculator {
 		precDiv.appendChild(exPrecInput);
 
 		const roundModeLabel = document.createElement("label");
-		roundModeLabel.textContent = "丸めモード:";
+		roundModeLabel.textContent = "丸めモード:";
 		precDiv.appendChild(roundModeLabel);
 
 		const roundModeSelect = document.createElement("select");
@@ -832,6 +859,8 @@ class Calculator {
 				switch (node.key) {
 					case "P": // π
 						return BigFloat.pi(precision);
+					case "T": // τ
+						return BigFloat.tau(precision);
 					case "E": // e
 						return BigFloat.e(precision);
 					default:
@@ -876,6 +905,10 @@ class Calculator {
 						return args[0].reciprocal();
 					case "exp":
 						return args[0].exp();
+					case "exp2":
+						return args[0].exp2();
+					case "expm1":
+						return args[0].expm1();
 					case "ln":
 						return args[0].ln();
 					case "gamma":
@@ -892,19 +925,18 @@ class Calculator {
 						return args[0].acos();
 					case "atan":
 						return args[0].atan();
-					case "factorial": {
-						// n! = Γ(n + 1)
-						const one = new BigFloat(1, precision);
-						return args[0].add(one).gamma();
-					}
+					case "factorial":
+						return args[0].factorial();
 
 					// 2引数以上の関数
 					case "pow":
 						// 通常の pow(x, y)
 						return args[0].pow(args[1]);
+					case "atan2":
+						return args[0].atan2(args[1]);
 
 					case "nthRoot": // n√x -> x.nthRoot(n)
-						return args[1].nthRoot(args[0].toNumber()); // BigFloat.nthRootはnをNumber/BigIntで受け取ります
+						return args[1].nthRoot(args[0].toNumber() | 0); // BigFloat.nthRootはnをNumber/BigIntで受け取ります
 
 					case "log": // log_b(x) -> x.log(b)
 						return args[1].log(args[0]);
@@ -912,10 +944,6 @@ class Calculator {
 					// 0引数関数
 					case "rand":
 						return BigFloat.random(precision);
-
-					// 括弧
-					case "":
-						return args[0];
 
 					default:
 						throw new Error(`未定義の関数です: ${node.disp}`);
@@ -1028,14 +1056,23 @@ class Calculator {
 			}
 			flushNumber();
 
-			if (node.key === "-") {
-				const prevNode = processedNodes[processedNodes.length - 1];
-				// 単項マイナスかを判定: 式の先頭、または直前が演算子か開き括弧/関数
-				if (!prevNode || ["op", "unary_op", "func", "struct-func", "bracket"].includes(prevNode.type)) {
-					const unaryMinusNode = new Node({ key: "neg", disp: "-", type: "unary_op", argLength: 1 });
-					processedNodes.push(unaryMinusNode);
+			if (node.key === "+" || node.key === "-") {
+				const prevProcessedNode = processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null;
+
+				// 単項演算子かを判定: 式の先頭、または直前が二項/単項演算子の場合。
+				// 値(数値、関数、定数など)の直後に来る +/- は二項演算子とみなす。
+				const isUnary = !prevProcessedNode || prevProcessedNode.type === "op" || prevProcessedNode.type === "unary_op";
+
+				if (isUnary) {
+					if (node.key === "-") {
+						// 単項マイナスは 'neg' というキーを持つ単項演算子ノードとして追加
+						const unaryMinusNode = new Node({ key: "neg", disp: "-", type: "unary_op", argLength: 1 });
+						processedNodes.push(unaryMinusNode);
+					}
+					// 単項プラス(+)は、計算に影響しないため無視する
 				} else {
-					processedNodes.push(node); // 二項マイナス
+					// 二項演算子としてそのまま追加
+					processedNodes.push(node);
 				}
 			} else {
 				processedNodes.push(node);
