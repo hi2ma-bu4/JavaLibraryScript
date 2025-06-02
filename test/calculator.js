@@ -168,7 +168,7 @@ class Cursor {
 		node.parent = this.parent;
 
 		// 関数系なら子スロットのどこかにカーソル潜り込ませたい
-		if ((node.type === "func" || node.type === "struct-func") && node.children?.length > 0) {
+		if ((node.type === "func" || node.type === "struct-func" || node.type === "bracket") && node.children?.length > 0) {
 			for (let i = 0; i < node.children.length; i++) {
 				const childSlot = node.children[i];
 				if (childSlot.length === 0) {
@@ -320,8 +320,8 @@ class Calculator {
 			// 1行目
 			nodeDataDict.gamma.clone(),
 			nodeDataDict.rand.clone(),
-			nodeDataDict.pi.clone(),
 			nodeDataDict.tau.clone(),
+			nodeDataDict.pi.clone(),
 			nodeDataDict.e.clone(),
 			{ label: "AC", type: "clear", func: () => this._calcInit() },
 			{ label: "BS", key: "Backspace", type: "clear", func: () => this._key_BS() },
@@ -717,7 +717,7 @@ class Calculator {
 		let count = 0;
 
 		const findCursor = (node) => {
-			if (node.type === "func" || node.type === "struct-func") {
+			if (node.type === "func" || node.type === "struct-func" || node.type === "bracket") {
 				for (let i = 0; i < node.children.length; i++) {
 					const slot = node.children[i];
 					if (count === displayIndex) {
@@ -927,6 +927,10 @@ class Calculator {
 						return args[0].atan();
 					case "factorial":
 						return args[0].factorial();
+					case "log2":
+						return args[0].log2();
+					case "log10":
+						return args[0].log10();
 
 					// 2引数以上の関数
 					case "pow":
