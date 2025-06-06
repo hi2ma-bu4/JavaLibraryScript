@@ -1121,9 +1121,10 @@ class BigFloat extends JavaLibraryScriptCore {
 		if (exponent === 0n) return scale;
 		if (base === 0n) return 0n;
 		if (exponent < 0n) {
-			// 負の指数は逆数計算を根幹でやるため div を使う
-			const one = this._makeResult(scale, precision);
-			return one.div(this._pow(base, -exponent, precision)).value;
+			const positivePow = this._pow(base, -exponent, precision);
+			if (positivePow === 0n) throw new Error("Division by zero in power function");
+			// (scale * scale) は、スケールされた値の除算で精度を維持するためのおまじない
+			return (scale * scale) / positivePow;
 		}
 		if (exponent % scale === 0n) {
 			// 整数が指数の場合
@@ -2474,8 +2475,8 @@ class BigFloat extends JavaLibraryScriptCore {
 	 * @static
 	 */
 	static _bernoulliNumbers(n, precision) {
-		const A = new Array(n + 1).fill(null).map(() => 0n);
-		const B = new Array(n + 1).fill(null);
+		const A = new Array(n + 1).fill(0n);
+		const B = new Array(n + 1).fill(0n);
 
 		const scale = 10n ** precision;
 
@@ -2558,7 +2559,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
-	 * Lanczos-Spouge近似
+	 * gamma関数[Lanczos-Spouge近似]
 	 * @param {BigInt} z - スケール済
 	 * @param {BigInt} precision - 精度
 	 * @returns {BigInt}
@@ -2609,7 +2610,7 @@ class BigFloat extends JavaLibraryScriptCore {
 	}
 
 	/**
-	 * ガンマ関数[台形積分]
+	 * ガンマ関数[Lanczos-Spouge近似]
 	 * @returns {BigFloat}
 	 */
 	gamma() {

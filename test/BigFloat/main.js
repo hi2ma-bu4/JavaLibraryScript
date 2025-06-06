@@ -1,6 +1,6 @@
 try {
 	// IDEの型表示用
-	const { default: JavaLibraryScript } = require("../types/JavaLibraryScript");
+	const { default: JavaLibraryScript } = require("../../types/JavaLibraryScript");
 	console.log("is load?!");
 } catch (e) {}
 

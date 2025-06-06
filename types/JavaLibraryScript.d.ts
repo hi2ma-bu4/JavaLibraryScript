@@ -1131,7 +1131,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     static _lanczosSpougeCoefficients(numCoeffs: number, a: number, precision: bigint): bigint[];
     /**
-     * Lanczos-Spouge近似
+     * gamma関数[Lanczos-Spouge近似]
      * @param {BigInt} z - スケール済
      * @param {BigInt} precision - 精度
      * @returns {BigInt}
@@ -1581,7 +1581,7 @@ declare class BigFloat extends JavaLibraryScriptCore {
      */
     log1p(): BigFloat;
     /**
-     * ガンマ関数[台形積分]
+     * ガンマ関数[Lanczos-Spouge近似]
      * @returns {BigFloat}
      */
     gamma(): BigFloat;

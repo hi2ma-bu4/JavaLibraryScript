@@ -58,7 +58,6 @@ select {
     animation: blink 1s steps(1) infinite;
     background-color: black;
     display: inline-block;
-    height: 1em;
     margin-left: 1px;
     pointer-events: none;
     width: 2px;
@@ -193,12 +192,12 @@ select {
     --btn-color: #4b0082;
 }
 
-.JLS_disp-cursor + .JLS_disp-item-placeholder {
-    margin-left: -3px;
-}
-
+/* span:has(+ span > span > .JLS_disp-item-placeholder) > span > .JLS_disp-cursor {
+    margin-right: -3px;
+} */
 .JLS_disp-item-placeholder {
     border: 1px solid #ccc;
+    color: transparent;
 }
 
 .JLS_disp-item-static {
