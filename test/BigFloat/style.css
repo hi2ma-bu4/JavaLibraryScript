@@ -39,7 +39,7 @@ select {
     flex-direction: row;
     font-family: monospace;
     font-size: 1.1em;
-    height: 3em;
+    height: auto;
     justify-content: flex-start;
     min-width: 0;
     overflow-x: auto;
@@ -192,21 +192,7 @@ select {
     --btn-color: #4b0082;
 }
 
-/* span:has(+ span > span > .JLS_disp-item-placeholder) > span > .JLS_disp-cursor {
-    margin-right: -3px;
-} */
 .JLS_disp-item-placeholder {
     border: 1px solid #ccc;
     color: transparent;
-}
-
-.JLS_disp-item-static {
-    color: #1ca19d;
-}
-
-.JLS_disp-item-func-open,
-.JLS_disp-item-func-close,
-.JLS_disp-item-struct-func-open,
-.JLS_disp-item-struct-func-close {
-    color: #4b0082;
 }
