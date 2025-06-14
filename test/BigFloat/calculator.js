@@ -13,6 +13,8 @@ function renderKaTeXWithCursor(latex, el) {
 	});
 
 	el.innerHTML = html.replaceAll("[CURSOR]", `<span class="JLS_disp-cursor">&nbsp;</span>`).replaceAll("[PH]", `<span class="JLS_disp-item-placeholder">0</span>`);
+
+	el.dataset.latex = latex.replace(CURSOR_MARKER, "").replace(PLACEHOLDER_MARKER, "?");
 }
 
 class NodeDict {
@@ -143,7 +145,6 @@ const nodeDataDict = {
 	abs: node({ label: "|x|", key: "|", disp: "abs", argLength: 1, type: "func" }),
 	reciprocal: node({ label: "1/x", disp: "reciprocal", argLength: 1, type: "func" }),
 	exp: node({ label: "eˣ", disp: "exp", argLength: 1, type: "func" }),
-	exp2: node({ label: "2ˣ", disp: "exp2", argLength: 1, type: "func" }),
 	"!": node({ label: "n!", key: "!", disp: "factorial", argLength: 1, type: "func" }),
 	log: node({ label: "log", disp: "log", argLength: 2, type: "func" }),
 	log2: node({ label: "log₂", disp: "log2", argLength: 1, type: "func" }),
@@ -170,7 +171,6 @@ const LaTeXTemplates = {
 	pow2: (args) => `{${args[0]}}^{2}`,
 	pow10: (args) => `{10}^{${args[0]}}`,
 	exp: (args) => `e^{${args[0]}}`,
-	exp2: (args) => `2^{${args[0]}}`,
 	reciprocal: (args) => `\\frac{1}{${args[0]}}`,
 	factorial: (args) => `${args[0]}!`,
 	gamma: (args) => `\\Gamma(${args[0]})`,
@@ -369,8 +369,8 @@ class Calculator {
 		[
 			// 2行目
 			nodeDataDict.gamma.clone(),
+			nodeDataDict["!"].clone(),
 			nodeDataDict.exp.clone(),
-			nodeDataDict.exp2.clone(),
 			nodeDataDict.sin.clone(),
 			nodeDataDict.cos.clone(),
 			nodeDataDict.tan.clone(),
@@ -422,7 +422,7 @@ class Calculator {
 		],
 		[
 			// 8行目
-			nodeDataDict["!"].clone(),
+			{ label: "Copy", key: "C", type: "cursor", func: () => this._key_C() },
 			nodeDataDict["."].clone(),
 			nodeDataDict["0"].clone(),
 			{ label: "=", key: ["=", "Enter"], type: "equal", func: () => this._key_Enter() },
@@ -806,6 +806,17 @@ class Calculator {
 		this._cursor.moveRight();
 	}
 
+	_key_C() {
+		const latex = this._display.dataset.latex;
+		jasc.copy2Clipboard(latex)
+			.then(() => {
+				log.log("LaTeXコピー成功");
+			})
+			.catch((error) => {
+				log.error("LaTeXコピー失敗:", error);
+			});
+	}
+
 	_key_Enter() {
 		try {
 			this.BigFloat.config.extraPrecision = this.exPrecision;
@@ -939,8 +950,6 @@ class Calculator {
 						return args[0].reciprocal();
 					case "exp":
 						return args[0].exp();
-					case "exp2":
-						return args[0].exp2();
 					case "expm1":
 						return args[0].expm1();
 					case "ln":
